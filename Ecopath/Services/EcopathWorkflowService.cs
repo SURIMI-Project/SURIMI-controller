@@ -1,5 +1,5 @@
 using Grpc.Core;
-using Surimi;
+using Grpc.Surimi;
 
 namespace Ecopath.Services;
 
