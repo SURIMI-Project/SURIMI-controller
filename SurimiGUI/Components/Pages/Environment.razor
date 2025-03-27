@@ -1,0 +1,43 @@
+﻿@page "/environment"
+@using System.Collections
+
+<PageTitle>Environment</PageTitle>
+
+<h1>Environment variables</h1>
+
+@if (envVars == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (DictionaryEntry entry in envVars)
+            {
+                <tr>
+                    <td>@entry.Key</td>
+                    <td>@entry.Value</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+
+@code {
+    private IDictionary? envVars;
+
+    protected override async Task OnInitializedAsync()
+    {
+        envVars = System.Environment.GetEnvironmentVariables();
+        await base.OnInitializedAsync();
+    }
+}

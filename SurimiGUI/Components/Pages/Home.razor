@@ -1,0 +1,83 @@
+﻿@page "/"
+@using SurimiGUI.Models
+@using SurimiGUI.Services
+
+<PageTitle>Home</PageTitle>
+
+<h1>SURIMI</h1>
+
+<p>
+    This is a SURIMI Test webapp
+</p>
+
+<p>
+    <a href="https://www.surimi-project.eu/">SURIMI</a>
+</p>
+
+<h2>Initialize the simulation</h2>
+
+@if (config == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="config" OnSubmit="HandleSubmit">
+        <div class="form-group row">
+            <label class="col-md-2 col-form-label">Experiment Id</label>
+            <div class="col-md-6">
+                <input type="text" class="form-control" @bind="config.ExperimentId">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Init</button>
+        <button type="button" class="btn btn-secondary" @onclick="HandleStartSimulation">Start Simulation</button>
+        <div class="col-7">
+            Response: @result
+        </div>
+    </EditForm>
+}
+
+@code {
+    private SimulationConfig? config { get; set; }
+    private string result = "";
+
+    [Inject]
+    private ControllerService? controllerService { get; set; }
+
+    protected override void OnInitialized()
+    {
+        config = new SimulationConfig();
+    }
+
+    async Task HandleSubmit()
+    {
+        if (config != null && controllerService != null)
+        {
+            try
+            {
+                result = "";
+                result = await controllerService.Init(config);
+            }
+            catch (Exception ex)
+            {
+                result = ex.Message;
+            }
+        }
+    }
+
+    async Task HandleStartSimulation()
+    {
+        if (controllerService != null)
+        {
+            try
+            {
+                result = "";
+                result = await controllerService.RunSimulation();
+            }
+            catch (Exception ex)
+            {
+                result = ex.Message;
+            }
+        }
+    }
+}

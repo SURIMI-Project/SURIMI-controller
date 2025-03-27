@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>a5f5e859-b4f5-46d6-83a4-beec1d065cd7</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.30.2" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.70.0" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
+    <PackageReference Include="Grpc.StatusProto" Version="2.70.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.71.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SURIMI.ServiceDefaults\SURIMI.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+	  <Protobuf Include="..\surimi_protocol\init_request.proto" />
+	  <Protobuf Include="..\surimi_protocol\species_price.proto" />
+	  <Protobuf Include="..\surimi_protocol\workflow.proto" GrpcServices="Client" />
+	  <Protobuf Include="..\surimi_protocol\controller.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+</Project>
