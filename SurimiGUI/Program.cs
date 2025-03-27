@@ -1,7 +1,6 @@
-using SurimiController;
 using SurimiGUI.Components;
 using SurimiGUI.Services;
-using SurimiWorkflow;
+using Surimi;
 
 namespace SurimiGUI;
 
@@ -12,18 +11,18 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
 
-        builder.Services.AddSingleton<ControllerService>();
+        builder.Services.AddSingleton<SurimiCUIControllerService>();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
 
-        builder.Services.AddGrpcClient<Workflow.WorkflowClient>(o =>
+        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>(o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("CONTROLLER_URL")!);
         });
 
-        builder.Services.AddGrpcClient<Controller.ControllerClient>(o =>
+        builder.Services.AddGrpcClient<ControllerService.ControllerServiceClient>(o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("CONTROLLER_URL")!);
         });

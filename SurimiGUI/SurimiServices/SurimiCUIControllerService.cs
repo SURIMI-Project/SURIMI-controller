@@ -1,20 +1,17 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Google.Rpc;
+﻿using Google.Rpc;
 using Grpc.Core;
-using SurimiController;
+using Surimi;
 using SurimiGUI.Models;
-using SurimiInitRequest;
-using SurimiWorkflow;
 using System.Text;
 
 namespace SurimiGUI.Services
 {
-    public class ControllerService
+    public class SurimiCUIControllerService
     {
-        private readonly Workflow.WorkflowClient _workflowClient;
-        private readonly Controller.ControllerClient _controllerClient;
+        private readonly WorkflowService.WorkflowServiceClient _workflowClient;
+        private readonly ControllerService.ControllerServiceClient _controllerClient;
 
-        public ControllerService(Workflow.WorkflowClient workflowClient, Controller.ControllerClient controllerClient)
+        public SurimiCUIControllerService(WorkflowService.WorkflowServiceClient workflowClient, ControllerService.ControllerServiceClient controllerClient)
         {
             _workflowClient = workflowClient;
             _controllerClient = controllerClient;
@@ -59,7 +56,7 @@ namespace SurimiGUI.Services
 
             try
             {
-                var reply = await _controllerClient.RunSimulationAsync(new Empty(), cancellationToken: cts.Token);
+                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest(), cancellationToken: cts.Token);
             }
             catch (RpcException ex)
             {

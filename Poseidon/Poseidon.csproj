@@ -14,9 +14,8 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<Protobuf Include="..\surimi_protocol\init_request.proto" />
-		<Protobuf Include="..\surimi_protocol\species_price.proto" />
-		<Protobuf Include="..\surimi_protocol\workflow.proto" GrpcServices="Server"/>
+		<Protobuf Include="..\proto\surimi\v1\species_price.proto" ProtoRoot="..\proto\"/>
+		<Protobuf Include="..\proto\surimi\v1\workflow.proto" ProtoRoot="..\proto\" GrpcServices="Server"/>
 	</ItemGroup>
 
 </Project>

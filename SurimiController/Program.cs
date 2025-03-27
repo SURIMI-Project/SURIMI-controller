@@ -1,5 +1,4 @@
-using SurimiController.Services;
-using SurimiWorkflow;
+using Surimi;
 
 namespace SurimiController;
 
@@ -13,11 +12,11 @@ public class Program
         // Add services to the container.
         builder.Services.AddGrpc();
 
-        builder.Services.AddGrpcClient<Workflow.WorkflowClient>("EcopathWorkflow", o =>
+        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow", o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
         });
-        builder.Services.AddGrpcClient<Workflow.WorkflowClient>("PoseidonWorkflow", o =>
+        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);
         });
@@ -27,8 +26,8 @@ public class Program
         app.MapDefaultEndpoints();
 
         // Configure the HTTP request pipeline.
-        app.MapGrpcService<WorkflowService>();
-        app.MapGrpcService<ControllerService>();
+        app.MapGrpcService<Services.SurimiWorkflowService>();
+        app.MapGrpcService<Services.SurimiControllerService>();
         app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
         Console.WriteLine($"For Ecopath write to: {Environment.GetEnvironmentVariable("ECOPATH_URL")}");

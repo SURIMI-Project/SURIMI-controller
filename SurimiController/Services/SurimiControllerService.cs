@@ -1,17 +1,16 @@
 ﻿using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
-using SurimiSpeciesPrice;
-using SurimiWorkflow;
+using Surimi;
 
 namespace SurimiController.Services
 {
-    public class ControllerService(GrpcClientFactory clientFactory) : Controller.ControllerBase
+    public class SurimiControllerService(GrpcClientFactory clientFactory) : ControllerService.ControllerServiceBase
     {
-        private readonly Workflow.WorkflowClient _ecopathWorkflowClient = clientFactory.CreateClient<Workflow.WorkflowClient>("EcopathWorkflow");
-        private readonly Workflow.WorkflowClient _poseidonWorkflowClient = clientFactory.CreateClient<Workflow.WorkflowClient>("PoseidonWorkflow");
+        private readonly WorkflowService.WorkflowServiceClient _ecopathWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow");
+        private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
 
-        public override async Task<Empty> RunSimulation(Empty request, ServerCallContext context)
+        public override async Task<RunSimulationResponse> RunSimulation(RunSimulationRequest request, ServerCallContext context)
         {
             Console.WriteLine($"Running simulation...");
 
@@ -23,7 +22,7 @@ namespace SurimiController.Services
 
                 // retrieve marketprice
                 //var marketReply = await marketClient.GetPricesAsync(new Empty());
-                var marketReply = new SpeciesPrices
+                var marketReply = new UpdatePricesRequest
                 {
                     Prices = { new SpeciesPrice { SpeciesId= "TUN", Price = 10.0f, Currency = "EUR", MeasurementUnit = "tonne", PortId = "ESBARC", Timestamp = Timestamp.FromDateTime(DateTime.UtcNow) },
                             new SpeciesPrice { SpeciesId = "WHA", Price = 231.43, Currency = "EUR", MeasurementUnit = "tonne", PortId = "ESMAR", Timestamp =Timestamp.FromDateTime(DateTime.UtcNow)  }
@@ -37,7 +36,7 @@ namespace SurimiController.Services
 
                 //                ecopathReply = await poseidonClient.RunSimulationAsync(new SimulationRequest { ExperimentId = request.ExperimentId });
             }
-            return new Empty();
+            return new RunSimulationResponse();
         }
     }
 }

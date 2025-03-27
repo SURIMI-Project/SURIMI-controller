@@ -1,20 +1,18 @@
-using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using SurimiInitRequest;
-using SurimiWorkflow;
+using Surimi;
 
 namespace Poseidon.Services;
 
-public class WorkflowService : Workflow.WorkflowBase
+public class PoseidonWorkflowService : WorkflowService.WorkflowServiceBase
 {
-    private readonly ILogger<WorkflowService> _logger;
+    private readonly ILogger<PoseidonWorkflowService> _logger;
 
-    public WorkflowService(ILogger<WorkflowService> logger)
+    public PoseidonWorkflowService(ILogger<PoseidonWorkflowService> logger)
     {
         _logger = logger;
     }
 
-    public override Task<Empty> Init(InitRequest request, ServerCallContext context)
+    public override Task<InitResponse> Init(InitRequest request, ServerCallContext context)
     {
         if (string.IsNullOrEmpty(request.ExperimentId))
         {
@@ -25,6 +23,6 @@ public class WorkflowService : Workflow.WorkflowBase
 
         Task.Delay(1000).Wait();
 
-        return Task.FromResult(new Empty());
+        return Task.FromResult(new InitResponse());
     }
 }
