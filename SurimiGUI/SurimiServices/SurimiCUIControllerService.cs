@@ -1,6 +1,6 @@
 ﻿using Google.Rpc;
 using Grpc.Core;
-using Surimi;
+using Grpc.Surimi;
 using SurimiGUI.Models;
 using System.Text;
 

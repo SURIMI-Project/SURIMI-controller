@@ -1,4 +1,4 @@
-using Surimi;
+using Grpc.Surimi;
 
 namespace SurimiController;
 

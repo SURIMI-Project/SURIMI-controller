@@ -1,6 +1,6 @@
 using SurimiGUI.Components;
 using SurimiGUI.Services;
-using Surimi;
+using Grpc.Surimi;
 
 namespace SurimiGUI;
 

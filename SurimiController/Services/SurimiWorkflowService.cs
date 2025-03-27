@@ -1,6 +1,6 @@
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
-using Surimi;
+using Grpc.Surimi;
 
 
 namespace SurimiController.Services;
