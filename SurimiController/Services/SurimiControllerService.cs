@@ -24,8 +24,8 @@ namespace SurimiController.Services
                 //var marketReply = await marketClient.GetPricesAsync(new Empty());
                 var marketReply = new UpdatePricesRequest
                 {
-                    Prices = { new SpeciesPrice { SpeciesId= "TUN", Price = 10.0f, Currency = "EUR", MeasurementUnit = "tonne", PortId = "ESBARC", Timestamp = Timestamp.FromDateTime(DateTime.UtcNow) },
-                            new SpeciesPrice { SpeciesId = "WHA", Price = 231.43, Currency = "EUR", MeasurementUnit = "tonne", PortId = "ESMAR", Timestamp =Timestamp.FromDateTime(DateTime.UtcNow)  }
+                    Prices = { new SpeciesPrice { SpeciesId= "BOG", Price = 1.03, Currency = "EUR", MeasurementUnit = "kg", PortId = "ESARN", Timestamp = Timestamp.FromDateTime(DateTime.UtcNow) },
+                            new SpeciesPrice { SpeciesId = "WHA", Price = 4.5, Currency = "EUR", MeasurementUnit = "kg", PortId = "ESARN", Timestamp =Timestamp.FromDateTime(DateTime.UtcNow)  }
                     }
                 };
 
