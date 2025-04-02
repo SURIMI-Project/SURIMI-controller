@@ -25,4 +25,34 @@
 		<Protobuf Include="..\proto\surimi\v1\workflow.proto" ProtoRoot="..\proto\" GrpcServices="Server" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Reference Include="EwECore">
+	    <HintPath>Includes\EwECore.dll</HintPath>
+	  </Reference>
+	  <Reference Include="EwELicense">
+	    <HintPath>Includes\EwELicense.dll</HintPath>
+	  </Reference>
+	  <Reference Include="EwEPlugin">
+	    <HintPath>Includes\EwEPlugin.dll</HintPath>
+	  </Reference>
+	  <Reference Include="EwEUtils">
+	    <HintPath>Includes\EwEUtils.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Includes\Anchovy Bay Spatial.eiixml">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Includes\EwECore.pdb">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Includes\EwEPlugin.pdb">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Includes\EwEUtils.pdb">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 </Project>

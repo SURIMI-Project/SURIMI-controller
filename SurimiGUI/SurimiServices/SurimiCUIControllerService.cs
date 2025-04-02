@@ -56,7 +56,7 @@ namespace SurimiGUI.Services
 
             try
             {
-                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest(), cancellationToken: cts.Token);
+                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() { FirstYear = 2020, LastYear = 2023 }, cancellationToken: cts.Token);
             }
             catch (RpcException ex)
             {
