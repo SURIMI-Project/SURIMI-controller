@@ -33,6 +33,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "surimi", "surimi", "{0F7992
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "v1", "v1", "{0E6E3315-53F8-427C-874B-E5ACE13FFDA6}"
 	ProjectSection(SolutionItems) = preProject
+		proto\surimi\v1\biomass.proto = proto\surimi\v1\biomass.proto
 		proto\surimi\v1\controller.proto = proto\surimi\v1\controller.proto
 		proto\surimi\v1\market.proto = proto\surimi\v1\market.proto
 		proto\surimi\v1\species_price.proto = proto\surimi\v1\species_price.proto
