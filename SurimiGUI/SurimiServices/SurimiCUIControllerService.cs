@@ -18,15 +18,18 @@ namespace SurimiGUI.Services
             _controllerClient = controllerClient;
         }
 
-        public async Task<string> Init(SimulationConfig config)
+        public async Task<string> Init(SimulationConfig config, CancellationToken token)
         {
-            var cts = new CancellationTokenSource();
-            cts.CancelAfter(1000000);
-
             InitSimulationResponse reply;
             try
             {
-                reply = await _controllerClient.InitSimulationAsync(new InitSimulationRequest { ScenarioId = config.ScenarioId, StartDateTime = Timestamp.FromDateTime(config.StartDateTime), StepSize = config.StepSize }, cancellationToken: cts.Token);
+                reply = await _controllerClient.InitSimulationAsync(new InitSimulationRequest 
+                { 
+                    ScenarioId = config.ScenarioId, 
+                    StartDateTime = Timestamp.FromDateTime(config.StartDateTime), 
+                    StepSize = config.StepSize 
+                }, 
+                cancellationToken: token);
             }
             catch (RpcException ex)
             {
@@ -51,11 +54,8 @@ namespace SurimiGUI.Services
             return reply.SimulationId;
         }
 
-        public async Task<string> RunSimulation(SimulationConfig config)
+        public async Task<string> RunSimulation(SimulationConfig config, CancellationToken token)
         {
-            var cts = new CancellationTokenSource();
-            cts.CancelAfter(1000000);
-
             try
             {
                 var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() 
@@ -64,7 +64,7 @@ namespace SurimiGUI.Services
                     StepSize = config.StepSize,
                     SimulationDuration = config.SimulationDuration,
                     SimulationId = config.SimulationId
-                }, cancellationToken: cts.Token);
+                }, cancellationToken: token);
             }
             catch (RpcException ex)
             {

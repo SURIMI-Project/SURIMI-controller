@@ -22,7 +22,7 @@
 }
 else
 {
-    <EditForm Model="config" OnSubmit="HandleSubmit">
+    <EditForm Model="config" OnSubmit="HandleInit">
         <div class="form-group row">
             <label class="col-md-2 col-form-label">Scenario Id</label>
             <div class="col-md-6">
@@ -54,8 +54,13 @@ else
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary">Init</button>
-        <button type="button" class="btn btn-secondary" @onclick="HandleStartSimulation">Start Simulation</button>
+        <div>
+            <button type="submit" class="btn btn-primary">Init</button>
+        </div>
+        <div>
+            <button type="button" class="btn btn-secondary" @onclick="HandleStartSimulation">Start Simulation</button>
+            <button type="button" class="btn btn-danger" @onclick="HandleCancelSimulation">Cancel Simulation</button>
+        </div>
         <div class="col-7">
             Response: @result
         </div>
@@ -65,6 +70,7 @@ else
 @code {
     private SimulationConfig? config { get; set; }
     private string result = "";
+    CancellationTokenSource cts = new CancellationTokenSource();
 
     [Inject]
     private SurimiCUIControllerService? controllerService { get; set; }
@@ -74,14 +80,15 @@ else
         config = new SimulationConfig();
     }
 
-    async Task HandleSubmit()
+    async Task HandleInit()
     {
         if (config != null && controllerService != null)
         {
             try
             {
                 result = "";
-                var res = await controllerService.Init(config);
+
+                var res = await controllerService.Init(config, cts.Token);
                 if (Guid.TryParse(res, out Guid simres))
                 {
                     config.SimulationId = res;
@@ -101,17 +108,23 @@ else
 
     async Task HandleStartSimulation()
     {
-        if (controllerService != null)
+        if (config != null && controllerService != null)
         {
             try
             {
+                cts = new CancellationTokenSource();
                 result = "";
-                result = await controllerService.RunSimulation(config);
+                result = await controllerService.RunSimulation(config, cts.Token);
             }
             catch (Exception ex)
             {
                 result = ex.Message;
             }
         }
+    }
+
+    void HandleCancelSimulation()
+    {
+        cts.Cancel();
     }
 }
