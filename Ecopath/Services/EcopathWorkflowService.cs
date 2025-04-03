@@ -28,6 +28,7 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
         Console.WriteLine($"Updating prices for {list.Prices.Count} species...");
 
         // Simulate some processing delay
+        // test
         //Task.Delay(1000).Wait();
 
         return Task.FromResult(new UpdatePricesResponse());
