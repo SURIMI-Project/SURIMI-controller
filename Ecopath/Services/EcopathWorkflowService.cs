@@ -44,7 +44,7 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
         return Task.FromResult(new SimulateStepResponse());
     }
 
-    //private int InitEwE()
+    //private int InitEwE() Test
     //{
     //    // Load and configure EwE for a given model setup, and run Ecospace up to the reporting year. Then halt
         
