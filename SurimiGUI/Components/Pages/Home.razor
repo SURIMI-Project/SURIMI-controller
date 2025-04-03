@@ -24,11 +24,36 @@ else
 {
     <EditForm Model="config" OnSubmit="HandleSubmit">
         <div class="form-group row">
-            <label class="col-md-2 col-form-label">Experiment Id</label>
+            <label class="col-md-2 col-form-label">Scenario Id</label>
             <div class="col-md-6">
-                <input type="text" class="form-control" @bind="config.ExperimentId">
+                <input type="text" class="form-control" @bind="config.ScenarioId">
             </div>
         </div>
+        <div class="form-group row">
+            <label class="col-md-2 col-form-label">Start Date</label>
+            <div class="col-md-6">
+                <input type="date" class="form-control" @bind="config.StartDateTime" />
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-md-2 col-form-label">Step size</label>
+            <div class="col-md-6">
+                <input type="text" class="form-control" @bind="config.StepSize">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-md-2 col-form-label">Simulation duration</label>
+            <div class="col-md-6">
+                <input type="text" class="form-control" @bind="config.SimulationDuration">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-md-2 col-form-label">Simulation Id</label>
+            <div class="col-md-6">
+                <input type="text" class="form-control" @bind="config.SimulationId" readonly="true">
+            </div>
+        </div>
+
         <button type="submit" class="btn btn-primary">Init</button>
         <button type="button" class="btn btn-secondary" @onclick="HandleStartSimulation">Start Simulation</button>
         <div class="col-7">
@@ -56,7 +81,16 @@ else
             try
             {
                 result = "";
-                result = await controllerService.Init(config);
+                var res = await controllerService.Init(config);
+                if (Guid.TryParse(res, out Guid simres))
+                {
+                    config.SimulationId = res;
+                    result = $"OK";
+                }
+                else
+                {
+                    result = $"Error initializing simulation: {res}";
+                }
             }
             catch (Exception ex)
             {
@@ -72,7 +106,7 @@ else
             try
             {
                 result = "";
-                result = await controllerService.RunSimulation();
+                result = await controllerService.RunSimulation(config);
             }
             catch (Exception ex)
             {

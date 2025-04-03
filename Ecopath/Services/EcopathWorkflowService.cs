@@ -15,8 +15,8 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
 
     public override Task<InitResponse> Init(InitRequest request, ServerCallContext context)
     {
-        GrpcValidation.ArgumentNotNullOrEmpty(request.ExperimentId);
-        Console.WriteLine($"Ecopath Initializing experiment {request.ExperimentId}...");
+        GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioId);
+        Console.WriteLine($"Ecopath Initializing scenario {request.ScenarioId}...");
 
         var core = new cCore();     // It would be better to inject this dependency. But I couldn't find a way to do it. Maybe with an interface?
         string ModelName = "Anchovy Bay Spatial.eiixml";
@@ -41,7 +41,7 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
 
     public override Task<SimulateStepResponse> SimulateStep(SimulateStepRequest req, ServerCallContext context)
     {
-        Console.WriteLine($"Simulate step for year {req.Year} and month {req.Month}...");
+        Console.WriteLine($"Simulate step for simulation_id {req.SimulationId}...");
 
         // Simulate some processing delay
         //Task.Delay(1000).Wait();

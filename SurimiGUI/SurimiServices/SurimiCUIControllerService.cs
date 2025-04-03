@@ -1,4 +1,5 @@
-﻿using Google.Rpc;
+﻿using Google.Protobuf.WellKnownTypes;
+using Google.Rpc;
 using Grpc.Core;
 using Grpc.Surimi;
 using SurimiGUI.Models;
@@ -22,9 +23,10 @@ namespace SurimiGUI.Services
             var cts = new CancellationTokenSource();
             cts.CancelAfter(1000000);
 
+            InitSimulationResponse reply;
             try
             {
-                var reply = await _workflowClient.InitAsync(new InitRequest { ExperimentId = config.ExperimentId }, cancellationToken: cts.Token);
+                reply = await _controllerClient.InitSimulationAsync(new InitSimulationRequest { ScenarioId = config.ScenarioId, StartDateTime = Timestamp.FromDateTime(config.StartDateTime), StepSize = config.StepSize }, cancellationToken: cts.Token);
             }
             catch (RpcException ex)
             {
@@ -46,17 +48,23 @@ namespace SurimiGUI.Services
                 return ex.Message;
             }
 
-            return "OK";
+            return reply.SimulationId;
         }
 
-        public async Task<string> RunSimulation()
+        public async Task<string> RunSimulation(SimulationConfig config)
         {
             var cts = new CancellationTokenSource();
             cts.CancelAfter(1000000);
 
             try
             {
-                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() { FirstYear = 2020, LastYear = 2023 }, cancellationToken: cts.Token);
+                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() 
+                { 
+                    StartDateTime = Timestamp.FromDateTime(config.StartDateTime.ToUniversalTime()),
+                    StepSize = config.StepSize,
+                    SimulationDuration = config.SimulationDuration,
+                    SimulationId = config.SimulationId
+                }, cancellationToken: cts.Token);
             }
             catch (RpcException ex)
             {
