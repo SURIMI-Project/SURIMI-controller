@@ -18,8 +18,8 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
 
     public override Task<InitResponse> Init(InitRequest request, ServerCallContext context)
     {
-        GrpcValidation.ArgumentNotNullOrEmpty(request.ExperimentId);
-        Console.WriteLine($"Ecopath Initializing experiment {request.ExperimentId}...");
+        GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioId);
+        Console.WriteLine($"Ecopath Initializing scenario {request.ScenarioId}...");
 
         return Task.FromResult(new InitResponse());
     }
