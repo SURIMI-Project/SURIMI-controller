@@ -1,5 +1,4 @@
 using EwECore;
-using EwEPlugin;
 using Grpc.Core;
 using Grpc.Surimi;
 
@@ -29,6 +28,7 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
         Console.WriteLine($"Updating prices for {list.Prices.Count} species...");
 
         // Simulate some processing delay
+        // test Test
         //Task.Delay(1000).Wait();
 
         return Task.FromResult(new UpdatePricesResponse());
