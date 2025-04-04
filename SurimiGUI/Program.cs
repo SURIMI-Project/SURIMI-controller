@@ -1,17 +1,22 @@
 using SurimiGUI.Components;
 using SurimiGUI.Services;
 using Grpc.Surimi;
+using System.Diagnostics;
 
 namespace SurimiGUI;
 
 public class Program
 {
+    private static readonly ActivitySource MyActivitySource = new("OpenTelemetry.SURIMI");
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
 
-        builder.Services.AddSingleton<SurimiCUIControllerService>();
+        // Custom ActivitySource for the application
+        using var parent = MyActivitySource.StartActivity("SurimiGui");
+
+        builder.Services.AddSingleton<SurimiGUIControllerService>();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()

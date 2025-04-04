@@ -1,6 +1,8 @@
 ﻿@page "/"
 @using SurimiGUI.Models
 @using SurimiGUI.Services
+@using System.Diagnostics
+@inject ActivitySource MyActivitySource
 
 <PageTitle>Home</PageTitle>
 
@@ -73,7 +75,7 @@ else
     CancellationTokenSource cts = new CancellationTokenSource();
 
     [Inject]
-    private SurimiCUIControllerService? controllerService { get; set; }
+    private SurimiGUIControllerService? controllerService { get; set; }
 
     protected override void OnInitialized()
     {
@@ -86,17 +88,20 @@ else
         {
             try
             {
-                result = "";
-
-                var res = await controllerService.Init(config, cts.Token);
-                if (Guid.TryParse(res, out Guid simres))
+                using (var activity = MyActivitySource.StartActivity("HandleInit"))
                 {
-                    config.SimulationId = res;
-                    result = $"OK";
-                }
-                else
-                {
-                    result = $"Error initializing simulation: {res}";
+                    activity?.SetTag("ScenarioId", config.ScenarioId);
+                    result = "";
+                    var res = await controllerService.Init(config, cts.Token);
+                    if (Guid.TryParse(res, out Guid simres))
+                    {
+                        config.SimulationId = res;
+                        result = $"OK";
+                    }
+                    else
+                    {
+                        result = $"Error initializing simulation: {res}";
+                    }
                 }
             }
             catch (Exception ex)
@@ -112,9 +117,13 @@ else
         {
             try
             {
-                cts = new CancellationTokenSource();
-                result = "";
-                result = await controllerService.RunSimulation(config, cts.Token);
+                using (var activity = MyActivitySource.StartActivity("HandleStartSimulation"))
+                {
+                    activity?.SetTag("SimulationId", config.SimulationId);
+                    cts = new CancellationTokenSource();
+                    result = "";
+                    result = await controllerService.RunSimulation(config, cts.Token);
+                }
             }
             catch (Exception ex)
             {
@@ -125,6 +134,9 @@ else
 
     void HandleCancelSimulation()
     {
-        cts.Cancel();
+        using (var activity = MyActivitySource.StartActivity("HandleCancelSimulation"))
+        {
+            cts.Cancel();
+        }
     }
 }
