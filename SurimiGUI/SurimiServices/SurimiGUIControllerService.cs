@@ -7,12 +7,12 @@ using System.Text;
 
 namespace SurimiGUI.Services
 {
-    public class SurimiCUIControllerService
+    public class SurimiGUIControllerService
     {
         private readonly WorkflowService.WorkflowServiceClient _workflowClient;
         private readonly ControllerService.ControllerServiceClient _controllerClient;
 
-        public SurimiCUIControllerService(WorkflowService.WorkflowServiceClient workflowClient, ControllerService.ControllerServiceClient controllerClient)
+        public SurimiGUIControllerService(WorkflowService.WorkflowServiceClient workflowClient, ControllerService.ControllerServiceClient controllerClient)
         {
             _workflowClient = workflowClient;
             _controllerClient = controllerClient;
