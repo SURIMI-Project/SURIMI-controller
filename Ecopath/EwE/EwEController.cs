@@ -1,4 +1,5 @@
 ﻿using EwECore;
+using EwECore.FitToTimeSeries;
 using EwEPlugin;
 using EwEUtils.Core;
 using static EwECore.cCore;
@@ -12,8 +13,15 @@ namespace Ecopath.EwE
         private Thread? _thread;
         private cMessageHandler? _mh;
 
-        private bool _isRunning = false;
-        private bool _isStopping = false;
+        public enum RunState
+        {
+            Idle, // Ready to be started
+            Starting, // Starting up, not ready yet
+            Waiting, // Waiting for exteral input
+            Running, // Busy running simulations
+            Stopping // Busy stoppping
+        }
+        private RunState _runstate = RunState.Idle;
 
         public EwEController() {
 
@@ -42,6 +50,13 @@ namespace Ecopath.EwE
 
         public int Start()
         {
+            if (_runstate != RunState.Idle)
+            {
+                Console.WriteLine("EwE controller already busy, aborting"); // ToDo: log this
+                return -1; // ToDo: return informative error code?
+            }
+
+            _runstate = RunState.Starting;
 
             // Todo: this needs to come from somewhere
             this.Configuration = new EwEConfiguration { 
@@ -118,28 +133,28 @@ namespace Ecopath.EwE
             // Phew, we managed to plow through. Run Ecospace!
             _thread = new Thread(RunEcospace);
             _thread.Start();
-            _isRunning = true;
-            _isStopping = false;
             _pausewait.WaitOne();
 
             return 1;
         }
 
-        public int Contrinue()
+        public int Continue()
         {
-            if (!_isRunning) return -1;
+            if (_runstate != RunState.Waiting) return -1;
 
             // Carry on
             _core.EcospacePaused = false;
+            Console.WriteLine("EwE - continue");
             return 0;
         }
 
         public int Stop()
         {
-            if (!_isRunning) return -1;
+            if (_runstate != RunState.Waiting) return -1;
+            Console.WriteLine("EwE - stopping");
             try
             {
-                _isStopping = true;
+                _runstate = RunState.Stopping;
                 _core.StopEcospace();
                 _pausewait.WaitOne();
             }
@@ -147,8 +162,7 @@ namespace Ecopath.EwE
             {
                 // ToDo: log this
             }
-            _isStopping = false;
-            _isRunning = false;
+            _runstate = RunState.Idle;
             _thread = null;
             return 1;
         }
@@ -166,9 +180,11 @@ namespace Ecopath.EwE
             if (ds.bInSpinUp) return;
             if (timestep.TimeStepinYears < Configuration.StartYear) return;
 
+            Console.WriteLine("EwE - pausing");
+
             IsWaiting = true;
             _pausewait.Set();
-            _core.EcospacePaused = !_isStopping;
+            _core.EcospacePaused = (_runstate != RunState.Stopping);
             IsWaiting = false;
         }
 
@@ -178,11 +194,10 @@ namespace Ecopath.EwE
             {
                 case eMessageType.EcospaceRunCompleted:
                     _pausewait.Set();
-                    _isStopping = false;
-                    _isRunning = false;
 
                     // Clear all modifications made by the process
                     _core.DiscardChanges();
+                    _runstate = RunState.Idle;
                     break;
             }
 

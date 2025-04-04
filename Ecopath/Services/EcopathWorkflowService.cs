@@ -22,12 +22,13 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
         GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioId);
         Console.WriteLine($"Ecopath Initializing scenario {request.ScenarioId}...");
 
-        _controller.Start();
-
-        // ToDo: wait until controller is paused
-        while (!_controller.IsWaiting)
+        if (_controller.Start() > 0)
         {
-            // ToDo: Fix this horrendous band-aid
+            // ToDo: wait until controller is paused
+            while (!_controller.IsWaiting)
+            {
+                // ToDo: Fix this horrendous band-aid
+            }
         }
         return Task.FromResult(new InitResponse());
     }
@@ -46,7 +47,7 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
     {
         Console.WriteLine($"Simulate step for simulation {req.SimulationId}");
 
-        _controller.Contrinue();
+        _controller.Continue();
         // Simulate some processing delay
         //Task.Delay(1000).Wait();
 
