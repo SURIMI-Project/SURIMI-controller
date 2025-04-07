@@ -1,5 +1,4 @@
 ﻿using EwECore;
-using EwECore.FitToTimeSeries;
 using EwEPlugin;
 using EwEUtils.Core;
 using static EwECore.cCore;
