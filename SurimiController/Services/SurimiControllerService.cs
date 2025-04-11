@@ -17,18 +17,27 @@ namespace SurimiController.Services
         {
             using var activity = _activitySource.StartActivity("InitSimulation");
             activity?.SetTag("ScenarioId", init.ScenarioId);
+            var simulationId = Guid.NewGuid();
 
-            Console.WriteLine($"Initializing scenario {init.ScenarioId}...");
+            Console.WriteLine($"Initializing scenario {init.ScenarioId}... SimulationId = {simulationId}");
+            var initRequest = new InitRequest
+            {
+                ScenarioId = init.ScenarioId,
+                StartDateTime = init.StartDateTime,
+                StepSize = init.StepSize,
+                SimulationId = simulationId.ToString(),
+            };
 
-            var ecopathReply = _ecopathWorkflowClient.InitAsync(new InitRequest { ScenarioId = init.ScenarioId });
+            var ecopathReply = _ecopathWorkflowClient.InitAsync(initRequest);
 
-            var poseidonReply = _poseidonWorkflowClient.InitAsync(new InitRequest { ScenarioId = init.ScenarioId });
+            var poseidonReply = _poseidonWorkflowClient.InitAsync(initRequest);
 
             activity?.AddEvent(new ActivityEvent("Start Init ecopath and poseidon"));
             await ecopathReply;
             await poseidonReply;
+
             activity?.AddEvent(new ActivityEvent("Finished ecopoath and poseidon"));
-            return new InitSimulationResponse() { SimulationId = Guid.NewGuid().ToString() };
+            return new InitSimulationResponse() { SimulationId = simulationId.ToString() };
         }
 
         public override async Task<RunSimulationResponse> RunSimulation(RunSimulationRequest request, ServerCallContext context)
@@ -47,14 +56,21 @@ namespace SurimiController.Services
                 var marketReply = new UpdatePricesRequest
                 {
                     Prices = { new SpeciesPrice { SpeciesId= "BOG", Price = 1.03, Currency = "EUR", MeasurementUnit = "kg", PortId = "ESARN", Timestamp = Timestamp.FromDateTime(DateTime.UtcNow) },
-                                new SpeciesPrice { SpeciesId = "WHA", Price = 4.5, Currency = "EUR", MeasurementUnit = "kg", PortId = "ESARN", Timestamp =Timestamp.FromDateTime(DateTime.UtcNow)  }
-                        }
+                                new SpeciesPrice { SpeciesId = "PIL", Price = 4.5, Currency = "EUR", MeasurementUnit = "kg", PortId = "ESARN", Timestamp =Timestamp.FromDateTime(DateTime.UtcNow)  }
+                        },
+                    SimulationId = request.SimulationId
                 };
 
                 var ecopathUpdatePricesReply = await _ecopathWorkflowClient.UpdatePricesAsync(marketReply);
                 var poseidonUpdatePricesReply = await _poseidonWorkflowClient.UpdatePricesAsync(marketReply);
 
-                var ecopathSimulateStelReply = await _ecopathWorkflowClient.SimulateStepAsync(new SimulateStepRequest() { SimulationId = request.SimulationId });
+                var simulationStepRequest = new SimulateStepRequest()
+                {
+                    SimulationId = request.SimulationId
+                };
+
+                var ecopathSimulateStelReply = await _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var poseidonSimulateStelReply = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
                 current = current.Add(stepSize);
             }
