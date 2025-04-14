@@ -7,10 +7,14 @@ using System.Xml;
 
 namespace SurimiController.Services
 {
-    public class SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource) : ControllerService.ControllerServiceBase
+    public class SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient) : ControllerService.ControllerServiceBase
     {
         private readonly WorkflowService.WorkflowServiceClient _ecopathWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow");
         private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
+        private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
+
+        private readonly MarketService.MarketServiceClient _marketClient = marketClient;
+
         private readonly ActivitySource _activitySource = activitySource;
 
         public override async Task<InitSimulationResponse> InitSimulation(InitSimulationRequest init, ServerCallContext context)
@@ -28,11 +32,13 @@ namespace SurimiController.Services
                 SimulationId = simulationId.ToString(),
             };
 
+            var marketReply = _marketWorkflowClient.InitAsync(initRequest);
             var ecopathReply = _ecopathWorkflowClient.InitAsync(initRequest);
-
             var poseidonReply = _poseidonWorkflowClient.InitAsync(initRequest);
 
+
             activity?.AddEvent(new ActivityEvent("Start Init ecopath and poseidon"));
+            await marketReply;
             await ecopathReply;
             await poseidonReply;
 
@@ -53,13 +59,22 @@ namespace SurimiController.Services
             {
                 Console.WriteLine($"Processing step {current}...");
 
+                var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest());
+
                 var marketReply = new UpdatePricesRequest
                 {
-                    Prices = { new SpeciesPrice { SpeciesId= "BOG", Price = 1.03, Currency = "EUR", MeasurementUnit = "kg", PortId = "ESARN", Timestamp = Timestamp.FromDateTime(DateTime.UtcNow) },
-                                new SpeciesPrice { SpeciesId = "PIL", Price = 4.5, Currency = "EUR", MeasurementUnit = "kg", PortId = "ESARN", Timestamp =Timestamp.FromDateTime(DateTime.UtcNow)  }
-                        },
                     SimulationId = request.SimulationId
                 };
+
+                marketReply.Prices.AddRange(speciesPriceResponse.Prices.Select(price => new SpeciesPrice
+                {
+                    SpeciesId = price.SpeciesId,
+                    Price = price.Price,
+                    Currency = price.Currency,
+                    MeasurementUnit = price.MeasurementUnit,
+                    PortId = price.PortId,
+                    Timestamp = Timestamp.FromDateTime(current)
+                }).ToList());
 
                 var ecopathUpdatePricesReply = await _ecopathWorkflowClient.UpdatePricesAsync(marketReply);
                 var poseidonUpdatePricesReply = await _poseidonWorkflowClient.UpdatePricesAsync(marketReply);
