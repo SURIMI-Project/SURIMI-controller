@@ -28,6 +28,14 @@ public class Program
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);
         });
+        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", o =>
+        {
+            o.Address = new Uri(Environment.GetEnvironmentVariable("MARKET_URL")!);
+        });
+        builder.Services.AddGrpcClient<MarketService.MarketServiceClient>(o =>
+        {
+            o.Address = new Uri(Environment.GetEnvironmentVariable("MARKET_URL")!);
+        });
 
         var app = builder.Build();
 
@@ -40,6 +48,7 @@ public class Program
 
         Console.WriteLine($"For Ecopath write to: {Environment.GetEnvironmentVariable("ECOPATH_URL")}");
         Console.WriteLine($"For Poseidon write to: {Environment.GetEnvironmentVariable("POSEIDON_URL")}");
+        Console.WriteLine($"For Market write to: {Environment.GetEnvironmentVariable("MARKET_URL")}");
 
         app.Run();
     }
