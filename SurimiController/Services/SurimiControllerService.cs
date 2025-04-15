@@ -86,6 +86,7 @@ namespace SurimiController.Services
 
                 var ecopathSimulateStelReply = await _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
                 var poseidonSimulateStelReply = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var marketSimulateStelReply = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
                 current = current.Add(stepSize);
             }
