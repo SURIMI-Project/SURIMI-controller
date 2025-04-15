@@ -58,8 +58,8 @@ namespace SurimiGUI.Services
         {
             try
             {
-                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() 
-                { 
+                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest()
+                {
                     StartDateTime = Timestamp.FromDateTime(config.StartDateTime.ToUniversalTime()),
                     StepSize = config.StepSize,
                     SimulationDuration = config.SimulationDuration,

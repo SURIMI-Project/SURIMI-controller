@@ -23,26 +23,28 @@ public class Program
         builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow", o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
-        });
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+
         builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);
-        });
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+
         builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("MARKET_URL")!);
-        });
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+
         builder.Services.AddGrpcClient<MarketService.MarketServiceClient>(o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("MARKET_URL")!);
-        });
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
 
         var app = builder.Build();
 
         app.MapDefaultEndpoints();
 
         // Configure the HTTP request pipeline.
-        app.MapGrpcService<Services.SurimiWorkflowService>();
         app.MapGrpcService<Services.SurimiControllerService>();
         app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 

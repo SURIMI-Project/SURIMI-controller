@@ -76,17 +76,23 @@ namespace SurimiController.Services
                     Timestamp = Timestamp.FromDateTime(current)
                 }).ToList());
 
-                var ecopathUpdatePricesReply = await _ecopathWorkflowClient.UpdatePricesAsync(marketReply);
-                var poseidonUpdatePricesReply = await _poseidonWorkflowClient.UpdatePricesAsync(marketReply);
+                var ecopathUpdatePricesReply = _ecopathWorkflowClient.UpdatePricesAsync(marketReply);
+                var poseidonUpdatePricesReply = _poseidonWorkflowClient.UpdatePricesAsync(marketReply);
+                await ecopathUpdatePricesReply;
+                await poseidonUpdatePricesReply;
 
                 var simulationStepRequest = new SimulateStepRequest()
                 {
                     SimulationId = request.SimulationId
                 };
 
-                var ecopathSimulateStelReply = await _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
-                var poseidonSimulateStelReply = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
-                var marketSimulateStelReply = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var ecopathSimulateStelReply = _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var poseidonSimulateStelReply = _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var marketSimulateStelReply = _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
+
+                await ecopathSimulateStelReply;
+                await poseidonSimulateStelReply;
+                await marketSimulateStelReply;
 
                 current = current.Add(stepSize);
             }
