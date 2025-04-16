@@ -44,6 +44,7 @@ namespace SurimiGUI.Services
                         error.AppendLine($"Description: {fieldViolation.Description}");
                     }
                 }
+                error.Append($" Method: {ex.Trailers.GetValue("method")} Application: {ex.Trailers.GetValue("application")}");
                 return error.ToString();
             }
             catch (Exception ex)

@@ -18,7 +18,10 @@ public class Program
         using var parent = MyActivitySource.StartActivity("SurimiController");
 
         // Add services to the container.
-        builder.Services.AddGrpc();
+        builder.Services.AddGrpc(options =>
+        {
+            options.Interceptors.Add<ExceptionMetadataInterceptor>();
+        });
 
         builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow", o =>
         {

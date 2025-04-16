@@ -10,7 +10,10 @@ public class Program
         builder.AddServiceDefaults();
 
         // Add services to the container.
-        builder.Services.AddGrpc();
+        builder.Services.AddGrpc(options =>
+        {
+            options.Interceptors.Add<ExceptionMetadataInterceptor>();
+        });
 
         var app = builder.Build();
 
