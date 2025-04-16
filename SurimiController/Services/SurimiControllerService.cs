@@ -19,6 +19,15 @@ namespace SurimiController.Services
 
         public override async Task<InitSimulationResponse> InitSimulation(InitSimulationRequest init, ServerCallContext context)
         {
+            if (init.ScenarioId.ToLower().Equals("testcontroller"))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "ScenarioId cannot be 'testcontroller'"));
+            }
+            if (init.ScenarioId.ToLower().Equals("testcontroller2"))
+            {
+                string tst = init.ScenarioId.Substring(4, 12);       // Will throw exception
+            }
+
             using var activity = _activitySource.StartActivity("InitSimulation");
             activity?.SetTag("ScenarioId", init.ScenarioId);
             var simulationId = Guid.NewGuid();
