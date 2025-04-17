@@ -23,6 +23,8 @@
 		<Protobuf Include="..\proto\surimi\v1\biomass.proto" ProtoRoot="..\proto\" />
 		<Protobuf Include="..\proto\surimi\v1\species_price.proto" ProtoRoot="..\proto\" />
 		<Protobuf Include="..\proto\surimi\v1\workflow.proto" ProtoRoot="..\proto\" GrpcServices="Server" />
+		<Protobuf Include="..\proto\surimi\v1\biomass.proto" ProtoRoot="..\proto\" />
+		<Protobuf Include="..\proto\surimi\v1\ecology.proto" ProtoRoot="..\proto\" />
 	</ItemGroup>
 
 	<ItemGroup>

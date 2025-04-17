@@ -35,6 +35,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "v1", "v1", "{0E6E3315-53F8-
 	ProjectSection(SolutionItems) = preProject
 		proto\surimi\v1\biomass.proto = proto\surimi\v1\biomass.proto
 		proto\surimi\v1\controller.proto = proto\surimi\v1\controller.proto
+		proto\surimi\v1\ecology.proto = proto\surimi\v1\ecology.proto
 		proto\surimi\v1\market.proto = proto\surimi\v1\market.proto
 		proto\surimi\v1\species_price.proto = proto\surimi\v1\species_price.proto
 		proto\surimi\v1\workflow.proto = proto\surimi\v1\workflow.proto

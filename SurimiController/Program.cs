@@ -28,6 +28,11 @@ public class Program
             o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
         }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
 
+        builder.Services.AddGrpcClient<EcologyService.EcologyServiceClient>("EcopathEcology", o =>
+        {
+            o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+
         builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);

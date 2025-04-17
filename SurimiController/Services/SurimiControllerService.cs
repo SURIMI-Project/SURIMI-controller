@@ -9,13 +9,14 @@ namespace SurimiController.Services
     public class SurimiControllerService : ControllerService.ControllerServiceBase
     {
         private readonly MarketService.MarketServiceClient _marketClient;
+        private readonly EcologyService.EcologyServiceClient _ecologyClient;
         private readonly ILogger<SurimiControllerService> _logger;
         private readonly ActivitySource _activitySource;
         private readonly WorkflowService.WorkflowServiceClient _ecopathWorkflowClient;
         private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient;
         private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient;
 
-        public SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient, ILogger<SurimiControllerService> logger)
+        public SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient, ILogger<SurimiControllerService> logger, EcologyService.EcologyServiceClient ecologyClient)
         {
             _activitySource = activitySource;
             _marketClient = marketClient;
@@ -23,6 +24,7 @@ namespace SurimiController.Services
             _ecopathWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow");
             _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
             _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
+            _ecologyClient = ecologyClient;
         }
 
         public override async Task<InitSimulationResponse> InitSimulation(InitSimulationRequest init, ServerCallContext context)
@@ -76,32 +78,43 @@ namespace SurimiController.Services
             {
                 _logger.LogInformation($"Processing step {current}. Start with SpeciesPrices");
 
-                var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest());
+                var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = request.SimulationId });
 
-                var marketReply = new UpdatePricesRequest
+                var marketResponse = new UpdatePricesRequest
                 {
                     SimulationId = request.SimulationId
                 };
+                marketResponse.Prices.AddRange(speciesPriceResponse.Prices);
 
-                marketReply.Prices.AddRange(speciesPriceResponse.Prices);
-
-                var ecopathUpdatePricesReply = _ecopathWorkflowClient.UpdatePricesAsync(marketReply);
-                var poseidonUpdatePricesReply = _poseidonWorkflowClient.UpdatePricesAsync(marketReply);
+                var ecopathUpdatePricesReply = _ecopathWorkflowClient.UpdatePricesAsync(marketResponse);
+                var poseidonUpdatePricesReply = _poseidonWorkflowClient.UpdatePricesAsync(marketResponse);
                 await ecopathUpdatePricesReply;
                 await poseidonUpdatePricesReply;
 
+                _logger.LogInformation($"Processing step {current}. Continue with Biomass");
+                var getBiomassResponse = await _ecologyClient.GetBiomassAsync(new GetBiomassRequest(){ SimulationId = request.SimulationId });
+
+                var updateBiomassRequest = new UpdateBiomassRequest()
+                {
+                    SimulationId = request.SimulationId,
+                    MeasurementUnit = getBiomassResponse.MeasurementUnit
+                };
+                updateBiomassRequest.BiomassGrids.AddRange(getBiomassResponse.BiomassGrids);
+                var poseidonupdateBiomassResponse = await _poseidonWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
+
+                _logger.LogInformation($"Processing step {current}. Move on with the SimulateStep");
                 var simulationStepRequest = new SimulateStepRequest()
                 {
                     SimulationId = request.SimulationId
                 };
 
-                var ecopathSimulateStelReply = _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
-                var poseidonSimulateStelReply = _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
-                var marketSimulateStelReply = _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var ecopathSimulateStelResponse = _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var poseidonSimulateStelResponse = _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var marketSimulateStelResponse = _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
-                await ecopathSimulateStelReply;
-                await poseidonSimulateStelReply;
-                await marketSimulateStelReply;
+                await ecopathSimulateStelResponse;
+                await poseidonSimulateStelResponse;
+                await marketSimulateStelResponse;
 
                 current = current.Add(stepSize);
             }
