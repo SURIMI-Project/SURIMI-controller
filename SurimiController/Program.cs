@@ -51,9 +51,12 @@ public class Program
         app.MapGrpcService<Services.SurimiControllerService>();
         app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
-        Console.WriteLine($"For Ecopath write to: {Environment.GetEnvironmentVariable("ECOPATH_URL")}");
-        Console.WriteLine($"For Poseidon write to: {Environment.GetEnvironmentVariable("POSEIDON_URL")}");
-        Console.WriteLine($"For Market write to: {Environment.GetEnvironmentVariable("MARKET_URL")}");
+        // Retrieve the logger
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+        logger.LogInformation($"For Ecopath write to: {Environment.GetEnvironmentVariable("ECOPATH_URL")}");
+        logger.LogInformation($"For Poseidon write to: {Environment.GetEnvironmentVariable("POSEIDON_URL")}");
+        logger.LogInformation($"For Market write to: {Environment.GetEnvironmentVariable("MARKET_URL")}");
 
         app.Run();
     }

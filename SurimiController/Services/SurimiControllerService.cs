@@ -1,5 +1,4 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using System.Diagnostics;
@@ -7,15 +6,24 @@ using System.Xml;
 
 namespace SurimiController.Services
 {
-    public class SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient) : ControllerService.ControllerServiceBase
+    public class SurimiControllerService : ControllerService.ControllerServiceBase
     {
-        private readonly WorkflowService.WorkflowServiceClient _ecopathWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow");
-        private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
-        private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
+        private readonly MarketService.MarketServiceClient _marketClient;
+        private readonly ILogger<SurimiControllerService> _logger;
+        private readonly ActivitySource _activitySource;
+        private readonly WorkflowService.WorkflowServiceClient _ecopathWorkflowClient;
+        private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient;
+        private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient;
 
-        private readonly MarketService.MarketServiceClient _marketClient = marketClient;
-
-        private readonly ActivitySource _activitySource = activitySource;
+        public SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient, ILogger<SurimiControllerService> logger)
+        {
+            _activitySource = activitySource;
+            _marketClient = marketClient;
+            _logger = logger;
+            _ecopathWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow");
+            _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
+            _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
+        }
 
         public override async Task<InitSimulationResponse> InitSimulation(InitSimulationRequest init, ServerCallContext context)
         {
@@ -32,7 +40,7 @@ namespace SurimiController.Services
             activity?.SetTag("ScenarioId", init.ScenarioId);
             var simulationId = Guid.NewGuid();
 
-            Console.WriteLine($"Initializing scenario {init.ScenarioId}... SimulationId = {simulationId}");
+            _logger.LogInformation($"Initializing scenario {init.ScenarioId}... SimulationId = {simulationId}");
             var initRequest = new InitRequest
             {
                 ScenarioId = init.ScenarioId,
@@ -58,7 +66,7 @@ namespace SurimiController.Services
         public override async Task<RunSimulationResponse> RunSimulation(RunSimulationRequest request, ServerCallContext context)
         {
             using var activity = _activitySource.StartActivity("RunSimulation");
-            Console.WriteLine($"Running simulation...");
+            _logger.LogInformation($"Running simulation...");
 
             var current = request.StartDateTime.ToDateTime();   // Start at startdatetime
             var stepSize = XmlConvert.ToTimeSpan(request.StepSize);
@@ -66,7 +74,7 @@ namespace SurimiController.Services
 
             while (current <= end)
             {
-                Console.WriteLine($"Processing step {current}...");
+                _logger.LogInformation($"Processing step {current}. Start with SpeciesPrices");
 
                 var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest());
 
@@ -75,15 +83,7 @@ namespace SurimiController.Services
                     SimulationId = request.SimulationId
                 };
 
-                marketReply.Prices.AddRange(speciesPriceResponse.Prices.Select(price => new SpeciesPrice
-                {
-                    SpeciesId = price.SpeciesId,
-                    Price = price.Price,
-                    Currency = price.Currency,
-                    MeasurementUnit = price.MeasurementUnit,
-                    PortId = price.PortId,
-                    Timestamp = Timestamp.FromDateTime(current)
-                }).ToList());
+                marketReply.Prices.AddRange(speciesPriceResponse.Prices);
 
                 var ecopathUpdatePricesReply = _ecopathWorkflowClient.UpdatePricesAsync(marketReply);
                 var poseidonUpdatePricesReply = _poseidonWorkflowClient.UpdatePricesAsync(marketReply);

@@ -18,7 +18,7 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
     public override Task<InitResponse> Init(InitRequest request, ServerCallContext context)
     {
         GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioId);
-        Console.WriteLine($"Ecopath Initializing scenario {request.ScenarioId}...");
+        _logger.LogInformation($"Ecopath Initializing scenario {request.ScenarioId}...");
         if (request.ScenarioId.ToLower().Equals("testecopath"))
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "ScenarioId cannot be 'testecopath'"));
@@ -32,7 +32,7 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
 
     public override Task<UpdatePricesResponse> UpdatePrices(UpdatePricesRequest list, ServerCallContext context)
     {
-        Console.WriteLine($"Updating prices for {list.Prices.Count} species...");
+        _logger.LogInformation($"Updating prices for {list.Prices.Count} species...");
 
         // Simulate some processing delay
         // test Test
@@ -43,7 +43,7 @@ public class EcopathWorkflowService : WorkflowService.WorkflowServiceBase
 
     public override Task<SimulateStepResponse> SimulateStep(SimulateStepRequest req, ServerCallContext context)
     {
-        Console.WriteLine($"Simulate step for simulation {req.SimulationId}");
+        _logger.LogInformation($"Simulate step for simulation {req.SimulationId}");
 
         // Simulate some processing delay
         //Task.Delay(1000).Wait();
