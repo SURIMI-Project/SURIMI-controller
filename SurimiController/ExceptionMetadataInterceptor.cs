@@ -14,6 +14,12 @@ namespace SurimiController
             {
                 return await continuation(request, context);
             }
+            catch (RpcException)
+            {
+                // If it's a known RpcException, we don't need to do anything special
+                // meta data is allready set
+                throw;
+            }
             catch (Exception ex)
             {
                 var status = new Status(StatusCode.Internal, ex.Message);
@@ -22,7 +28,7 @@ namespace SurimiController
                     { "method", context.Method },
                     { "application", typeof(Program).Assembly.GetName().Name }
                 };
-                throw new RpcException(status, metadata);
+                throw new RpcException(status);
             }
         }
     }
