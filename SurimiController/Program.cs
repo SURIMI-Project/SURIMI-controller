@@ -48,6 +48,23 @@ public class Program
             o.Address = new Uri(Environment.GetEnvironmentVariable("MARKET_URL")!);
         }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
 
+        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow", o =>
+        {
+            o.Address = new Uri(Environment.GetEnvironmentVariable("CMSY_URL")!);
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+
+        builder.Services.AddGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("CmsyStockAssessment", o =>
+        {
+            o.Address = new Uri(Environment.GetEnvironmentVariable("CMSY_URL")!);
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+
+        builder.Services.AddGrpcClient<AgentsService.AgentsServiceClient>("PoseidonAgents", o =>
+        {
+            o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+
+
+
         var app = builder.Build();
 
         app.MapDefaultEndpoints();
@@ -62,6 +79,7 @@ public class Program
         logger.LogInformation($"For Ecopath write to: {Environment.GetEnvironmentVariable("ECOPATH_URL")}");
         logger.LogInformation($"For Poseidon write to: {Environment.GetEnvironmentVariable("POSEIDON_URL")}");
         logger.LogInformation($"For Market write to: {Environment.GetEnvironmentVariable("MARKET_URL")}");
+        logger.LogInformation($"For CMSY write to: {Environment.GetEnvironmentVariable("CMSY_URL")}");
 
         app.Run();
     }

@@ -1,4 +1,5 @@
-﻿using Grpc.Core;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using System.Diagnostics;
@@ -15,8 +16,11 @@ namespace SurimiController.Services
         private readonly WorkflowService.WorkflowServiceClient _ecopathWorkflowClient;
         private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient;
         private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient;
+        private readonly WorkflowService.WorkflowServiceClient _cmsyWorkflowClient;
+        private readonly AgentsService.AgentsServiceClient _poseidonAgentsClient;
+        private readonly StockAssessmentService.StockAssessmentServiceClient _cmsyStockAssessmentClient;
 
-        public SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient, ILogger<SurimiControllerService> logger, EcologyService.EcologyServiceClient ecologyClient)
+        public SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient, ILogger<SurimiControllerService> logger, EcologyService.EcologyServiceClient ecologyClient, AgentsService.AgentsServiceClient poseidonAgentsClient, StockAssessmentService.StockAssessmentServiceClient stockAssessmentClient)
         {
             _activitySource = activitySource;
             _marketClient = marketClient;
@@ -24,7 +28,10 @@ namespace SurimiController.Services
             _ecopathWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow");
             _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
             _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
+            _cmsyWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow");
             _ecologyClient = ecologyClient;
+            _poseidonAgentsClient = poseidonAgentsClient;
+            _cmsyStockAssessmentClient = stockAssessmentClient;
         }
 
         public override async Task<InitSimulationResponse> InitSimulation(InitSimulationRequest init, ServerCallContext context)
@@ -54,12 +61,16 @@ namespace SurimiController.Services
             var marketReply = _marketWorkflowClient.InitAsync(initRequest);
             var ecopathReply = _ecopathWorkflowClient.InitAsync(initRequest);
             var poseidonReply = _poseidonWorkflowClient.InitAsync(initRequest);
+            var cmsyReply = _cmsyWorkflowClient.InitAsync(initRequest);
 
 
             activity?.AddEvent(new ActivityEvent("Start Init ecopath and poseidon"));
             await marketReply;
             await ecopathReply;
             await poseidonReply;
+            await cmsyReply;
+
+            var createStockAssessmentresponse = await _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = simulationId.ToString() });
 
             activity?.AddEvent(new ActivityEvent("Finished ecopoath and poseidon"));
             return new InitSimulationResponse() { SimulationId = simulationId.ToString() };
@@ -100,7 +111,11 @@ namespace SurimiController.Services
                     MeasurementUnit = getBiomassResponse.MeasurementUnit
                 };
                 updateBiomassRequest.BiomassGrids.AddRange(getBiomassResponse.BiomassGrids);
-                var poseidonupdateBiomassResponse = await _poseidonWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
+                var poseidonUpdateBiomassResponse = _poseidonWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
+                var cmsyUpdateBiomassResponse = _cmsyWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
+
+                await poseidonUpdateBiomassResponse;
+                await cmsyUpdateBiomassResponse;
 
                 _logger.LogInformation($"Processing step {current}. Move on with the SimulateStep");
                 var simulationStepRequest = new SimulateStepRequest()
@@ -108,16 +123,43 @@ namespace SurimiController.Services
                     SimulationId = request.SimulationId
                 };
 
-                var ecopathSimulateStelResponse = _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
-                var poseidonSimulateStelResponse = _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
-                var marketSimulateStelResponse = _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
+                var poseidonSimulateStepResponse = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
-                await ecopathSimulateStelResponse;
-                await poseidonSimulateStelResponse;
-                await marketSimulateStelResponse;
+                var poseidonGetSalesRequest = new GetSalesSummaryRequest()
+                {
+                    SimulationId = request.SimulationId,
+                    StartDateTime = Timestamp.FromDateTime(current),
+                    EndDateTime = Timestamp.FromDateTime(current.Add(stepSize))
+                };
+                var poseidonGetSalesResponse = await _poseidonAgentsClient.GetSalesSummaryAsync(poseidonGetSalesRequest);
+
+                // Request catches of Poseidon
+
+                // Update catches to EwE
+
+                // UpdateCatches to CMSY
+
+                // Request discards of Poseidon
+
+                // Update discards to EwE
+
+                var ecopathSimulateStepResponse = await _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
+
+                // Update Sales to Market
+               var updateSalesRequest = new UpdateSalesRequest()
+                {
+                    SimulationId = request.SimulationId,
+                };
+                updateSalesRequest.SalesSummaries.AddRange(poseidonGetSalesResponse.SalesSummaries);
+                var marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(updateSalesRequest);
+
+
+                var marketSimulateStepResponse = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
                 current = current.Add(stepSize);
             }
+            var createStockAssessmentresponse = await _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = request.SimulationId });
+
             return new RunSimulationResponse();
         }
     }
