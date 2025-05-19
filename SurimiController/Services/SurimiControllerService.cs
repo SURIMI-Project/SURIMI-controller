@@ -82,12 +82,11 @@ namespace SurimiController.Services
             _logger.LogInformation($"Running simulation...");
 
             var current = request.StartDateTime.ToDateTime();   // Start at startdatetime
-            var stepSize = XmlConvert.ToTimeSpan(request.StepSize);
             var end = current.Add(XmlConvert.ToTimeSpan(request.SimulationDuration));
 
             while (current <= end)
             {
-                _logger.LogInformation($"Processing step {current}. Start with SpeciesPrices");
+                _logger.LogInformation($"Processing step {current}. Market.GetSpeciesPrices");
 
                 var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = request.SimulationId });
 
@@ -99,11 +98,13 @@ namespace SurimiController.Services
 
                 var ecopathUpdatePricesReply = _ecopathWorkflowClient.UpdatePricesAsync(marketResponse);
                 var poseidonUpdatePricesReply = _poseidonWorkflowClient.UpdatePricesAsync(marketResponse);
+                _logger.LogInformation($"Processing step {current}. Ecopath.UpdatePrices");
                 await ecopathUpdatePricesReply;
+                _logger.LogInformation($"Processing step {current}. Poseidon.UpdatePrices");
                 await poseidonUpdatePricesReply;
 
-                _logger.LogInformation($"Processing step {current}. Continue with Biomass");
-                var getBiomassResponse = await _ecologyClient.GetBiomassAsync(new GetBiomassRequest(){ SimulationId = request.SimulationId });
+                _logger.LogInformation($"Processing step {current}. GetBiomass");
+                var getBiomassResponse = await _ecologyClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = request.SimulationId });
 
                 var updateBiomassRequest = new UpdateBiomassRequest()
                 {
@@ -114,23 +115,27 @@ namespace SurimiController.Services
                 var poseidonUpdateBiomassResponse = _poseidonWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
                 var cmsyUpdateBiomassResponse = _cmsyWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
 
+                _logger.LogInformation($"Processing step {current}. Poseidon.UpdateBiomass");
                 await poseidonUpdateBiomassResponse;
+
+                _logger.LogInformation($"Processing step {current}. CMSY++.UpdateBiomass");
                 await cmsyUpdateBiomassResponse;
 
-                _logger.LogInformation($"Processing step {current}. Move on with the SimulateStep");
+                _logger.LogInformation($"Processing step {current}. Poseidon.SimulateStep");
                 var simulationStepRequest = new SimulateStepRequest()
                 {
                     SimulationId = request.SimulationId
                 };
-
                 var poseidonSimulateStepResponse = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
                 var poseidonGetSalesRequest = new GetSalesSummaryRequest()
                 {
                     SimulationId = request.SimulationId,
                     StartDateTime = Timestamp.FromDateTime(current),
-                    EndDateTime = Timestamp.FromDateTime(current.Add(stepSize))
+                    EndDateTime = Timestamp.FromDateTime(AddStepSize(current, request.StepSize))
                 };
+
+                _logger.LogInformation($"Processing step {current}. Poseidon.GetSalesSummary");
                 var poseidonGetSalesResponse = await _poseidonAgentsClient.GetSalesSummaryAsync(poseidonGetSalesRequest);
 
                 // Request catches of Poseidon
@@ -143,24 +148,38 @@ namespace SurimiController.Services
 
                 // Update discards to EwE
 
+                _logger.LogInformation($"Processing step {current}. Ecopath.SimulateStep");
                 var ecopathSimulateStepResponse = await _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
                 // Update Sales to Market
-               var updateSalesRequest = new UpdateSalesRequest()
+                var updateSalesRequest = new UpdateSalesRequest()
                 {
                     SimulationId = request.SimulationId,
                 };
                 updateSalesRequest.SalesSummaries.AddRange(poseidonGetSalesResponse.SalesSummaries);
+                _logger.LogInformation($"Processing step {current}. Market.UpdateSales");
                 var marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(updateSalesRequest);
 
-
+                _logger.LogInformation($"Processing step {current}. Market.SimulateStep");
                 var marketSimulateStepResponse = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
-                current = current.Add(stepSize);
+                current = AddStepSize(current, request.StepSize);
             }
             var createStockAssessmentresponse = await _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = request.SimulationId });
 
             return new RunSimulationResponse();
+        }
+
+        private static DateTime AddStepSize(DateTime current, string input)
+        {
+            if (input.Length >= 2 && input.StartsWith('P') && input.EndsWith('M') && int.TryParse((input.Substring(1, input.Length - 2)), out int result))
+            {
+                return current.AddMonths(result);
+            }
+            else
+            {
+                return current + XmlConvert.ToTimeSpan(input);
+            }
         }
     }
 }
