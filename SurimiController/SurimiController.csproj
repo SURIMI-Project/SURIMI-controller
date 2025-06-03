@@ -27,6 +27,7 @@
     <Protobuf Include="..\proto\surimi\v1\agents.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
     <Protobuf Include="..\proto\surimi\v1\sales.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
     <Protobuf Include="..\proto\surimi\v1\stock_assessment.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
+    <Protobuf Include="..\proto\surimi\v1\disposition.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
   </ItemGroup>
 
 </Project>
