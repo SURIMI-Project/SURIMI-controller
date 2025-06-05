@@ -1,6 +1,7 @@
 using EwECore;
 using Grpc.Core;
 using Grpc.Surimi;
+using System.Reflection;
 
 namespace Ecopath.Services;
 
@@ -26,7 +27,7 @@ public class EcopathEcologyService : EcologyService.EcologyServiceBase
         };
         response.BiomassGrids.Add(new BiomassGrid()
         {
-            SpeciesId = "PIL"
+            SpeciesCode = "PIL"
         });
         response.BiomassGrids[0].BiomassCells.Add(new BiomassCell()
         {
@@ -36,7 +37,7 @@ public class EcopathEcologyService : EcologyService.EcologyServiceBase
         });
         response.BiomassGrids.Add(new BiomassGrid()
         {
-            SpeciesId = "BOG"
+            SpeciesCode = "BOG"
         });
         response.BiomassGrids[1].BiomassCells.Add(new BiomassCell()
         {
@@ -45,5 +46,13 @@ public class EcopathEcologyService : EcologyService.EcologyServiceBase
             Biomass = 2500.0f
         });
         return Task.FromResult(response);
+    }
+
+    public override Task<UpdateCatchDispositionSummaryResponse> UpdateCatchDispositionSummary(UpdateCatchDispositionSummaryRequest request, ServerCallContext context)
+    {
+        GrpcValidation.ArgumentNotNullOrEmpty(request.SimulationId);
+        GrpcValidation.ArgumentNotNullOrEmpty(request.MeasurementUnit);
+
+        return Task.FromResult(new UpdateCatchDispositionSummaryResponse());
     }
 }

@@ -10,17 +10,19 @@ namespace SurimiController.Services
     public class SurimiControllerService : ControllerService.ControllerServiceBase
     {
         private readonly MarketService.MarketServiceClient _marketClient;
-        private readonly EcologyService.EcologyServiceClient _ecologyClient;
+        private readonly EcologyService.EcologyServiceClient _ecopathEcologyClient;
+        private readonly EcologyService.EcologyServiceClient _cmsyEcologyClient;
         private readonly ILogger<SurimiControllerService> _logger;
         private readonly ActivitySource _activitySource;
         private readonly WorkflowService.WorkflowServiceClient _ecopathWorkflowClient;
         private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient;
         private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient;
         private readonly WorkflowService.WorkflowServiceClient _cmsyWorkflowClient;
-        private readonly AgentsService.AgentsServiceClient _poseidonAgentsClient;
+        private readonly FisheryService.FisheryServiceClient _poseidonFisheryClient;
+        private readonly FisheryService.FisheryServiceClient _ecopathFisheryClient;
         private readonly StockAssessmentService.StockAssessmentServiceClient _cmsyStockAssessmentClient;
 
-        public SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient, ILogger<SurimiControllerService> logger, EcologyService.EcologyServiceClient ecologyClient, AgentsService.AgentsServiceClient poseidonAgentsClient, StockAssessmentService.StockAssessmentServiceClient stockAssessmentClient)
+        public SurimiControllerService(GrpcClientFactory clientFactory, ActivitySource activitySource, MarketService.MarketServiceClient marketClient, ILogger<SurimiControllerService> logger, StockAssessmentService.StockAssessmentServiceClient stockAssessmentClient)
         {
             _activitySource = activitySource;
             _marketClient = marketClient;
@@ -29,8 +31,10 @@ namespace SurimiController.Services
             _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
             _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
             _cmsyWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow");
-            _ecologyClient = ecologyClient;
-            _poseidonAgentsClient = poseidonAgentsClient;
+            _ecopathEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("EcopathEcology");
+            _cmsyEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("CmsyEcology");
+            _poseidonFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("PoseidonFishery"); ;
+            _ecopathFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("EcopathFishery"); ;
             _cmsyStockAssessmentClient = stockAssessmentClient;
         }
 
@@ -112,8 +116,8 @@ namespace SurimiController.Services
                 _logger.LogInformation($"Processing step {current}. Ecopath.SimulateStep");
                 await _ecopathWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
-                _logger.LogInformation($"Processing step {current}. GetBiomass");
-                var getBiomassResponse = await _ecologyClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = request.SimulationId });
+                _logger.LogInformation($"Processing step {current}. Ecopath GetBiomass (intermediate)");
+                var getBiomassResponse = await _ecopathEcologyClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = request.SimulationId });
 
                 var updateBiomassRequest = new UpdateBiomassRequest()
                 {
@@ -122,13 +126,13 @@ namespace SurimiController.Services
                 };
                 updateBiomassRequest.BiomassGrids.AddRange(getBiomassResponse.BiomassGrids);
 
-                _logger.LogInformation($"Processing step {current}. Poseidon.UpdateBiomass");
+                _logger.LogInformation($"Processing step {current}. Poseidon.UpdateBiomass  (intermediate)");
                 var poseidonUpdateBiomassResponse = await _poseidonWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
 
                 _logger.LogInformation($"Processing step {current}. Poseidon.SimulateStep");
                 var poseidonSimulateStepResponse = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
-                var poseidonGetCatchDispositionRequest = new GetCatchDispositionSummaryRequest()
+                var getCatchDispositionRequest = new GetCatchDispositionSummaryRequest()
                 {
                     SimulationId = request.SimulationId,
                     StartDateTime = Timestamp.FromDateTime(current),
@@ -136,50 +140,63 @@ namespace SurimiController.Services
                 };
 
                 _logger.LogInformation($"Processing step {current}. Poseidon.GetCatchDisposition");
-                var poseidonGetSalesResponse = await _poseidonAgentsClient.GetCatchDispositionSummaryAsync(poseidonGetCatchDispositionRequest);
+                var poseidonCatchDispositionSummary = await _poseidonFisheryClient.GetCatchDispositionSummaryAsync(getCatchDispositionRequest);
 
+                var updateCatchDispositionSummaryRequest = new UpdateCatchDispositionSummaryRequest()
+                {
+                    SimulationId = request.SimulationId,
+                    MeasurementUnit = poseidonCatchDispositionSummary.MeasurementUnit
+                };
+                updateCatchDispositionSummaryRequest.DispositionGrids.AddRange(poseidonCatchDispositionSummary.DispositionGrids);
 
+                _logger.LogInformation($"Processing step {current}. Ecopath.UpdateCatchDisposition Summary");
+                var catchDispositionResponse = await _ecopathEcologyClient.UpdateCatchDispositionSummaryAsync(updateCatchDispositionSummaryRequest);
 
+                _logger.LogInformation($"Processing step {current}. Ecopath GetBiomass (total)");
+                getBiomassResponse = await _ecopathEcologyClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = request.SimulationId });
 
-                var cmsyUpdateBiomassResponse = _cmsyWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
+                updateBiomassRequest.BiomassGrids.Clear();
+                updateBiomassRequest.BiomassGrids.AddRange(getBiomassResponse.BiomassGrids);
+                _logger.LogInformation($"Processing step {current}. CMSY++.UpdateBiomass (total)");
+                var cmsyUpdateBiomassResponse = await _cmsyWorkflowClient.UpdateBiomassAsync(updateBiomassRequest);
 
+                _logger.LogInformation($"Processing step {current}. Ecopath.GetCatchDisposition");
+                var ecopathCatchDispositionSummary = await _ecopathFisheryClient.GetCatchDispositionSummaryAsync(getCatchDispositionRequest);
 
-                _logger.LogInformation($"Processing step {current}. CMSY++.UpdateBiomass");
-                await cmsyUpdateBiomassResponse;
+                updateCatchDispositionSummaryRequest.DispositionGrids.Clear();
+                updateCatchDispositionSummaryRequest.DispositionGrids.AddRange(ecopathCatchDispositionSummary.DispositionGrids);
+                _logger.LogInformation($"Processing step {current}. CMSY UpdateCatchDisposition (total)");
+                _cmsyEcologyClient.UpdateCatchDispositionSummary(updateCatchDispositionSummaryRequest);
 
-
-
-
-
-                var poseidonGetSalesRequest = new GetSalesSummaryRequest()
+                var getSalesRequest = new GetSalesSummaryRequest()
                 {
                     SimulationId = request.SimulationId,
                     StartDateTime = Timestamp.FromDateTime(current),
                     EndDateTime = Timestamp.FromDateTime(AddStepSize(current, request.StepSize))
                 };
 
-                _logger.LogInformation($"Processing step {current}. Poseidon.GetSalesSummary");
-                var poseidonGetSalesResponse = await _poseidonAgentsClient.GetSalesSummaryAsync(poseidonGetSalesRequest);
-
-                // Request catches of Poseidon
-
-                // Update catches to EwE
-
-                // UpdateCatches to CMSY
-
-                // Request discards of Poseidon
-
-                // Update discards to EwE
-
+                _logger.LogInformation($"Processing step {current}. Ecopath.GetSalesSummary");
+                var ecopathGetSalesResponse = await _ecopathFisheryClient.GetSalesSummaryAsync(getSalesRequest);
 
                 // Update Sales to Market
                 var updateSalesRequest = new UpdateSalesRequest()
                 {
                     SimulationId = request.SimulationId,
                 };
-                updateSalesRequest.SalesSummaries.AddRange(poseidonGetSalesResponse.SalesSummaries);
-                _logger.LogInformation($"Processing step {current}. Market.UpdateSales");
+                updateSalesRequest.SalesSummaries.AddRange(ecopathGetSalesResponse.SalesSummaries);
+                _logger.LogInformation($"Processing step {current}. Market.UpdateSales from Ecopath");
                 var marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(updateSalesRequest);
+
+                _logger.LogInformation($"Processing step {current}. Poseidon.GetSalesSummary");
+                var poseidonGetSalesResponse = await _poseidonFisheryClient.GetSalesSummaryAsync(getSalesRequest);
+
+                updateSalesRequest.SalesSummaries.Clear();
+                updateSalesRequest.SalesSummaries.AddRange(poseidonGetSalesResponse.SalesSummaries);
+                _logger.LogInformation($"Processing step {current}. Market.UpdateSales from Poseidon");
+                marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(updateSalesRequest);
+
+                _logger.LogInformation($"Processing step {current}. CMSY.SimulateStep");
+                var cmsySimulateStepResponse = await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
                 _logger.LogInformation($"Processing step {current}. Market.SimulateStep");
                 var marketSimulateStepResponse = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);

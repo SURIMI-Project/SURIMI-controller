@@ -7,7 +7,7 @@ var market = builder.AddContainer("market", "rikkert242/market", "latest")
     .WithHttpEndpoint(port: 5001, targetPort: 5001, name: "market");
 
 var cmsy = builder.AddContainer("cmsy", "rikkert242/cmsy", "latest")
-    .WithHttpEndpoint(port: 50201, targetPort: 50201, name: "cmsy");
+    .WithHttpEndpoint(port: 5020, targetPort: 5020, name: "cmsy");
 
 var ecopath = builder.AddProject<Projects.Ecopath>("ecopath");
 
@@ -16,7 +16,7 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
     .WithReference(ecopath)
     .WithEnvironment("POSEIDON_URL", "http://localhost:50051")      // I don't know why you can't use http://poseidon:50051 in this place... but this also works
     .WithEnvironment("MARKET_URL", "http://localhost:5001")         // idem. Didn't test
-    .WithEnvironment("CMSY_URL", "http://localhost:50201")
+    .WithEnvironment("CMSY_URL", "http://localhost:5020")
     .WithEnvironment("ECOPATH_URL", "http://ecopath:8080");
 
 builder.AddProject<Projects.SurimiGUI>("surimigui")

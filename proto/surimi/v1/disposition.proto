@@ -8,13 +8,13 @@ option java_package = "eu.project.surimi";
 message DispositionGrid {
   string gear_code = 1;
   string species_code = 2; // 3-alpha code of https://www.fao.org/fishery/en/collection/asfis
-  repeated DispositionCell biomass_cells = 3;
+  repeated DispositionCell disposition_cells = 3;
 }
 
 message DispositionCell {// center of the cell
   double longitude = 1;
   double latitude = 2;
-  double gross_catch_biomass = 3;
-  double live_discards_biomass = 4;
-  double dead_discards_biomass = 5;
+  double gross_catch = 3;
+  double live_discards = 4;
+  double dead_discards = 5;
 }

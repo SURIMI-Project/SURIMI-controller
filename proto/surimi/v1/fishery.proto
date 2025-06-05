@@ -5,7 +5,7 @@ package surimi.v1;
 import "google/protobuf/timestamp.proto";
 import "surimi/v1/disposition.proto";
 import "surimi/v1/sales.proto";
-
+  
 option csharp_namespace = "Grpc.Surimi";
 option java_package = "eu.project.surimi";
 
@@ -30,7 +30,7 @@ message GetCatchDispositionSummaryResponse {
   repeated DispositionGrid disposition_grids = 2;
 }
 
-service AgentsService {
+service FisheryService {
   rpc GetSalesSummary(GetSalesSummaryRequest) returns (GetSalesSummaryResponse);
   rpc GetCatchDispositionSummary(GetCatchDispositionSummaryRequest) returns (GetCatchDispositionSummaryResponse);
 }
