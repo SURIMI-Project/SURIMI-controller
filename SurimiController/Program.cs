@@ -33,6 +33,11 @@ public class Program
             o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
         }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
 
+        builder.Services.AddGrpcClient<EcologyService.EcologyServiceClient>("CmsyEcology", o =>
+        {
+            o.Address = new Uri(Environment.GetEnvironmentVariable("CMSY_URL")!);
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+
         builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);
@@ -58,11 +63,15 @@ public class Program
             o.Address = new Uri(Environment.GetEnvironmentVariable("CMSY_URL")!);
         }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
 
-        builder.Services.AddGrpcClient<AgentsService.AgentsServiceClient>("PoseidonAgents", o =>
+        builder.Services.AddGrpcClient<FisheryService.FisheryServiceClient>("PoseidonFishery", o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);
         }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
 
+        builder.Services.AddGrpcClient<FisheryService.FisheryServiceClient>("EcopathFishery", o =>
+        {
+            o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
+        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
 
 
         var app = builder.Build();

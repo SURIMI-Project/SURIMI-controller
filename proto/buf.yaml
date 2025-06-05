@@ -1,0 +1,10 @@
+version: v2
+name: github.com/nicolaspayette/surimi_protocol
+
+lint:
+  use:
+    - STANDARD
+
+breaking:
+  use:
+    - FILE
