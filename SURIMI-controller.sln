@@ -5,8 +5,6 @@ VisualStudioVersion = 17.13.35818.85
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurimiController", "SurimiController\SurimiController.csproj", "{3550461E-31C4-446D-B3BF-9C2E7C0BC517}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ecopath", "Ecopath\Ecopath.csproj", "{14E5A49C-3EC7-4764-BD3A-EAC853A8DA01}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurimiGUI", "SurimiGUI\SurimiGUI.csproj", "{2C6FD099-D3B6-429B-94BA-69177D06BB5B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SURIMI.AppHost", "SURIMI.AppHost\SURIMI.AppHost.csproj", "{43B6C22B-12F9-403A-A147-79ADBB851072}"
@@ -31,10 +29,6 @@ Global
 		{3550461E-31C4-446D-B3BF-9C2E7C0BC517}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3550461E-31C4-446D-B3BF-9C2E7C0BC517}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3550461E-31C4-446D-B3BF-9C2E7C0BC517}.Release|Any CPU.Build.0 = Release|Any CPU
-		{14E5A49C-3EC7-4764-BD3A-EAC853A8DA01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{14E5A49C-3EC7-4764-BD3A-EAC853A8DA01}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{14E5A49C-3EC7-4764-BD3A-EAC853A8DA01}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{14E5A49C-3EC7-4764-BD3A-EAC853A8DA01}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2C6FD099-D3B6-429B-94BA-69177D06BB5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2C6FD099-D3B6-429B-94BA-69177D06BB5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C6FD099-D3B6-429B-94BA-69177D06BB5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -50,10 +44,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{0F7992FD-DF72-4A0C-B0B3-454A2C0F88A7} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{0E6E3315-53F8-427C-874B-E5ACE13FFDA6} = {0F7992FD-DF72-4A0C-B0B3-454A2C0F88A7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EB1BE4EF-6413-43EE-B00C-E49FA557AD9D}
