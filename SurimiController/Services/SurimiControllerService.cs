@@ -74,7 +74,7 @@ namespace SurimiController.Services
             await poseidonResponse;
             await cmsyResponse;
 
-            var createStockAssessmentresponse = await _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = simulationId.ToString() });
+            var createStockAssessmentresponse = _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = simulationId.ToString() });
 
             activity?.AddEvent(new ActivityEvent("Finished ecopoath and poseidon"));
             return new InitSimulationResponse() { SimulationId = simulationId.ToString() };
@@ -203,7 +203,7 @@ namespace SurimiController.Services
 
                 current = AddStepSize(current, request.StepSize);
             }
-            var createStockAssessmentresponse = await _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = request.SimulationId });
+            var createStockAssessmentresponse = _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = request.SimulationId });
 
             return new RunSimulationResponse();
         }
