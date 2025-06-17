@@ -94,11 +94,12 @@ namespace SurimiController.Services
 
                 var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = request.SimulationId });
 
-                var updatePriceRequest = new UpdatePricesRequest
-                {
-                    SimulationId = request.SimulationId
-                };
-                updatePriceRequest.Prices.AddRange(speciesPriceResponse.Prices);
+                //var updatePriceRequest = new UpdatePricesRequest
+                //{
+                //    SimulationId = request.SimulationId
+                //};
+                //updatePriceRequest.Prices.AddRange(speciesPriceResponse.Prices);
+                var updatePriceRequest = CreateUpdatePricesRequest(speciesPriceResponse, request.SimulationId);
 
                 var ecopathUpdatePricesResponse = _ecopathWorkflowClient.UpdatePricesAsync(updatePriceRequest);
                 var poseidonUpdatePricesResponse = _poseidonWorkflowClient.UpdatePricesAsync(updatePriceRequest);
@@ -218,6 +219,15 @@ namespace SurimiController.Services
             {
                 return current + XmlConvert.ToTimeSpan(input);
             }
+        }
+
+        public static UpdatePricesRequest CreateUpdatePricesRequest(GetSpeciesPricesResponse response, string simulationId)
+        {
+            return new UpdatePricesRequest
+            {
+                SimulationId = simulationId,
+                Prices = { response.Prices }
+            };
         }
     }
 }
