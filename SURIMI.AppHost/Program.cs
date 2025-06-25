@@ -9,7 +9,9 @@ var market = builder.AddContainer("market", "rikkert242/market", "latest")
 var cmsy = builder.AddContainer("cmsy", "rikkert242/cmsy", "latest")
     .WithHttpEndpoint(port: 5020, targetPort: 5020, name: "cmsy");
 
-//var ecopath = builder.AddProject<Projects.Ecopath>("ecopath");
+//var ecopath = builder.AddProject<Projects.Ecopath>("ecopath")
+//    .WithReplicas(5);
+
 var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
     .WithHttpEndpoint(port: 7890, targetPort: 8080, name: "ecopath");
 
