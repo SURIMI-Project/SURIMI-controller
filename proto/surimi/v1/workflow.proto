@@ -20,6 +20,12 @@ message InitRequest {
 
 message InitResponse {}
 
+message FinalizeRequest {
+  string simulation_id = 1;
+}
+
+message FinalizeResponse {}
+
 message UpdatePricesRequest {
   string simulation_id = 1;
   repeated SpeciesPrice prices = 2;
@@ -46,4 +52,5 @@ service WorkflowService {
   rpc UpdatePrices(UpdatePricesRequest) returns (UpdatePricesResponse);
   rpc SimulateStep(SimulateStepRequest) returns (SimulateStepResponse);
   rpc UpdateBiomass(UpdateBiomassRequest) returns (UpdateBiomassResponse);
+  rpc Finalize(FinalizeRequest) returns (FinalizeResponse);
 }

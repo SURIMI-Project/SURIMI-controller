@@ -22,11 +22,6 @@ public class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
 
-        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>(o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("CONTROLLER_URL")!);
-        });
-
         builder.Services.AddGrpcClient<ControllerService.ControllerServiceClient>(o =>
         {
             o.Address = new Uri(Environment.GetEnvironmentVariable("CONTROLLER_URL")!);
@@ -52,7 +47,9 @@ public class Program
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode();
 
-        Console.WriteLine($"For the Controller write to: {Environment.GetEnvironmentVariable("CONTROLLER_URL")}");
+        // Retrieve the logger
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation($"For the Controller write to: {Environment.GetEnvironmentVariable("CONTROLLER_URL")}");
 
         app.Run();
     }

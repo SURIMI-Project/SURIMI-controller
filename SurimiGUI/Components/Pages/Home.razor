@@ -3,6 +3,7 @@
 @using SurimiGUI.Services
 @using System.Diagnostics
 @inject ActivitySource MyActivitySource
+@implements IDisposable
 
 <PageTitle>Home</PageTitle>
 
@@ -62,48 +63,74 @@ else
                         class="btn btn-primary"
                         style="width: 155px"
                         disabled="@isInitLoading">
-                    Init
+                    Submit
                 </button>
                 @if (isInitLoading)
                 {
                     <span class="spinner-border spinner-border-sm text-primary ms-2" role="status" aria-hidden="true"></span>
                 }
             </div>
-            <div class="d-flex align-items-center">
-                <button type="button"
-                        class="btn btn-secondary"
-                        style="width: 155px"
-                        disabled="@isStartLoading"
-                        @onclick="HandleStartSimulation">
-                    Start Simulation
-                </button>
-                @if (isStartLoading)
-                {
-                    <span class="spinner-border spinner-border-sm text-secondary ms-2" role="status" aria-hidden="true"></span>
-                }
-            </div>
-            <div class="d-flex align-items-center">
-                <button type="button"
-                        class="btn btn-danger"
-                        style="width: 155px"
-                        disabled="@(!isStartLoading)"
-                        @onclick="HandleCancelSimulation">
-                    Cancel Simulation
-                </button>
-            </div>
         </div>
         <div class="col-7">
             Response: @result
         </div>
     </EditForm>
+
+    <h3 class="mt-4">Simulations</h3>
+    @if (simulations == null)
+    {
+        <p><em>Loading simulations...</em></p>
+    }
+    else if (simulations.Count == 0)
+    {
+        <p><em>No simulations found.</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Simulation Id</th>
+                    <th>Scenario Id</th>
+                    <th>Start Date</th>
+                    <th>Step Size</th>
+                    <th>Status</th>
+                    <th>Simulation Created</th>
+                    <th>Simulation Current</th>
+                    <th>IP</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sim in simulations)
+                {
+                    <tr>
+                        <td>@sim.SimulationId</td>
+                        <td>@sim.ScenarioId</td>
+                        <td>@sim.StartDateTime.ToShortDateString()</td>
+                        <td>@sim.StepSize</td>
+                        <td>@sim.Status</td>
+                        <td>@sim.SimulationCreated?.ToString("g")</td>
+                        <td>@sim.SimulationCurrent?.ToString("dd-MM-yyyy")</td>
+                        <td>@sim.IP</td>
+                        <td>
+                            <a href="#" class="btn btn-link btn-sm" @onclick="() => StartSimulationFor(sim)">Start</a>
+                            <a href="#" class="btn btn-link btn-sm text-danger" @onclick="() => CancelSimulationFor(sim)">Cancel</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }
 
 @code {
     private bool isInitLoading = false;
-    private bool isStartLoading = false;
     private SimulationConfig? config { get; set; }
+    private List<Simulation>? simulations { get; set; } = new List<Simulation>();
     private string result = "";
     CancellationTokenSource cts = new CancellationTokenSource();
+    private System.Threading.Timer? _refreshTimer;
 
     [Inject]
     private SurimiGUIControllerService? controllerService { get; set; }
@@ -111,6 +138,7 @@ else
     protected override void OnInitialized()
     {
         config = new SimulationConfig();
+        StartRefreshTimer();
     }
 
     async Task HandleInit()
@@ -125,11 +153,13 @@ else
                 {
                     activity?.SetTag("ScenarioId", config.ScenarioId);
                     result = "";
-                    config.SimulationId = "";
+                    config.SimulationId = Guid.NewGuid().ToString();
                     var res = await controllerService.Init(config, cts.Token);
                     if (Guid.TryParse(res, out Guid simres))
                     {
                         config.SimulationId = res;
+                        // Fetch updated simulations list after successful init
+                        simulations = await controllerService.GetAllSimulations(cts.Token);
                         result = $"OK";
                     }
                     else
@@ -140,7 +170,7 @@ else
             }
             catch (Exception ex)
             {
-                result = ex.Message;
+                result = $"Exception: {ex.Message}";
             }
             finally
             {
@@ -151,40 +181,115 @@ else
     }
 
 
-    async Task HandleStartSimulation()
-    {
-        if (config != null && controllerService != null)
-        {
-            isStartLoading = true;
-            StateHasChanged();
+    // async Task HandleStartSimulation()
+    // {
+    //     if (config != null && controllerService != null)
+    //     {
+    //         isStartLoading = true;
+    //         StateHasChanged();
 
+    //         try
+    //         {
+    //             using (var activity = MyActivitySource.StartActivity("HandleStartSimulation"))
+    //             {
+    //                 activity?.SetTag("SimulationId", config.SimulationId);
+    //                 cts = new CancellationTokenSource();
+    //                 result = "";
+    //                 result = await controllerService.RunSimulation(config, cts.Token);
+    //             }
+    //         }
+    //         catch (Exception ex)
+    //         {
+    //             result = ex.Message;
+    //         }
+    //         finally
+    //         {
+    //             isStartLoading = false;
+    //             StateHasChanged();
+    //         }
+    //     }
+    // }
+
+    // void HandleCancelSimulation()
+    // {
+    //     using (var activity = MyActivitySource.StartActivity("HandleCancelSimulation"))
+    //     {
+    //         cts.Cancel();
+    //     }
+    // }
+
+    async Task StartSimulationFor(Simulation sim)
+    {
+        if (controllerService != null)
+        {
+            var simConfig = new SimulationConfig
+            {
+                ScenarioId = sim.ScenarioId,
+                StartDateTime = sim.StartDateTime,
+                StepSize = sim.StepSize,
+                SimulationDuration = config?.SimulationDuration ?? "1 month",
+                SimulationId = sim.SimulationId
+            };
             try
             {
-                using (var activity = MyActivitySource.StartActivity("HandleStartSimulation"))
+                using (var activity = MyActivitySource.StartActivity("StartSimulationFor"))
                 {
-                    activity?.SetTag("SimulationId", config.SimulationId);
-                    cts = new CancellationTokenSource();
+                    activity?.SetTag("SimulationId", sim.SimulationId);
                     result = "";
-                    result = await controllerService.RunSimulation(config, cts.Token);
+                    result = await controllerService.RunSimulation(simConfig, CancellationToken.None);
+                    // Optionally refresh simulations list
+                    simulations = await controllerService.GetAllSimulations(CancellationToken.None);
                 }
             }
             catch (Exception ex)
             {
                 result = ex.Message;
             }
-            finally
+            StateHasChanged();
+        }
+    }
+
+    void CancelSimulationFor(Simulation sim)
+    {
+        using (var activity = MyActivitySource.StartActivity("CancelSimulationFor"))
+        {
+            // This is a placeholder. Actual cancellation logic may require tracking tokens per simulation.
+            cts.Cancel();
+            result = $"Cancel requested for {sim.SimulationId}";
+        }
+        StateHasChanged();
+    }
+
+    private void StartRefreshTimer()
+    {
+        _refreshTimer = new System.Threading.Timer(async _ =>
+        {
+            await RefreshSimulations();
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+    }
+
+    private async Task RefreshSimulations()
+    {
+        if (controllerService != null)
+        {
+            try
             {
-                isStartLoading = false;
-                StateHasChanged();
+                var sims = await controllerService.GetAllSimulations(CancellationToken.None);
+                await InvokeAsync(() =>
+                {
+                    simulations = sims;
+                    StateHasChanged();
+                });
+            }
+            catch
+            {
+                // Optionally handle errors
             }
         }
     }
 
-    void HandleCancelSimulation()
+    public void Dispose()
     {
-        using (var activity = MyActivitySource.StartActivity("HandleCancelSimulation"))
-        {
-            cts.Cancel();
-        }
+        _refreshTimer?.Dispose();
     }
 }

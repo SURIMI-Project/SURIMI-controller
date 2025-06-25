@@ -23,56 +23,19 @@ public class Program
             options.Interceptors.Add<ExceptionMetadataInterceptor>();
         });
 
-        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
+        // Use the helper for all your gRPC clients
+//        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow", "ECOPATH_URL");
+//        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("EcopathEcology", "ECOPATH_URL");
+        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("CmsyEcology", "CMSY_URL");
+        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", "POSEIDON_URL");
+        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", "MARKET_URL");
+        AddConfiguredGrpcClient<MarketService.MarketServiceClient>(null, "MARKET_URL");
+        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow", "CMSY_URL");
+        AddConfiguredGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("CmsyStockAssessment", "CMSY_URL");
+        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("PoseidonFishery", "POSEIDON_URL");
+//        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("EcopathFishery", "ECOPATH_URL");
 
-        builder.Services.AddGrpcClient<EcologyService.EcologyServiceClient>("EcopathEcology", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
-        builder.Services.AddGrpcClient<EcologyService.EcologyServiceClient>("CmsyEcology", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("CMSY_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
-        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
-        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("MARKET_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
-        builder.Services.AddGrpcClient<MarketService.MarketServiceClient>(o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("MARKET_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
-        builder.Services.AddGrpcClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("CMSY_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
-        builder.Services.AddGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("CmsyStockAssessment", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("CMSY_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
-        builder.Services.AddGrpcClient<FisheryService.FisheryServiceClient>("PoseidonFishery", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("POSEIDON_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
-        builder.Services.AddGrpcClient<FisheryService.FisheryServiceClient>("EcopathFishery", o =>
-        {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("ECOPATH_URL")!);
-        }).EnableCallContextPropagation();  // propagates deadlines and cancellation tokens
-
+        builder.Services.AddSingleton<SimulationDispatcher>();
 
         var app = builder.Build();
 
@@ -91,5 +54,37 @@ public class Program
         logger.LogInformation($"For CMSY write to: {Environment.GetEnvironmentVariable("CMSY_URL")}");
 
         app.Run();
+
+
+        // Local helper function for registering gRPC clients
+        void AddConfiguredGrpcClient<TClient>(string? name, string envVar)
+            where TClient : class
+        {
+            var baseAddress = Environment.GetEnvironmentVariable(envVar);
+            if (string.IsNullOrWhiteSpace(baseAddress))
+            {
+                throw new InvalidOperationException($"Environment variable '{envVar}' is not set.");
+            }
+
+            var registration = name != null
+                ? builder.Services.AddGrpcClient<TClient>(name, o =>
+                {
+                    o.Address = new Uri(baseAddress);
+                })
+                : builder.Services.AddGrpcClient<TClient>(o =>
+                {
+                    o.Address = new Uri(baseAddress);
+                });
+
+            registration.ConfigureChannel(options =>
+            {
+                options.Credentials = Grpc.Core.ChannelCredentials.Insecure;
+                options.HttpHandler = new SocketsHttpHandler
+                {
+                    EnableMultipleHttp2Connections = true
+                };
+            })
+            .EnableCallContextPropagation();
+        }
     }
 }
