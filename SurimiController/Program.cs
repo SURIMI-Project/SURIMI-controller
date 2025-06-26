@@ -24,16 +24,18 @@ public class Program
         });
 
         // Use the helper for all your gRPC clients
-//        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("EcopathWorkflow", "ECOPATH_URL");
-//        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("EcopathEcology", "ECOPATH_URL");
-        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("CmsyEcology", "CMSY_URL");
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", "POSEIDON_URL");
+        AddConfiguredGrpcClient<MarketService.MarketServiceClient>("PoseidonMarket", "POSEIDON_URL");
+        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("PoseidonFishery", "POSEIDON_URL");
+        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("PoseidonEcology", "POSEIDON_URL");
+
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", "MARKET_URL");
         AddConfiguredGrpcClient<MarketService.MarketServiceClient>(null, "MARKET_URL");
+
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow", "CMSY_URL");
+        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("CmsyEcology", "CMSY_URL");
+        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("CmsyFishery", "CMSY_URL");
         AddConfiguredGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("CmsyStockAssessment", "CMSY_URL");
-        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("PoseidonFishery", "POSEIDON_URL");
-//        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("EcopathFishery", "ECOPATH_URL");
 
         builder.Services.AddSingleton<SimulationDispatcher>();
 
