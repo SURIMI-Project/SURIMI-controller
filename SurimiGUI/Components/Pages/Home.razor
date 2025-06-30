@@ -154,6 +154,7 @@ else
                     activity?.SetTag("ScenarioId", config.ScenarioId);
                     result = "";
                     config.SimulationId = Guid.NewGuid().ToString();
+                    config.StartDateTime = config.StartDateTime.ToUniversalTime().Date; // to set the kind to UTC
                     var res = await controllerService.Init(config, cts.Token);
                     if (Guid.TryParse(res, out Guid simres))
                     {
