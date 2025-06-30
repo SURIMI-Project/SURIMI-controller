@@ -295,7 +295,7 @@ namespace SurimiController.Services
                     {
                         new BiomassGrid()
                         {
-                            SpeciesCode = getBiomassResponse.BiomassSummary.BiomassGrids.First().SpeciesCode
+                            SpeciesCode = "PIL"
                         }
                     }
                 }
