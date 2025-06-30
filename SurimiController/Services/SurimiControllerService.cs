@@ -125,12 +125,12 @@ namespace SurimiController.Services
             _ecopathSimDispatcher.ReleasePodFromSimulation(request.SimulationId);
 
             var marketFinaliseResponse = _marketWorkflowClient.FinaliseAsync(finaliseRequest);
-            var poseidonFinaliseResponse = _poseidonWorkflowClient.FinaliseAsync(finaliseRequest);
+            //var poseidonFinaliseResponse = _poseidonWorkflowClient.FinaliseAsync(finaliseRequest);
             var cmsyFinaliseResponse = _cmsyWorkflowClient.FinaliseAsync(finaliseRequest);
 
             await ecopathFinaliseResponse;
             await marketFinaliseResponse;
-            await poseidonFinaliseResponse;
+            //await poseidonFinaliseResponse;
             await cmsyFinaliseResponse;
 
             _simulations[request.SimulationId].Status = "Finished";
@@ -193,6 +193,8 @@ namespace SurimiController.Services
             LogStep(current, "Ecopath GetBiomass (intermediate)");
             var getBiomassResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = request.SimulationId }, request.SimulationId,
                 (client, req) => client.GetBiomassAsync(req));
+
+            getBiomassResponse = GetTestBiomassIntermediate(getBiomassResponse);
 
             var updateBiomassIntermediateRequest = new UpdateBiomassRequest()
             {
@@ -279,6 +281,50 @@ namespace SurimiController.Services
 
             LogStep(current, "Market.SimulateStep");
             var marketSimulateStepResponse = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest);
+        }
+
+        private GetBiomassResponse GetTestBiomassIntermediate(GetBiomassResponse getBiomassResponse)
+        {
+            var response = new GetBiomassResponse
+            {
+                SimulationId = getBiomassResponse.SimulationId,
+                BiomassSummary = new BiomassSummary()
+                {
+                    MeasurementUnit = getBiomassResponse.BiomassSummary.MeasurementUnit,
+                    BiomassGrids =
+                    {
+                        new BiomassGrid()
+                        {
+                            SpeciesCode = getBiomassResponse.BiomassSummary.BiomassGrids.First().SpeciesCode
+                        }
+                    }
+                }
+            };
+            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell() 
+            {
+                Longitude = 3.854550141823501,
+                Latitude = 43.4696509055585,
+                Biomass = 234.58345446064777
+            });
+            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell()
+            {
+                Longitude = 3.9378501437425006,
+                Latitude = 43.4696509055585,
+                Biomass = 234.49611350085252
+            });
+            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell()
+            {
+                Longitude = 4.021150145661501,
+                Latitude = 43.4696509055585,
+                Biomass = 234.31994639839104
+            });
+            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell()
+            {
+                Longitude = 4.104450147580501,
+                Latitude = 43.4696509055585,
+                Biomass = 234.03908407601193
+            });
+            return response;
         }
 
         private void LogStep(DateTime current, string step)
