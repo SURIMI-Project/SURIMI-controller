@@ -9,26 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" Version="2.70.0" />
+    <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.73.10101-20250630081951-7db8eb8b4db1" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SURIMI.ServiceDefaults\SURIMI.ServiceDefaults.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Protobuf Include="..\proto\surimi\v1\species_price.proto" ProtoRoot="..\proto\" />
-    <Protobuf Include="..\proto\surimi\v1\disposition.proto" ProtoRoot="..\proto\" />
-    <Protobuf Include="..\proto\surimi\v1\biomass.proto" ProtoRoot="..\proto\" />
-    <Protobuf Include="..\proto\surimi\v1\sales.proto" ProtoRoot="..\proto\" />
-	<Protobuf Include="..\proto\surimi\v1\simulation.proto" ProtoRoot="..\proto\" />
-    <Protobuf Include="..\proto\surimi\v1\workflow.proto" ProtoRoot="..\proto\" />
-    <Protobuf Include="..\proto\surimi\v1\market.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
-    <Protobuf Include="..\proto\surimi\v1\ecology.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
-    <Protobuf Include="..\proto\surimi\v1\controller.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
-    <Protobuf Include="..\proto\surimi\v1\fishery.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
-    <Protobuf Include="..\proto\surimi\v1\stock_assessment.proto" ProtoRoot="..\proto\" GrpcServices="Both" />
   </ItemGroup>
 
 </Project>
