@@ -30,26 +30,15 @@ namespace SurimiGUI.Services
                         ScenarioId = config.ScenarioId,
                         StartDateTime = Timestamp.FromDateTime(config.StartDateTime),
                         StepSize = config.StepSize,
-                        SimulationId = config.SimulationId
+                        SimulationId = config.SimulationId,
+                        SimulationDuration = config.SimulationDuration
                     }
                 },
                 cancellationToken: token);
             }
             catch (RpcException ex)
             {
-                var error = new StringBuilder();
-                error.AppendLine($"Server error: {ex.Status.Detail}");
-                var badRequest = ex.GetRpcStatus()?.GetDetail<BadRequest>();
-                if (badRequest != null)
-                {
-                    foreach (var fieldViolation in badRequest.FieldViolations)
-                    {
-                        error.AppendLine($"Field: {fieldViolation.Field}");
-                        error.AppendLine($"Description: {fieldViolation.Description}");
-                    }
-                }
-                error.Append($" Method: {ex.Trailers.GetValue("method")} Application: {ex.Trailers.GetValue("application")}");
-                return error.ToString();
+                return CreateErrorStringFromGrpcException(ex);
             }
             catch (Exception ex)
             {
@@ -64,29 +53,11 @@ namespace SurimiGUI.Services
         {
             try
             {
-                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest()
-                {
-                    StartDateTime = Timestamp.FromDateTime(config.StartDateTime.ToUniversalTime()),
-                    StepSize = config.StepSize,
-                    SimulationDuration = config.SimulationDuration,
-                    SimulationId = config.SimulationId
-                }, cancellationToken: token);
+                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() { SimulationId = config.SimulationId }, cancellationToken: token);
             }
             catch (RpcException ex)
             {
-                var error = new StringBuilder();
-                error.AppendLine($"Server error: {ex.Status.Detail}");
-                var badRequest = ex.GetRpcStatus()?.GetDetail<BadRequest>();
-                if (badRequest != null)
-                {
-                    foreach (var fieldViolation in badRequest.FieldViolations)
-                    {
-                        error.AppendLine($"Field: {fieldViolation.Field}");
-                        error.AppendLine($"Description: {fieldViolation.Description}");
-                    }
-                }
-                error.Append($" Method: {ex.Trailers.GetValue("method")} Application: {ex.Trailers.GetValue("application")}");
-                return error.ToString();
+                return CreateErrorStringFromGrpcException(ex);
             }
             catch (Exception ex)
             {
@@ -96,7 +67,25 @@ namespace SurimiGUI.Services
             return "OK";
         }
 
-        public async Task<List<Models.Simulation>> GetAllSimulations(CancellationToken token)
+        public async Task<string> CancelSimulationAsync(string simulationId, CancellationToken token)
+        {
+            try
+            {
+                var reply = await _controllerClient.CancelSimulationAsync(new CancelSimulationRequest() { SimulationId = simulationId }, cancellationToken: token);
+            }
+            catch (RpcException ex)
+            {
+                return CreateErrorStringFromGrpcException(ex);
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+
+            return "OK";
+        }
+
+        public async Task<List<Models.Simulation>> GetAllSimulationsAsync(CancellationToken token)
         {
             GetAllSimulationsResponse reply;
             try
@@ -105,19 +94,7 @@ namespace SurimiGUI.Services
             }
             catch (RpcException ex)
             {
-                var error = new StringBuilder();
-                error.AppendLine($"Server error: {ex.Status.Detail}");
-                var badRequest = ex.GetRpcStatus()?.GetDetail<BadRequest>();
-                if (badRequest != null)
-                {
-                    foreach (var fieldViolation in badRequest.FieldViolations)
-                    {
-                        error.AppendLine($"Field: {fieldViolation.Field}");
-                        error.AppendLine($"Description: {fieldViolation.Description}");
-                    }
-                }
-                error.Append($" Method: {ex.Trailers.GetValue("method")} Application: {ex.Trailers.GetValue("application")}");
-                throw new Exception(error.ToString());
+                throw new Exception(CreateErrorStringFromGrpcException(ex));
             }
             catch (Exception ex)
             {
@@ -135,6 +112,23 @@ namespace SurimiGUI.Services
                 Status = sim.Status,
                 IP = string.IsNullOrEmpty(sim.EcologyHost) ? string.Empty : sim.EcologyHost.Replace("http://", "").Split(':')[3]
             }).ToList();
+        }
+
+        string CreateErrorStringFromGrpcException(RpcException ex)
+        {
+            var error = new StringBuilder();
+            error.AppendLine($"Server error: {ex.Status.Detail}");
+            var badRequest = ex.GetRpcStatus()?.GetDetail<BadRequest>();
+            if (badRequest != null)
+            {
+                foreach (var fieldViolation in badRequest.FieldViolations)
+                {
+                    error.AppendLine($"Field: {fieldViolation.Field}");
+                    error.AppendLine($"Description: {fieldViolation.Description}");
+                }
+            }
+            error.Append($" Method: {ex.Trailers.GetValue("method")} Application: {ex.Trailers.GetValue("application")}");
+            return error.ToString();
         }
     }
 }

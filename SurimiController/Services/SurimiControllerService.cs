@@ -53,6 +53,11 @@ namespace SurimiController.Services
             using var activity = _activitySource.StartActivity("InitSimulation");
             activity?.SetTag("ScenarioId", request.Simulation.ScenarioId);
 
+            if(_simulations.ContainsKey(request.Simulation.SimulationId))
+            {
+                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {request.Simulation.SimulationId} is already initialised"));
+            }
+
             _logger.LogInformation($"Initializing scenario {request.Simulation.ScenarioId}... SimulationId = {request.Simulation.SimulationId}");
             var initRequest = new InitialiseRequest
             {
@@ -88,9 +93,11 @@ namespace SurimiController.Services
                 ScenarioId = request.Simulation.ScenarioId,
                 StartDateTime = request.Simulation.StartDateTime.ToDateTime(),
                 StepSize = request.Simulation.StepSize,
+                Duration = request.Simulation.SimulationDuration,
                 Status = "Initialised",
                 EcologyHost = hostValue ?? string.Empty,
-                SimulationCreated = DateTime.UtcNow
+                SimulationCreated = DateTime.UtcNow,
+                CancelIsCalled = false,
             };
 
             activity?.AddEvent(new ActivityEvent("Finished ecopoath and poseidon"));
@@ -102,39 +109,95 @@ namespace SurimiController.Services
             using var activity = _activitySource.StartActivity("RunSimulation");
             _logger.LogInformation($"Running simulation...");
 
+            if (_simulations.ContainsKey(request.SimulationId) == false)
+            {
+                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {request.SimulationId} can not be started. It is not found"));
+            }
+
+            if (_simulations[request.SimulationId].Status == "Running")
+            {
+                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {request.SimulationId} is already running"));
+            }
+
+            if (_simulations[request.SimulationId].CancelIsCalled == true)
+            {
+                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {request.SimulationId} is canceled and can not be started"));
+            }
+
             _simulations[request.SimulationId].Status = "Running";
 
-            var current = request.StartDateTime.ToDateTime();   // Start at startdatetime
-            var end = current.Add(XmlConvert.ToTimeSpan(request.SimulationDuration));
+            var current = _simulations[request.SimulationId].StartDateTime;
+            var end = current.Add(XmlConvert.ToTimeSpan(_simulations[request.SimulationId].Duration));
 
-            while (current <= end)
+            while (current <= end && _simulations[request.SimulationId].CancelIsCalled == false)
             {
-                await ProcessSimulationStep(request, current);
+                await ProcessSimulationStep(request.SimulationId, current, AddStepSize(current, _simulations[request.SimulationId].StepSize));
 
-                current = AddStepSize(current, request.StepSize);
+                current = AddStepSize(current, _simulations[request.SimulationId].StepSize);
             }
-            var createStockAssessmentresponse = _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = request.SimulationId });
 
-            // Finalise the simulation
-            var finaliseRequest = new FinaliseRequest
+            if (_simulations[request.SimulationId].CancelIsCalled == false)
             {
-                SimulationId = request.SimulationId,
-            };
-            var ecopathFinaliseResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, FinaliseRequest, FinaliseResponse>(finaliseRequest, request.SimulationId,
-                (client, req) => client.FinaliseAsync(req));
-            _ecopathSimDispatcher.ReleasePodFromSimulation(request.SimulationId);
+                var createStockAssessmentresponse = _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = request.SimulationId });
 
-            var marketFinaliseResponse = _marketWorkflowClient.FinaliseAsync(finaliseRequest);
-            //var poseidonFinaliseResponse = _poseidonWorkflowClient.FinaliseAsync(finaliseRequest);
-            var cmsyFinaliseResponse = _cmsyWorkflowClient.FinaliseAsync(finaliseRequest);
+                // Finalise the simulation
+                var finaliseRequest = CreateFinaliseRequest(request.SimulationId);
 
-            await ecopathFinaliseResponse;
-            await marketFinaliseResponse;
-            //await poseidonFinaliseResponse;
-            await cmsyFinaliseResponse;
+                var ecopathFinaliseResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, FinaliseRequest, FinaliseResponse>(finaliseRequest, request.SimulationId,
+                    (client, req) => client.FinaliseAsync(req));
+                _ecopathSimDispatcher.ReleasePodFromSimulation(request.SimulationId);
 
-            _simulations[request.SimulationId].Status = "Finished";
+                var marketFinaliseResponse = _marketWorkflowClient.FinaliseAsync(finaliseRequest);
+                var poseidonFinaliseResponse = _poseidonWorkflowClient.FinaliseAsync(finaliseRequest);
+                var cmsyFinaliseResponse = _cmsyWorkflowClient.FinaliseAsync(finaliseRequest);
+
+                await ecopathFinaliseResponse;
+                await marketFinaliseResponse;
+                await poseidonFinaliseResponse;
+                await cmsyFinaliseResponse;
+                _simulations[request.SimulationId].Status = "Finished";
+                _logger.LogInformation($"Simulation {request.SimulationId} is finished");
+            }
+            else
+            {
+                // cancel the simulation
+                var cancelRequest = CreateCancelRequest(request.SimulationId);
+
+                var ecopathCancelResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, CancelRequest, CancelResponse>(cancelRequest, request.SimulationId,
+                    (client, req) => client.CancelAsync(req));
+                _ecopathSimDispatcher.ReleasePodFromSimulation(request.SimulationId);
+
+                var marketCancelResponse = _marketWorkflowClient.CancelAsync(cancelRequest);
+                var poseidonCancelResponse = _poseidonWorkflowClient.CancelAsync(cancelRequest);
+                var cmsyCancelResponse = _cmsyWorkflowClient.CancelAsync(cancelRequest);
+
+                await ecopathCancelResponse;
+                await marketCancelResponse;
+                await poseidonCancelResponse;
+                await cmsyCancelResponse;
+                _simulations[request.SimulationId].Status = "Canceled";
+                _logger.LogInformation($"Simulation {request.SimulationId} is canceled");
+            }
+
             return new RunSimulationResponse();
+        }
+
+        public override Task<CancelSimulationResponse> CancelSimulation(CancelSimulationRequest request, ServerCallContext context)
+        {
+            if (_simulations.ContainsKey(request.SimulationId) == false)
+            {
+                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {request.SimulationId} can not be canceled. It is not found"));
+            }
+
+            if (_simulations[request.SimulationId].Status != "Running")
+            {
+                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {request.SimulationId} can not be canceled. Its status is '{_simulations[request.SimulationId].Status}'"));
+            }
+
+            _logger.LogInformation($"Cancel Simulation {request.SimulationId}");
+            _simulations[request.SimulationId].CancelIsCalled = true;
+
+            return Task.FromResult(new CancelSimulationResponse());
         }
 
         public override Task<GetAllSimulationsResponse> GetAllSimulations(GetAllSimulationsRequest get, ServerCallContext context)
@@ -158,20 +221,20 @@ namespace SurimiController.Services
             });
         }
 
-        private async Task ProcessSimulationStep(RunSimulationRequest request, DateTime current)
+        private async Task ProcessSimulationStep(string simulationId, DateTime current, DateTime endStepDateTime)
         {
             LogStep(current, "Market.GetSpeciesPrices");
-            _simulations[request.SimulationId].SimulationCurrent = current;
+            _simulations[simulationId].SimulationCurrent = current;
 
-            var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = request.SimulationId });
+            var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId });
 
             var updatePriceRequest = new UpdateSpeciesPricesRequest
             {
-                SimulationId = request.SimulationId
+                SimulationId = simulationId
             };
             updatePriceRequest.Prices.AddRange(speciesPriceResponse.Prices);
 
-            var ecopathUpdatePricesResponse = _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updatePriceRequest, request.SimulationId,
+            var ecopathUpdatePricesResponse = _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updatePriceRequest, simulationId,
                 (client, req) => client.UpdateSpeciesPricesAsync(req));
 
             var poseidonUpdatePricesResponse = _poseidonMarketClient.UpdateSpeciesPricesAsync(updatePriceRequest);
@@ -181,26 +244,19 @@ namespace SurimiController.Services
             LogStep(current, "Poseidon.UpdatePrices");
             await poseidonUpdatePricesResponse;
 
-            var simulationStepRequest = new SimulateStepRequest()
-            {
-                SimulationId = request.SimulationId
-            };
+            var simulationStepRequest = CreateSimulateStepRequest(simulationId);
 
             LogStep(current, "Ecopath.SimulateStep");
-            await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, SimulateStepRequest, SimulateStepResponse>(simulationStepRequest, request.SimulationId,
+            await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, SimulateStepRequest, SimulateStepResponse>(simulationStepRequest, simulationId,
                 (client, req) => client.SimulateStepAsync(req));
 
             LogStep(current, "Ecopath GetBiomass (intermediate)");
-            var getBiomassResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = request.SimulationId }, request.SimulationId,
+            var getBiomassResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
                 (client, req) => client.GetBiomassAsync(req));
 
             getBiomassResponse = GetTestBiomassIntermediate(getBiomassResponse);
 
-            var updateBiomassIntermediateRequest = new UpdateBiomassRequest()
-            {
-                SimulationId = request.SimulationId,
-                BiomassSummary = getBiomassResponse.BiomassSummary
-            };
+            var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponse, simulationId);
 
             LogStep(current, "Poseidon.UpdateBiomass  (intermediate)");
             var poseidonUpdateBiomassResponse = await _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassIntermediateRequest);
@@ -208,73 +264,50 @@ namespace SurimiController.Services
             LogStep(current, "Poseidon.SimulateStep");
             var poseidonSimulateStepResponse = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest);
 
-            var getCatchDispositionRequest = new GetCatchDispositionRequest()
-            {
-                SimulationId = request.SimulationId,
-                StartDateTime = Timestamp.FromDateTime(current),
-                EndDateTime = Timestamp.FromDateTime(AddStepSize(current, request.StepSize))
-            };
+            var getCatchDispositionRequest = CreateGetCatchDispositionRequest(simulationId, current, endStepDateTime);
 
             LogStep(current, "Poseidon.GetCatchDisposition");
             var poseidonCatchDisposition = await _poseidonFisheryClient.GetCatchDispositionAsync(getCatchDispositionRequest);
 
-            var updateCatchDispositionIntermediateRequest = new UpdateCatchDispositionRequest()
-            {
-                SimulationId = request.SimulationId,
-                CatchDispositionSummary = poseidonCatchDisposition.CatchDispositionSummary
-            };
+            var updateCatchDispositionIntermediateRequest = CreateUpdateCatchDispositionRequest(poseidonCatchDisposition, simulationId);
 
             LogStep(current, "Ecopath.UpdateCatchDisposition Summary");
-            var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionIntermediateRequest, request.SimulationId,
+            var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionIntermediateRequest, simulationId,
                 (client, req) => client.UpdateCatchDispositionAsync(req));
 
             LogStep(current, "Ecopath GetBiomass (total)");
-            getBiomassResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = request.SimulationId }, request.SimulationId,
+            getBiomassResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
                 (client, req) => client.GetBiomassAsync(req));
 
-            var updateBiomassTotalRequest = new UpdateBiomassRequest()
-            {
-                SimulationId = request.SimulationId,
-                BiomassSummary = getBiomassResponse.BiomassSummary
-            };
+            var updateBiomassTotalRequest = CreateUpdateBiomassRequest(getBiomassResponse, simulationId);
 
             LogStep(current, "CMSY++.UpdateBiomass (total)");
             var cmsyUpdateBiomassResponse = await _cmsyEcologyClient.UpdateBiomassAsync(updateBiomassTotalRequest);
 
             LogStep(current, "Ecopath.GetCatchDisposition");
-            var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, request.SimulationId,
+            var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, simulationId,
                 (client, req) => client.GetCatchDispositionAsync(req));
 
-            var updateCatchDispositionTotalRequest = new UpdateCatchDispositionRequest()
-            {
-                SimulationId = request.SimulationId,
-                CatchDispositionSummary = poseidonCatchDisposition.CatchDispositionSummary
-            };
+            var updateCatchDispositionTotalRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary, simulationId);
 
             LogStep(current, "CMSY UpdateCatchDisposition (total)");
-            _cmsyFisheryClient.UpdateCatchDisposition(updateCatchDispositionTotalRequest);
+            await _cmsyFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest);
 
-            var getSalesRequest = new GetSalesRequest()
-            {
-                SimulationId = request.SimulationId,
-                StartDateTime = Timestamp.FromDateTime(current),
-                EndDateTime = Timestamp.FromDateTime(AddStepSize(current, request.StepSize))
-            };
+            var getSalesRequest = CreateGetSalesRequest(simulationId, current, endStepDateTime);
 
             LogStep(current, "Ecopath.GetSales");
-            var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, request.SimulationId,
+            var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, simulationId,
                 (client, req) => client.GetSalesAsync(req));
 
             // Update Sales to Market
             LogStep(current, "Market.UpdateSales from Ecopath");
-            var marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse, request.SimulationId));
+            var marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse, simulationId));
 
             LogStep(current, "Poseidon.GetSalesSummary");
             var poseidonGetSalesResponse = await _poseidonMarketClient.GetSalesAsync(getSalesRequest);
 
-
             LogStep(current, "Market.UpdateSales from Poseidon");
-            marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse, request.SimulationId));
+            marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse, simulationId));
 
             LogStep(current, "CMSY.SimulateStep");
             var cmsySimulateStepResponse = await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest);
@@ -300,7 +333,7 @@ namespace SurimiController.Services
                     }
                 }
             };
-            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell() 
+            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell()
             {
                 Longitude = 3.854550141823501,
                 Latitude = 43.4696509055585,
@@ -350,6 +383,68 @@ namespace SurimiController.Services
             {
                 SimulationId = simulationId,
                 SalesSummaries = { response.SalesSummaries }
+            };
+        }
+
+        public static GetSalesRequest CreateGetSalesRequest(string simulationId, DateTime startDateTime, DateTime endDateTime)
+        {
+            return new GetSalesRequest
+            {
+                SimulationId = simulationId,
+                StartDateTime = Timestamp.FromDateTime(startDateTime),
+                EndDateTime = Timestamp.FromDateTime(endDateTime)
+            };
+        }
+
+        private UpdateCatchDispositionRequest CreateUpdateCatchDispositionRequest(GetCatchDispositionResponse catchDisposition, string simulationId)
+        {
+            return new UpdateCatchDispositionRequest()
+            {
+                SimulationId = simulationId,
+                CatchDispositionSummary = catchDisposition.CatchDispositionSummary
+            };
+        }
+
+        private static GetCatchDispositionRequest CreateGetCatchDispositionRequest(string simulationId, DateTime startDateTime, DateTime endDateTime)
+        {
+            return new GetCatchDispositionRequest
+            {
+                SimulationId = simulationId,
+                StartDateTime = Timestamp.FromDateTime(startDateTime),
+                EndDateTime = Timestamp.FromDateTime(endDateTime)
+            };
+        }
+
+        private static UpdateBiomassRequest CreateUpdateBiomassRequest(GetBiomassResponse getBiomassResponse, string simulationId)
+        {
+            return new UpdateBiomassRequest
+            {
+                SimulationId = simulationId,
+                BiomassSummary = getBiomassResponse.BiomassSummary
+            };
+        }
+
+        private static SimulateStepRequest CreateSimulateStepRequest(string simulationId)
+        {
+            return new SimulateStepRequest
+            {
+                SimulationId = simulationId
+            };
+        }
+
+        private static CancelRequest CreateCancelRequest(string simulationId)
+        {
+            return new CancelRequest
+            {
+                SimulationId = simulationId
+            };
+        }
+
+        private static FinaliseRequest CreateFinaliseRequest(string simulationId)
+        {
+            return new FinaliseRequest
+            {
+                SimulationId = simulationId
             };
         }
     }
