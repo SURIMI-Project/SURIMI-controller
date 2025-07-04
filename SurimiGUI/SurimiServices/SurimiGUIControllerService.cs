@@ -49,11 +49,11 @@ namespace SurimiGUI.Services
             return reply.SimulationId;
         }
 
-        public async Task<string> RunSimulation(SimulationConfig config, CancellationToken token)
+        public async Task<string> RunSimulationAsync(string simulationId, CancellationToken token)
         {
             try
             {
-                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() { SimulationId = config.SimulationId }, cancellationToken: token);
+                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() { SimulationId = simulationId }, cancellationToken: token);
             }
             catch (RpcException ex)
             {
@@ -114,7 +114,7 @@ namespace SurimiGUI.Services
             }).ToList();
         }
 
-        string CreateErrorStringFromGrpcException(RpcException ex)
+        private string CreateErrorStringFromGrpcException(RpcException ex)
         {
             var error = new StringBuilder();
             error.AppendLine($"Server error: {ex.Status.Detail}");

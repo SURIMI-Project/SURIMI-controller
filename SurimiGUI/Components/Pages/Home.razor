@@ -187,23 +187,14 @@ else
     {
         if (controllerService != null)
         {
-            var simConfig = new SimulationConfig
-            {
-                ScenarioId = sim.ScenarioId,
-                StartDateTime = sim.StartDateTime,
-                StepSize = sim.StepSize,
-                SimulationDuration = config?.SimulationDuration ?? "1 month",
-                SimulationId = sim.SimulationId
-            };
             try
             {
                 using (var activity = MyActivitySource.StartActivity("StartSimulationFor"))
                 {
                     activity?.SetTag("SimulationId", sim.SimulationId);
                     result = "";
-                    result = await controllerService.RunSimulation(simConfig, CancellationToken.None);
-                    // Optionally refresh simulations list
-                    simulations = await controllerService.GetAllSimulationsAsync(CancellationToken.None);
+                    result = await controllerService.RunSimulationAsync(sim.SimulationId, CancellationToken.None);
+
                 }
             }
             catch (Exception ex)
