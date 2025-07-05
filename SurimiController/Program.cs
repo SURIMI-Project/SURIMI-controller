@@ -1,4 +1,5 @@
 using Grpc.Surimi;
+using SurimiController.Services;
 using System.Diagnostics;
 
 namespace SurimiController;
@@ -38,6 +39,7 @@ public class Program
         AddConfiguredGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("CmsyStockAssessment", "CMSY_URL");
 
         builder.Services.AddSingleton<SimulationDispatcher>();
+        builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
 
         var app = builder.Build();
 
@@ -85,8 +87,8 @@ public class Program
                 {
                     EnableMultipleHttp2Connections = true
                 };
-            })
-            .EnableCallContextPropagation();
+            });
+//            .EnableCallContextPropagation();
         }
     }
 }

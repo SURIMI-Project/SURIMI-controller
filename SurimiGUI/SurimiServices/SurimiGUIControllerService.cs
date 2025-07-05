@@ -49,22 +49,21 @@ namespace SurimiGUI.Services
             return reply.SimulationId;
         }
 
-        public async Task<string> RunSimulationAsync(string simulationId, CancellationToken token)
+        public Task<string> RunSimulationAsync(string simulationId, CancellationToken token)
         {
             try
             {
-                var reply = await _controllerClient.RunSimulationAsync(new RunSimulationRequest() { SimulationId = simulationId }, cancellationToken: token);
+                var reply = _controllerClient.RunSimulationAsync(new RunSimulationRequest() { SimulationId = simulationId }, cancellationToken: token);
+                return Task.FromResult("OK");
             }
             catch (RpcException ex)
             {
-                return CreateErrorStringFromGrpcException(ex);
+                return Task.FromResult(CreateErrorStringFromGrpcException(ex));
             }
             catch (Exception ex)
             {
-                return ex.Message;
+                return Task.FromResult(ex.Message);
             }
-
-            return "OK";
         }
 
         public async Task<string> CancelSimulationAsync(string simulationId, CancellationToken token)

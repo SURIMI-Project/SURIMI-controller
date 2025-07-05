@@ -10,6 +10,8 @@
         public required string Status { get; set; }
         public DateTime SimulationCurrent { get; set; }
         public required string EcologyHost { get; set; }
-        public bool CancelIsCalled { get; set; } 
+        public Task? Task { get; set; }
+        public CancellationTokenSource? Cts { get; set; }
+
     }
 }
