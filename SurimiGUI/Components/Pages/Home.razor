@@ -2,7 +2,6 @@
 @using SurimiGUI.Models
 @using SurimiGUI.Services
 @using System.Diagnostics
-@inject ActivitySource MyActivitySource
 @implements IDisposable
 
 <PageTitle>Home</PageTitle>
@@ -93,11 +92,11 @@ else
                     <th>Simulation Id</th>
                     <th>Scen Id</th>
                     <th>Start Date</th>
-                    <th>Step Size</th>
+                    <th>Duration</th>
                     <th>Status</th>
                     <th>Sim Created</th>
                     <th>Sim Current</th>
-                    <th>IP</th>
+                    <th>EwE IP</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -107,10 +106,12 @@ else
                     <tr>
                         <td>@sim.SimulationId</td>
                         <td>@sim.ScenarioId</td>
-                        <td>@sim.StartDateTime.ToShortDateString()</td>
-                        <td>@sim.StepSize</td>
+                        <td>@sim.StartDateTime.ToString("dd-MM-yyyy")</td>
+                        <td>@sim.Duration</td>
                         <td>@sim.Status</td>
-                        <td>@sim.SimulationCreated?.ToString("g")</td>
+                        <td>@(sim.SimulationCreated.HasValue 
+                            ? sim.SimulationCreated.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm") 
+                            : "")</td>
                         <td>@sim.SimulationCurrent?.ToString("dd-MM-yyyy")</td>
                         <td>@sim.IP</td>
                         <td>
@@ -141,7 +142,7 @@ else
         StartRefreshTimer();
     }
 
-    async Task HandleInit()
+    private async Task HandleInit()
     {
         if (config != null && controllerService != null)
         {
@@ -149,24 +150,20 @@ else
             StateHasChanged();
             try
             {
-                using (var activity = MyActivitySource.StartActivity("HandleInit"))
+                result = "";
+                config.SimulationId = Guid.NewGuid().ToString();
+                config.StartDateTime = config.StartDateTime.ToUniversalTime().Date; // to set the kind to UTC
+                var res = await controllerService.Init(config, cts.Token);
+                if (Guid.TryParse(res, out Guid simres))
                 {
-                    activity?.SetTag("ScenarioId", config.ScenarioId);
-                    result = "";
-                    config.SimulationId = Guid.NewGuid().ToString();
-                    config.StartDateTime = config.StartDateTime.ToUniversalTime().Date; // to set the kind to UTC
-                    var res = await controllerService.Init(config, cts.Token);
-                    if (Guid.TryParse(res, out Guid simres))
-                    {
-                        config.SimulationId = res;
-                        // Fetch updated simulations list after successful init
-                        simulations = await controllerService.GetAllSimulations(cts.Token);
-                        result = $"OK";
-                    }
-                    else
-                    {
-                        result = $"Error initializing simulation: {res}";
-                    }
+                    config.SimulationId = res;
+                    // Fetch updated simulations list after successful init
+                    simulations = await controllerService.GetAllSimulationsAsync(cts.Token);
+                    result = $"OK";
+                }
+                else
+                {
+                    result = $"Error initializing simulation: {res}";
                 }
             }
             catch (Exception ex)
@@ -181,66 +178,14 @@ else
         }
     }
 
-
-    // async Task HandleStartSimulation()
-    // {
-    //     if (config != null && controllerService != null)
-    //     {
-    //         isStartLoading = true;
-    //         StateHasChanged();
-
-    //         try
-    //         {
-    //             using (var activity = MyActivitySource.StartActivity("HandleStartSimulation"))
-    //             {
-    //                 activity?.SetTag("SimulationId", config.SimulationId);
-    //                 cts = new CancellationTokenSource();
-    //                 result = "";
-    //                 result = await controllerService.RunSimulation(config, cts.Token);
-    //             }
-    //         }
-    //         catch (Exception ex)
-    //         {
-    //             result = ex.Message;
-    //         }
-    //         finally
-    //         {
-    //             isStartLoading = false;
-    //             StateHasChanged();
-    //         }
-    //     }
-    // }
-
-    // void HandleCancelSimulation()
-    // {
-    //     using (var activity = MyActivitySource.StartActivity("HandleCancelSimulation"))
-    //     {
-    //         cts.Cancel();
-    //     }
-    // }
-
-    async Task StartSimulationFor(Simulation sim)
+    private async Task StartSimulationFor(Simulation sim)
     {
         if (controllerService != null)
         {
-            var simConfig = new SimulationConfig
-            {
-                ScenarioId = sim.ScenarioId,
-                StartDateTime = sim.StartDateTime,
-                StepSize = sim.StepSize,
-                SimulationDuration = config?.SimulationDuration ?? "1 month",
-                SimulationId = sim.SimulationId
-            };
             try
             {
-                using (var activity = MyActivitySource.StartActivity("StartSimulationFor"))
-                {
-                    activity?.SetTag("SimulationId", sim.SimulationId);
-                    result = "";
-                    result = await controllerService.RunSimulation(simConfig, CancellationToken.None);
-                    // Optionally refresh simulations list
-                    simulations = await controllerService.GetAllSimulations(CancellationToken.None);
-                }
+                result = "";
+                result = await controllerService.RunSimulationAsync(sim.SimulationId, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -250,15 +195,17 @@ else
         }
     }
 
-    void CancelSimulationFor(Simulation sim)
+    private async Task CancelSimulationFor(Simulation sim)
     {
-        using (var activity = MyActivitySource.StartActivity("CancelSimulationFor"))
+        if (controllerService != null)
         {
-            // This is a placeholder. Actual cancellation logic may require tracking tokens per simulation.
-            cts.Cancel();
-            result = $"Cancel requested for {sim.SimulationId}";
+            result = "";
+            result = await controllerService.CancelSimulationAsync(sim.SimulationId, CancellationToken.None);
+            // Optionally refresh simulations list
+            simulations = await controllerService.GetAllSimulationsAsync(CancellationToken.None);
+
+            StateHasChanged();
         }
-        StateHasChanged();
     }
 
     private void StartRefreshTimer()
@@ -275,7 +222,7 @@ else
         {
             try
             {
-                var sims = await controllerService.GetAllSimulations(CancellationToken.None);
+                var sims = await controllerService.GetAllSimulationsAsync(CancellationToken.None);
                 await InvokeAsync(() =>
                 {
                     simulations = sims;

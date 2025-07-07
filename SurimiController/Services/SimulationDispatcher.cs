@@ -1,5 +1,4 @@
 ﻿using Grpc.Core;
-using Grpc.Surimi;
 using SurimiController.Services;
 using System.Collections.Concurrent;
 
@@ -32,25 +31,61 @@ public class SimulationDispatcher
         Func<TClient, TRequest, AsyncUnaryCall<TResponse>> grpcMethod)
         where TClient : ClientBase<TClient>
     {
+        var address = Environment.GetEnvironmentVariable("ECOPATH_URL");    // for example: http://surimi-ecopath-0.surimi-ecopath.user-rikkert.svc.cluster.local:8080
         string pod;
 
         if (!simulationToPodMap.TryGetValue(simulationId, out pod))
         {
-            pod = podAvailability.FirstOrDefault(p => p.Value).Key;
+            // so this is a new simulation
+            pod = podAvailability.FirstOrDefault(p => p.Value).Key; // Find the first available pod
             if (pod == null)
                 throw new Exception("No available pods");
+
+            if (address!.Contains("surimi-ecopath-0"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
+            {
+                address = address!.Replace("surimi-ecopath-0", pod);
+            }
+
+            // Check if the dns address can be resolved. If not, don't use this pod yet
+            try
+            {
+                var uri = new Uri(address);
+                var host = uri.Host;
+                var addresses = System.Net.Dns.GetHostAddresses(host);
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                throw new RpcException(
+                    new Status(StatusCode.Unavailable, $"Could not resolve DNS for pod {pod} with address {address}"),
+                    new Metadata
+                    {
+                        { "pod", pod },
+                        { "simulationId", simulationId }
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                throw new RpcException(
+                    new Status(StatusCode.Internal, $"Error resolving DNS for pod {pod}: {ex.Message}"),
+                    new Metadata
+                    {
+                        { "pod", pod },
+                        { "simulationId", simulationId }
+                    }
+                );
+            }
 
             simulationToPodMap[simulationId] = pod;
             podAvailability[pod] = false;
         }
 
-        var address = Environment.GetEnvironmentVariable("ECOPATH_URL");    // for example: http://surimi-ecopath-0.surimi-ecopath.user-rikkert.svc.cluster.local:8080
-        if (address!.Contains("surimi-ecopath-0"))
+        if (address!.Contains("surimi-ecopath-0"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
         {
             address = address!.Replace("surimi-ecopath-0", pod);
         }
 
-        _logger.LogInformation("Using address {Address} for pod {Pod} and simulationId {SimulationId}", address, pod, simulationId);
+        _logger.LogInformation("{SimulationId} Using address {Address} for pod {Pod} and simulationId", simulationId, address, pod);
         try
         {
             var client = DynamicGrpcClientFactory.CreateClient<TClient>(address);
@@ -73,11 +108,11 @@ public class SimulationDispatcher
         if (simulationToPodMap.TryRemove(simulationId, out var pod))
         {
             podAvailability[pod] = true;
-            _logger.LogInformation("Released pod {Pod} from simulationId {SimulationId}", pod, simulationId);
+            _logger.LogInformation("{SimulationId} Released pod {Pod} from simulationId", simulationId, pod);
         }
         else
         {
-            _logger.LogWarning("No pod found for simulationId {SimulationId} to release", simulationId);
+            _logger.LogWarning("{SimulationId} No pod found for simulationId to release", simulationId);
         }
     }
 }

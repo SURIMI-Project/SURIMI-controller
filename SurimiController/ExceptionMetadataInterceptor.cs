@@ -14,9 +14,24 @@ namespace SurimiController
             {
                 return await continuation(request, context);
             }
-            catch (RpcException)
+            catch (RpcException ex)
             {
-                // If it's a known RpcException, we don't need to do anything special
+                if(ex.Trailers?.GetValue("method") == null || ex.Trailers?.GetValue("application") == null)
+                {
+                    // If the RpcException does not have metadata, we add it
+                    // This is useful for logging and debugging purposes
+                    var status = new Status(ex.StatusCode, ex.Message);
+                    
+                    // Create metadata with method and application name
+                    var metadata = new Metadata
+                    {
+                        { "method", context.Method },
+                        { "application", typeof(Program).Assembly.GetName().Name }
+                    };
+                    
+                    throw new RpcException(status, metadata);
+                }
+                // If it's a RpcException from another model, we don't need to do anything special
                 // meta data is allready set
                 throw;
             }
@@ -28,7 +43,7 @@ namespace SurimiController
                     { "method", context.Method },
                     { "application", typeof(Program).Assembly.GetName().Name }
                 };
-                throw new RpcException(status);
+                throw new RpcException(status, metadata);
             }
         }
     }

@@ -1,21 +1,15 @@
 using Grpc.Surimi;
+using SurimiController.Services;
 using System.Diagnostics;
 
 namespace SurimiController;
 
 public class Program
 {
-    private static readonly ActivitySource MyActivitySource = new("OpenTelemetry.SURIMI");
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
-
-        // Register Custom ActivitySource for the application
-        builder.Services.AddSingleton(MyActivitySource);
-
-        // Custom ActivitySource for the application
-        using var parent = MyActivitySource.StartActivity("SurimiController");
 
         // Add services to the container.
         builder.Services.AddGrpc(options =>
@@ -38,6 +32,7 @@ public class Program
         AddConfiguredGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("CmsyStockAssessment", "CMSY_URL");
 
         builder.Services.AddSingleton<SimulationDispatcher>();
+        builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
 
         var app = builder.Build();
 
@@ -85,8 +80,8 @@ public class Program
                 {
                     EnableMultipleHttp2Connections = true
                 };
-            })
-            .EnableCallContextPropagation();
+            });
+//            .EnableCallContextPropagation();
         }
     }
 }
