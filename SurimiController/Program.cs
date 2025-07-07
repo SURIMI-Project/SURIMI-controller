@@ -6,17 +6,10 @@ namespace SurimiController;
 
 public class Program
 {
-    private static readonly ActivitySource MyActivitySource = new("OpenTelemetry.SURIMI");
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
-
-        // Register Custom ActivitySource for the application
-        builder.Services.AddSingleton(MyActivitySource);
-
-        // Custom ActivitySource for the application
-        using var parent = MyActivitySource.StartActivity("SurimiController");
 
         // Add services to the container.
         builder.Services.AddGrpc(options =>

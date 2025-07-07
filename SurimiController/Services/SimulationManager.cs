@@ -443,6 +443,7 @@ namespace SurimiController.Services
                         ScenarioId = sim.Value.ScenarioId,
                         StartDateTime = Timestamp.FromDateTime(sim.Value.StartDateTime),
                         StepSize = sim.Value.StepSize,
+                        SimulationDuration = sim.Value.Duration,
                         Status = sim.Value.Status,
                         SimulationCurrent = sim.Value.SimulationCurrent == default ? null : Timestamp.FromDateTime(sim.Value.SimulationCurrent),
                         SimulationCreated = sim.Value.SimulationCreated == default ? null : Timestamp.FromDateTime(sim.Value.SimulationCreated),

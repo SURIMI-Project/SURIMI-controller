@@ -1,28 +1,22 @@
 ﻿using Grpc.Core;
 using Grpc.Surimi;
-using System.Diagnostics;
 
 namespace SurimiController.Services
 {
     public class SurimiControllerService : ControllerService.ControllerServiceBase
     {
         private readonly ILogger<SurimiControllerService> _logger;
-        private readonly ActivitySource _activitySource;
 
         private readonly ISimulationManager _simulationManager;
 
-        public SurimiControllerService(ActivitySource activitySource, ILogger<SurimiControllerService> logger, ISimulationManager simulationManager)
+        public SurimiControllerService(ILogger<SurimiControllerService> logger, ISimulationManager simulationManager)
         {
-            _activitySource = activitySource;
             _logger = logger;
             _simulationManager = simulationManager;
         }
 
         public override async Task<InitSimulationResponse> InitSimulation(InitSimulationRequest request, ServerCallContext context)
         {
-            using var activity = _activitySource.StartActivity("InitSimulation");
-            activity?.SetTag("ScenarioId", request.Simulation.ScenarioId);
-
             _logger.LogInformation("{SimulationId} Initializing scenario {ScenarioId}", request.Simulation.SimulationId, request.Simulation.ScenarioId);
 
             await _simulationManager.InitSimulationAsync(
@@ -32,13 +26,12 @@ namespace SurimiController.Services
                 request.Simulation.StepSize,
                 request.Simulation.SimulationDuration);
 
-            activity?.AddEvent(new ActivityEvent("Finished ecopoath and poseidon"));
+            //activity?.AddEvent(new ActivityEvent("Finished ecopoath and poseidon"));
             return new InitSimulationResponse() { SimulationId = request.Simulation.SimulationId };
         }
 
         public override Task<RunSimulationResponse> RunSimulation(RunSimulationRequest request, ServerCallContext context)
         {
-            using var activity = _activitySource.StartActivity("RunSimulation");
             _logger.LogInformation("{SimulationId} Running simulation...", request.SimulationId);
 
             try
