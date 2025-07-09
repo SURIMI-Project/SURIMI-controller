@@ -302,7 +302,10 @@ namespace SurimiController.Services
                     {
                         new BiomassGrid()
                         {
-                            SpeciesCode = "PIL"
+                            Species = new Species()
+                            {
+                                SpeciesCode = "PIL"
+                            }
                         }
                     }
                 }

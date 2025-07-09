@@ -23,10 +23,10 @@ namespace SurimiGUI.Services
         public async Task<string> Init(SimulationConfig config, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set. In a Blazor application, the Activity.Current might be unaltered which causes telemetry to use the same TraceId for all requests, leading to confusion in telemetry data.
-            InitSimulationResponse reply;
+            InitialiseSimulationResponse reply;
             try
             {
-                reply = await _controllerClient.InitSimulationAsync(new InitSimulationRequest
+                reply = await _controllerClient.InitialiseSimulationAsync(new InitialiseSimulationRequest
                 {
                     Simulation = new Grpc.Surimi.Simulation()
                     {
