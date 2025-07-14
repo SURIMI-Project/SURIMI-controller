@@ -5,6 +5,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Extensions.Hosting;
@@ -33,7 +34,7 @@ public static class Extensions
                 config.AttemptTimeout.Timeout = TimeSpan.FromMinutes(2);
                 config.CircuitBreaker.SamplingDuration = timeSpan * 2;
                 config.TotalRequestTimeout.Timeout = timeSpan * 3;
-            });      
+            });
 
             // Turn on service discovery by default
             http.AddServiceDiscovery();
@@ -56,22 +57,37 @@ public static class Extensions
             logging.IncludeScopes = true;
         });
 
-        builder.Services.AddOpenTelemetry()
-            .WithMetrics(metrics =>
-            {
-                metrics.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
-            })
-            .WithTracing(tracing =>
-            {
-                tracing.AddSource(builder.Environment.ApplicationName)
-                    .AddAspNetCoreInstrumentation()
-                    .AddGrpcClientInstrumentation()
-                    .AddHttpClientInstrumentation();
-            });
+        var useOtlpExporter = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
 
-        builder.AddOpenTelemetryExporters();
+        var otel = builder.Services.AddOpenTelemetry();
+
+        // Configure OpenTelemetry Resources with the application name
+        otel.ConfigureResource(resource => resource
+            .AddService(serviceName: builder.Environment.ApplicationName));
+
+        // Add Metrics for ASP.NET Core
+        otel.WithMetrics(metrics =>
+        {
+            metrics.AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddRuntimeInstrumentation();
+        });
+        otel.WithTracing(tracing =>
+        {
+            tracing.AddSource(builder.Environment.ApplicationName)
+                .AddAspNetCoreInstrumentation()
+                .AddGrpcClientInstrumentation()
+                .AddHttpClientInstrumentation();
+            if (!string.IsNullOrEmpty(useOtlpExporter))
+            {
+                tracing.AddOtlpExporter(otlpOptions =>
+                 {
+                     otlpOptions.Endpoint = new Uri(useOtlpExporter);
+                 });
+            }
+        });
+
+        //builder.AddOpenTelemetryExporters();
 
         return builder;
     }

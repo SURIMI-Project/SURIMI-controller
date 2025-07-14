@@ -15,7 +15,7 @@ namespace SurimiController.Services
             _simulationManager = simulationManager;
         }
 
-        public override async Task<InitSimulationResponse> InitSimulation(InitSimulationRequest request, ServerCallContext context)
+        public override async Task<InitialiseSimulationResponse> InitialiseSimulation(InitialiseSimulationRequest request, ServerCallContext context)
         {
             _logger.LogInformation("{SimulationId} Initializing scenario {ScenarioId}", request.Simulation.SimulationId, request.Simulation.ScenarioId);
 
@@ -27,7 +27,7 @@ namespace SurimiController.Services
                 request.Simulation.SimulationDuration);
 
             //activity?.AddEvent(new ActivityEvent("Finished ecopoath and poseidon"));
-            return new InitSimulationResponse() { SimulationId = request.Simulation.SimulationId };
+            return new InitialiseSimulationResponse() { SimulationId = request.Simulation.SimulationId };
         }
 
         public override Task<RunSimulationResponse> RunSimulation(RunSimulationRequest request, ServerCallContext context)
