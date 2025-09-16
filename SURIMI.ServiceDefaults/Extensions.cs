@@ -62,8 +62,7 @@ public static class Extensions
         var otel = builder.Services.AddOpenTelemetry();
 
         // Configure OpenTelemetry Resources with the application name
-        otel.ConfigureResource(resource => resource
-            .AddService(serviceName: builder.Environment.ApplicationName));
+        // Don't do this, so the applicationName will be derived from the dns name. surimi-controller and surimi-gui just like surimi-ecopath and surimi-market etc.
 
         // Add Metrics for ASP.NET Core
         otel.WithMetrics(metrics =>

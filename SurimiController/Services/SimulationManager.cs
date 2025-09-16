@@ -46,7 +46,7 @@ namespace SurimiController.Services
             _logger = logger;
         }
 
-        public async Task InitSimulationAsync(string simulationId, string scenarioId, Timestamp startDateTime, string stepSize, string duration)
+        public Task InitSimulationAsync(string simulationId, string scenarioId, Timestamp startDateTime, string stepSize, string duration)
         {
             if (_simulations.ContainsKey(simulationId))
             {
@@ -68,29 +68,41 @@ namespace SurimiController.Services
             var cmsyResponse = _cmsyWorkflowClient.InitialiseAsync(initRequest);
             var marketResponse = _marketWorkflowClient.InitialiseAsync(initRequest);
 
-            await ecopathResponse;
-            await poseidonResponse;
-            await cmsyResponse;
-            await marketResponse;
-
-            // Await the response headers
-            var headers = await ecopathResponse.ResponseHeadersAsync;
-
-            // Find the header by key (case-insensitive)
-            var hostValue = headers.GetValue("host"); // returns null if not found
-
-            var createStockAssessmentresponse = _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = simulationId });
-
-            _simulations[simulationId] = new Models.Simulation
+            // Run the rest of the logic in a background task after all initialisation calls complete
+            _ = Task.Run(async () =>
             {
-                SimulationCreated = DateTime.UtcNow,
-                ScenarioId = scenarioId,
-                StartDateTime = startDateTime.ToDateTime(),
-                StepSize = stepSize,
-                Duration = duration,
-                Status = "Created",
-                EcologyHost = hostValue ?? string.Empty,
-            };
+                await Task.WhenAll(
+                    ecopathResponse.ResponseAsync,
+                    poseidonResponse.ResponseAsync,
+                    cmsyResponse.ResponseAsync,
+                    marketResponse.ResponseAsync);
+
+                // Await the response headers
+                var headers = await ecopathResponse.ResponseHeadersAsync;
+
+                // Find the header by key (case-insensitive)
+                var hostValue = headers.GetValue("host"); // returns null if not found
+
+                // Create an initial stock assessment for the simulation in the background. Don't await it, as we want to return promptly
+                var createStockAssessmentresponse = _cmsyStockAssessmentClient.CreateStockAssessmentAsync(
+                    new CreateStockAssessmentRequest() { SimulationId = simulationId });
+
+                _simulations[simulationId] = new Models.Simulation
+                {
+                    SimulationCreated = DateTime.UtcNow,
+                    ScenarioId = scenarioId,
+                    StartDateTime = startDateTime.ToDateTime(),
+                    StepSize = stepSize,
+                    Duration = duration,
+                    Status = "Created",
+                    EcologyHost = hostValue ?? string.Empty,
+                };
+
+                _logger.LogInformation("Simulation {SimulationId} is created and initialised", simulationId);
+            });
+
+            // Return promptly, do not await the initialisation calls
+            return Task.CompletedTask;
         }
 
         public Task RunSimulationAsync(string simulationId, CancellationToken externalToken)
@@ -185,7 +197,7 @@ namespace SurimiController.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} can not be canceled. It is not found"));
             }
 
-            if(_simulations[simulationId].Cts == null)
+            if (_simulations[simulationId].Cts == null)
             {
                 throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} can not be canceled. It is not started"));
             }
@@ -210,7 +222,7 @@ namespace SurimiController.Services
             var ecopathUpdatePricesResponse = _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updatePriceRequest, simulationId,
                 (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: token));
 
-            var poseidonUpdatePricesResponse = _poseidonMarketClient.UpdateSpeciesPricesAsync(updatePriceRequest,  cancellationToken: token);
+            var poseidonUpdatePricesResponse = _poseidonMarketClient.UpdateSpeciesPricesAsync(updatePriceRequest, cancellationToken: token);
 
             LogStep(simulationId, current, "Ecopath.UpdatePrices");
             await ecopathUpdatePricesResponse;
@@ -224,13 +236,13 @@ namespace SurimiController.Services
                 (client, req) => client.SimulateStepAsync(req, cancellationToken: token));
 
             LogStep(simulationId, current, "Ecopath GetBiomass (intermediate)");
-            var getBiomassResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
+            var getBiomassResponseIntermediate = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
                 (client, req) => client.GetBiomassAsync(req, cancellationToken: token));
 
             // For testing purposes, we can use a fixed biomass response
-            getBiomassResponse = GetTestBiomassIntermediate(getBiomassResponse);
+//            getBiomassResponseIntermediate = GetTestBiomassIntermediate(getBiomassResponseIntermediate);
 
-            var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponse);
+            var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponseIntermediate);
 
             LogStep(simulationId, current, "Poseidon.UpdateBiomass  (intermediate)");
             var poseidonUpdateBiomassResponse = await _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassIntermediateRequest, cancellationToken: token);
@@ -250,10 +262,10 @@ namespace SurimiController.Services
                 (client, req) => client.UpdateCatchDispositionAsync(req, cancellationToken: token));
 
             LogStep(simulationId, current, "Ecopath GetBiomass (total)");
-            getBiomassResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
+            var getBiomassResponseTotal = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
                 (client, req) => client.GetBiomassAsync(req, cancellationToken: token));
 
-            var updateBiomassTotalRequest = CreateUpdateBiomassRequest(getBiomassResponse);
+            var updateBiomassTotalRequest = CreateUpdateBiomassRequest(getBiomassResponseTotal);
 
             LogStep(simulationId, current, "CMSY++.UpdateBiomass (total)");
             var cmsyUpdateBiomassResponse = await _cmsyEcologyClient.UpdateBiomassAsync(updateBiomassTotalRequest, cancellationToken: token);
@@ -392,13 +404,27 @@ namespace SurimiController.Services
             };
         }
 
-        private static UpdateBiomassRequest CreateUpdateBiomassRequest(GetBiomassResponse getBiomassResponse)
+        private UpdateBiomassRequest CreateUpdateBiomassRequest(GetBiomassResponse getBiomassResponse)
         {
-            return new UpdateBiomassRequest
+            var updateRequest = new UpdateBiomassRequest
             {
                 SimulationId = getBiomassResponse.SimulationId,
                 BiomassSummary = getBiomassResponse.BiomassSummary
             };
+
+            // TODO: Remove this when the issue is fixed in Ecopath. This is a workaround to TEST
+            foreach (var grid in updateRequest.BiomassSummary.BiomassGrids)
+            {
+                foreach (var cell in grid.BiomassCells)
+                {
+                    if (cell.Biomass < 0)
+                    {
+                        _logger.LogWarning("GetBiomassResponse of Simulation {SimulationId} has a cell with a negative Biomass {Biomass}. It is set to 0. Fix this.", getBiomassResponse.SimulationId, cell.Biomass);
+                        cell.Biomass = 0;
+                    }
+                }
+            }
+            return updateRequest;
         }
 
         private static SimulateStepRequest CreateSimulateStepRequest(string simulationId)
