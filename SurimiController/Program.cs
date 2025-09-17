@@ -24,12 +24,15 @@ public class Program
         AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("PoseidonEcology", "POSEIDON_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", "MARKET_URL");
-        AddConfiguredGrpcClient<MarketService.MarketServiceClient>(null, "MARKET_URL");
+        AddConfiguredGrpcClient<MarketService.MarketServiceClient>("MarketMarket", "MARKET_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow", "CMSY_URL");
         AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("CmsyEcology", "CMSY_URL");
         AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("CmsyFishery", "CMSY_URL");
         AddConfiguredGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("CmsyStockAssessment", "CMSY_URL");
+
+        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow", "VALUECHAIN_URL");
+        AddConfiguredGrpcClient<MarketService.MarketServiceClient>("ValueChainMarket", "VALUECHAIN_URL");
 
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
@@ -49,6 +52,7 @@ public class Program
         logger.LogInformation($"For Poseidon write to: {Environment.GetEnvironmentVariable("POSEIDON_URL")}");
         logger.LogInformation($"For Market write to: {Environment.GetEnvironmentVariable("MARKET_URL")}");
         logger.LogInformation($"For CMSY write to: {Environment.GetEnvironmentVariable("CMSY_URL")}");
+        logger.LogInformation($"For Value Chain write to: {Environment.GetEnvironmentVariable("VALUECHAIN_URL")}");
 
         app.Run();
 

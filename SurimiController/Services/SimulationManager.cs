@@ -20,15 +20,18 @@ namespace SurimiController.Services
         private readonly EcologyService.EcologyServiceClient _poseidonEcologyClient;
 
         private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient;
-        private readonly MarketService.MarketServiceClient _marketClient;
+        private readonly MarketService.MarketServiceClient _marketMarketClient;
 
         private readonly WorkflowService.WorkflowServiceClient _cmsyWorkflowClient;
         private readonly EcologyService.EcologyServiceClient _cmsyEcologyClient;
         private readonly FisheryService.FisheryServiceClient _cmsyFisheryClient;
 
+        private readonly WorkflowService.WorkflowServiceClient _valueChainWorkflowClient;
+        private readonly MarketService.MarketServiceClient _valueChainMarketClient;
+
         private readonly StockAssessmentService.StockAssessmentServiceClient _cmsyStockAssessmentClient;
 
-        public SimulationManager(GrpcClientFactory clientFactory, SimulationDispatcher ecopathSimDispatcher, ILogger<SimulationManager> logger, MarketService.MarketServiceClient marketClient, StockAssessmentService.StockAssessmentServiceClient stockAssessmentClient)
+        public SimulationManager(GrpcClientFactory clientFactory, SimulationDispatcher ecopathSimDispatcher, ILogger<SimulationManager> logger, StockAssessmentService.StockAssessmentServiceClient stockAssessmentClient)
         {
             _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
             _poseidonMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("PoseidonMarket");
@@ -36,13 +39,18 @@ namespace SurimiController.Services
             _poseidonFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("PoseidonFishery");
 
             _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
-            _marketClient = marketClient;
+            _marketMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("MarketMarket");
 
             _cmsyWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow");
             _cmsyEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("CmsyEcology");
             _cmsyFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("CmsyFishery");
 
-            _cmsyStockAssessmentClient = stockAssessmentClient; _ecopathSimDispatcher = ecopathSimDispatcher;
+            _cmsyStockAssessmentClient = stockAssessmentClient; 
+            _ecopathSimDispatcher = ecopathSimDispatcher;
+
+            _valueChainWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow");
+            _valueChainMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("ValueChainMarket");
+
             _logger = logger;
         }
 
@@ -67,6 +75,7 @@ namespace SurimiController.Services
             var poseidonResponse = _poseidonWorkflowClient.InitialiseAsync(initRequest);
             var cmsyResponse = _cmsyWorkflowClient.InitialiseAsync(initRequest);
             var marketResponse = _marketWorkflowClient.InitialiseAsync(initRequest);
+            var valueChainResponse = _valueChainWorkflowClient.InitialiseAsync(initRequest);
 
             // Run the rest of the logic in a background task after all initialisation calls complete
             _ = Task.Run(async () =>
@@ -75,7 +84,8 @@ namespace SurimiController.Services
                     ecopathResponse.ResponseAsync,
                     poseidonResponse.ResponseAsync,
                     cmsyResponse.ResponseAsync,
-                    marketResponse.ResponseAsync);
+                    marketResponse.ResponseAsync,
+                    valueChainResponse.ResponseAsync);
 
                 // Await the response headers
                 var headers = await ecopathResponse.ResponseHeadersAsync;
@@ -155,11 +165,14 @@ namespace SurimiController.Services
                     var marketFinaliseResponse = _marketWorkflowClient.FinaliseAsync(finaliseRequest);
                     var poseidonFinaliseResponse = _poseidonWorkflowClient.FinaliseAsync(finaliseRequest);
                     var cmsyFinaliseResponse = _cmsyWorkflowClient.FinaliseAsync(finaliseRequest);
+                    var valueChainFinaliseResponse = _valueChainWorkflowClient.FinaliseAsync(finaliseRequest);
 
                     await ecopathFinaliseResponse;
                     await marketFinaliseResponse;
                     await poseidonFinaliseResponse;
                     await cmsyFinaliseResponse;
+                    await valueChainFinaliseResponse;
+
                     _simulations[simulationId].Status = "Finished";
                     _logger.LogInformation("{SimulationId} is finished", simulationId);
                 }
@@ -175,11 +188,14 @@ namespace SurimiController.Services
                     var marketCancelResponse = _marketWorkflowClient.CancelAsync(cancelRequest);
                     var poseidonCancelResponse = _poseidonWorkflowClient.CancelAsync(cancelRequest);
                     var cmsyCancelResponse = _cmsyWorkflowClient.CancelAsync(cancelRequest);
+                    var valueChainCancelResponse = _valueChainWorkflowClient.CancelAsync(cancelRequest);
 
                     await ecopathCancelResponse;
                     await marketCancelResponse;
                     await poseidonCancelResponse;
                     await cmsyCancelResponse;
+                    await valueChainCancelResponse;
+
                     _simulations[simulationId].Status = "Canceled";
                     _logger.LogInformation("{SimulationId} is canceled", simulationId);
                 }
@@ -215,7 +231,7 @@ namespace SurimiController.Services
             LogStep(simulationId, current, "Market.GetSpeciesPrices");
             _simulations[simulationId].SimulationCurrent = current;
 
-            var speciesPriceResponse = await _marketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, cancellationToken: token);
+            var speciesPriceResponse = await _marketMarketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, cancellationToken: token);
 
             var updatePriceRequest = CreateUpdateSpeciesPricesRequest(speciesPriceResponse);
 
@@ -287,19 +303,28 @@ namespace SurimiController.Services
 
             // Update Sales to Market
             LogStep(simulationId, current, "Market.UpdateSales from Ecopath");
-            var marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
+            var marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
+
+            LogStep(simulationId, current, "ValueChain.UpdateSales from Ecopath");
+            var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
 
             LogStep(simulationId, current, "Poseidon.GetSalesSummary");
             var poseidonGetSalesResponse = await _poseidonMarketClient.GetSalesAsync(getSalesRequest, cancellationToken: token);
 
             LogStep(simulationId, current, "Market.UpdateSales from Poseidon");
-            marketUpdateSalesResponse = await _marketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
+            marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
+
+            LogStep(simulationId, current, "ValueChain.UpdateSales from Poseidon");
+            valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
 
             LogStep(simulationId, current, "CMSY.SimulateStep");
             var cmsySimulateStepResponse = await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
 
             LogStep(simulationId, current, "Market.SimulateStep");
             var marketSimulateStepResponse = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
+
+            LogStep(simulationId, current, "ValueChain.SimulateStep");
+            var valueChainSimulateStepResponse = await _valueChainWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
         }
 
         private GetBiomassResponse GetTestBiomassIntermediate(GetBiomassResponse getBiomassResponse)
