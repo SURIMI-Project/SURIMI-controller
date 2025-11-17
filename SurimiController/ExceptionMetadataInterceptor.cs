@@ -26,7 +26,7 @@ namespace SurimiController
                     var metadata = new Metadata
                     {
                         { "method", context.Method },
-                        { "application", typeof(Program).Assembly.GetName().Name }
+                        { "application", typeof(Program).Assembly.GetName().Name ?? "Unknown"}
                     };
                     
                     throw new RpcException(status, metadata);
@@ -41,7 +41,7 @@ namespace SurimiController
                 var metadata = new Metadata
                 {
                     { "method", context.Method },
-                    { "application", typeof(Program).Assembly.GetName().Name }
+                    { "application", typeof(Program).Assembly.GetName().Name ?? "Unknown"}
                 };
                 throw new RpcException(status, metadata);
             }

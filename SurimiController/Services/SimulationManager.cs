@@ -29,9 +29,7 @@ namespace SurimiController.Services
         private readonly WorkflowService.WorkflowServiceClient _valueChainWorkflowClient;
         private readonly MarketService.MarketServiceClient _valueChainMarketClient;
 
-        private readonly StockAssessmentService.StockAssessmentServiceClient _cmsyStockAssessmentClient;
-
-        public SimulationManager(GrpcClientFactory clientFactory, SimulationDispatcher ecopathSimDispatcher, ILogger<SimulationManager> logger, StockAssessmentService.StockAssessmentServiceClient stockAssessmentClient)
+        public SimulationManager(GrpcClientFactory clientFactory, SimulationDispatcher ecopathSimDispatcher, ILogger<SimulationManager> logger)
         {
             _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
             _poseidonMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("PoseidonMarket");
@@ -45,7 +43,6 @@ namespace SurimiController.Services
             _cmsyEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("CmsyEcology");
             _cmsyFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("CmsyFishery");
 
-            _cmsyStockAssessmentClient = stockAssessmentClient; 
             _ecopathSimDispatcher = ecopathSimDispatcher;
 
             _valueChainWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow");
@@ -92,10 +89,6 @@ namespace SurimiController.Services
 
                 // Find the header by key (case-insensitive)
                 var hostValue = headers.GetValue("host"); // returns null if not found
-
-                // Create an initial stock assessment for the simulation in the background. Don't await it, as we want to return promptly
-                var createStockAssessmentresponse = _cmsyStockAssessmentClient.CreateStockAssessmentAsync(
-                    new CreateStockAssessmentRequest() { SimulationId = simulationId });
 
                 _simulations[simulationId] = new Models.Simulation
                 {
@@ -152,8 +145,6 @@ namespace SurimiController.Services
                         //Console.WriteLine($"[Simulation {simulationId}] Running...");
                         //await Task.Delay(1000, cts.Token); // Simulate work
                     }
-
-                    var createStockAssessmentresponse = _cmsyStockAssessmentClient.CreateStockAssessmentAsync(new CreateStockAssessmentRequest() { SimulationId = simulationId });
 
                     // Finalise the simulation
                     var finaliseRequest = CreateFinaliseRequest(simulationId);
