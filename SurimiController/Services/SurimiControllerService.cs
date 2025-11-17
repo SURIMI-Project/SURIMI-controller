@@ -17,7 +17,7 @@ namespace SurimiController.Services
 
         public override async Task<InitialiseSimulationResponse> InitialiseSimulation(InitialiseSimulationRequest request, ServerCallContext context)
         {
-            _logger.LogInformation("{SimulationId} Initializing scenario {ScenarioId}", request.Simulation.SimulationId, request.Simulation.ScenarioId);
+            _logger.LogInformation("Simulation {SimulationId} is initializing scenario {ScenarioId}", request.Simulation.SimulationId, request.Simulation.ScenarioId);
             System.Diagnostics.Activity.Current?.SetTag("simulation_id", request.Simulation.SimulationId);
 
             await _simulationManager.InitSimulationAsync(
@@ -33,7 +33,7 @@ namespace SurimiController.Services
 
         public override Task<RunSimulationResponse> RunSimulation(RunSimulationRequest request, ServerCallContext context)
         {
-            _logger.LogInformation("{SimulationId} Running simulation...", request.SimulationId);
+            _logger.LogInformation("Running simulation {SimulationId} ...", request.SimulationId);
             System.Diagnostics.Activity.Current?.SetTag("simulation_id", request.SimulationId);
 
             try
@@ -50,7 +50,7 @@ namespace SurimiController.Services
 
         public override Task<CancelSimulationResponse> CancelSimulation(CancelSimulationRequest request, ServerCallContext context)
         {
-            _logger.LogInformation("{SimulationId} Cancel Simulation", request.SimulationId);
+            _logger.LogInformation("Cancel Simulation {SimulationId}", request.SimulationId);
             System.Diagnostics.Activity.Current?.SetTag("simulation_id", request.SimulationId);
             _simulationManager.CancelSimulation(request.SimulationId);
 

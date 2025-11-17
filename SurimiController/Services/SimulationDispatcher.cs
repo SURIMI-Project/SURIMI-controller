@@ -32,7 +32,7 @@ public class SimulationDispatcher
         where TClient : ClientBase<TClient>
     {
         var address = Environment.GetEnvironmentVariable("ECOPATH_URL");    // for example: http://surimi-ecopath-0.surimi-ecopath.user-rikkert.svc.cluster.local:8080
-        string pod;
+        string? pod;
 
         if (!simulationToPodMap.TryGetValue(simulationId, out pod))
         {
@@ -76,6 +76,7 @@ public class SimulationDispatcher
                 );
             }
 
+            _logger.LogInformation("Add Simulation:{SimulationId} with pod:{pod} to simulationToPodMap", simulationId, pod);
             simulationToPodMap[simulationId] = pod;
             podAvailability[pod] = false;
         }
@@ -85,7 +86,7 @@ public class SimulationDispatcher
             address = address!.Replace("surimi-ecopath-0", pod);
         }
 
-        _logger.LogInformation("{SimulationId} Using address {Address} for pod {Pod} and simulationId", simulationId, address, pod);
+        _logger.LogInformation("Using address {Address} for pod {Pod} and simulationId {SimulationId}", address, pod, simulationId);
         try
         {
             var client = DynamicGrpcClientFactory.CreateClient<TClient>(address);
@@ -108,11 +109,11 @@ public class SimulationDispatcher
         if (simulationToPodMap.TryRemove(simulationId, out var pod))
         {
             podAvailability[pod] = true;
-            _logger.LogInformation("{SimulationId} Released pod {Pod} from simulationId", simulationId, pod);
+            _logger.LogInformation("Simulation {SimulationId} Released pod {Pod} from simulationId", simulationId, pod);
         }
         else
         {
-            _logger.LogWarning("{SimulationId} No pod found for simulationId to release", simulationId);
+            _logger.LogWarning("Simulation {SimulationId} No pod found for simulationId to release", simulationId);
         }
     }
 }
