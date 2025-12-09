@@ -9,13 +9,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.76.10001.15+5a29df729c60" />
+    <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.76.10001.21+47e44929464e" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SURIMI.ConfigurationService\SURIMI.ConfigurationService.csproj" />
     <ProjectReference Include="..\SURIMI.ServiceDefaults\SURIMI.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="western_med_contract.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

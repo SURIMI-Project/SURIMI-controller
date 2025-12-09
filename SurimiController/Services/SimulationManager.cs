@@ -51,7 +51,7 @@ namespace SurimiController.Services
             _logger = logger;
         }
 
-        public Task InitSimulationAsync(string simulationId, string scenarioId, Timestamp startDateTime, string stepSize, string duration)
+        public Task InitSimulationAsync(string simulationId, string scenarioId, DateTime endDateTime, Grpc.Surimi.Simulation simulation)
         {
             if (_simulations.ContainsKey(simulationId))
             {
@@ -61,9 +61,8 @@ namespace SurimiController.Services
             var initRequest = new InitialiseRequest
             {
                 ScenarioId = scenarioId,
-                StartDateTime = startDateTime,
-                StepSize = stepSize,
-                SimulationId = simulationId
+                Simulation = simulation,
+                SimulationId = simulationId,
             };
 
             var ecopathResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, InitialiseRequest, InitialiseResponse>(initRequest, initRequest.SimulationId,
@@ -94,9 +93,9 @@ namespace SurimiController.Services
                 {
                     SimulationCreated = DateTime.UtcNow,
                     ScenarioId = scenarioId,
-                    StartDateTime = startDateTime.ToDateTime(),
-                    StepSize = stepSize,
-                    Duration = duration,
+                    StartDateTime = simulation.StartDateTime.ToDateTime(),
+                    StepSize = simulation.TimeStep,
+                    EndDateTime = endDateTime,
                     Status = "Created",
                     EcologyHost = hostValue ?? string.Empty,
                 };
@@ -126,7 +125,7 @@ namespace SurimiController.Services
             //}
 
             var current = _simulations[simulationId].StartDateTime;
-            var end = current.Add(XmlConvert.ToTimeSpan(_simulations[simulationId].Duration));
+            var end = _simulations[simulationId].EndDateTime;
 
             _simulations[simulationId].Status = "Running";
             var cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
@@ -225,6 +224,7 @@ namespace SurimiController.Services
             var speciesPriceResponse = await _marketMarketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, cancellationToken: token);
 
             var updatePriceRequest = CreateUpdateSpeciesPricesRequest(speciesPriceResponse);
+//            var xx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
 
             var ecopathUpdatePricesResponse = _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updatePriceRequest, simulationId,
                 (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: token));
@@ -252,6 +252,9 @@ namespace SurimiController.Services
             var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponseIntermediate);
 
             LogStep(simulationId, current, "Poseidon.UpdateBiomass  (intermediate)");
+
+//            xx = GetProtoString<UpdateBiomassRequest>(updateBiomassIntermediateRequest);
+
             var poseidonUpdateBiomassResponse = await _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassIntermediateRequest, cancellationToken: token);
 
             LogStep(simulationId, current, "Poseidon.SimulateStep");
@@ -318,51 +321,17 @@ namespace SurimiController.Services
             var valueChainSimulateStepResponse = await _valueChainWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
         }
 
-        private GetBiomassResponse GetTestBiomassIntermediate(GetBiomassResponse getBiomassResponse)
+        private string GetProtoString<T>(object obj)
         {
-            var response = new GetBiomassResponse
+            System.Text.Json.JsonSerializerOptions jsonOptions = new()
             {
-                SimulationId = getBiomassResponse.SimulationId,
-                BiomassSummary = new BiomassSummary()
-                {
-                    MeasurementUnit = getBiomassResponse.BiomassSummary.MeasurementUnit,
-                    BiomassGrids =
-                    {
-                        new BiomassGrid()
-                        {
-                            Species = new Species()
-                            {
-                                SpeciesCode = "PIL"
-                            }
-                        }
-                    }
-                }
+                WriteIndented = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
             };
-            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell()
-            {
-                Longitude = 3.854550141823501,
-                Latitude = 43.4696509055585,
-                Biomass = 234.58345446064777
-            });
-            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell()
-            {
-                Longitude = 3.9378501437425006,
-                Latitude = 43.4696509055585,
-                Biomass = 234.49611350085252
-            });
-            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell()
-            {
-                Longitude = 4.021150145661501,
-                Latitude = 43.4696509055585,
-                Biomass = 234.31994639839104
-            });
-            response.BiomassSummary.BiomassGrids.First().BiomassCells.Add(new BiomassCell()
-            {
-                Longitude = 4.104450147580501,
-                Latitude = 43.4696509055585,
-                Biomass = 234.03908407601193
-            });
-            return response;
+
+            string resultaat = System.Text.Json.JsonSerializer.Serialize(obj, jsonOptions);
+            return resultaat;
         }
 
         private void LogStep(string simulationId, DateTime current, string step)
@@ -476,19 +445,19 @@ namespace SurimiController.Services
             };
         }
 
-        public Task<GetAllSimulationsResponse> GetAllSimulationsAsync(CancellationToken cancellationToken)
+        public Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new GetAllSimulationsResponse
+            return Task.FromResult(new GetAllSimulationStatusesResponse
             {
-                Simulations =
+                SimulationStatuses =
                 {
-                    _simulations.Select(sim => new Grpc.Surimi.Simulation
+                    _simulations.Select(sim => new Grpc.Surimi.SimulationStatus
                     {
                         SimulationId = sim.Key,
-                        ScenarioId = sim.Value.ScenarioId,
+                        //ScenarioId = sim.Value.ScenarioId,
                         StartDateTime = Timestamp.FromDateTime(sim.Value.StartDateTime),
-                        StepSize = sim.Value.StepSize,
-                        SimulationDuration = sim.Value.Duration,
+                        //StepSize = sim.Value.StepSize,
+                        EndDateTime = Timestamp.FromDateTime(sim.Value.EndDateTime),
                         Status = sim.Value.Status,
                         SimulationCurrent = sim.Value.SimulationCurrent == default ? null : Timestamp.FromDateTime(sim.Value.SimulationCurrent),
                         SimulationCreated = sim.Value.SimulationCreated == default ? null : Timestamp.FromDateTime(sim.Value.SimulationCreated),

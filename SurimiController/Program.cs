@@ -1,4 +1,5 @@
 using Grpc.Surimi;
+using SURIMI.ConfigurationService;
 using SurimiController.Services;
 using System.Diagnostics;
 
@@ -35,6 +36,7 @@ public class Program
 
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
+        builder.Services.AddTransient<ISurimiConfigurationService, SurimiConfigurationService>();
 
         builder.Logging.ClearProviders();
         builder.Services.AddLogging(opt =>
@@ -56,11 +58,11 @@ public class Program
         // Retrieve the logger
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-        logger.LogInformation($"For Ecopath write to: {Environment.GetEnvironmentVariable("ECOPATH_URL")}");
-        logger.LogInformation($"For Poseidon write to: {Environment.GetEnvironmentVariable("POSEIDON_URL")}");
-        logger.LogInformation($"For Market write to: {Environment.GetEnvironmentVariable("MARKET_URL")}");
-        logger.LogInformation($"For CMSY write to: {Environment.GetEnvironmentVariable("CMSY_URL")}");
-        logger.LogInformation($"For Value Chain write to: {Environment.GetEnvironmentVariable("VALUECHAIN_URL")}");
+        logger.LogInformation("For Ecopath write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("ECOPATH_URL"));
+        logger.LogInformation("For Poseidon write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("POSEIDON_URL"));
+        logger.LogInformation("For Market write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("MARKET_URL"));
+        logger.LogInformation("For CMSY write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
+        logger.LogInformation("For Value Chain write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("VALUECHAIN_URL"));
 
         app.Run();
 

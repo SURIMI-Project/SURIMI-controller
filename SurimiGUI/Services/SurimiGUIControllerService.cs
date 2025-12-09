@@ -28,14 +28,10 @@ namespace SurimiGUI.Services
             {
                 reply = await _controllerClient.InitialiseSimulationAsync(new InitialiseSimulationRequest
                 {
-                    Simulation = new Grpc.Surimi.Simulation()
-                    {
-                        ScenarioId = config.ScenarioId,
-                        StartDateTime = Timestamp.FromDateTime(config.StartDateTime),
-                        StepSize = config.StepSize,
-                        SimulationId = config.SimulationId,
-                        SimulationDuration = config.SimulationDuration
-                    }
+                    ScenarioId = config.ScenarioId ?? "",
+                    StartDateTime = Timestamp.FromDateTime(config.StartDateTime),
+                    EndDateTime = Timestamp.FromDateTime(config.EndDateTime),
+                    SimulationId = config.SimulationId
                 },
                 cancellationToken: token);
             }
@@ -89,15 +85,15 @@ namespace SurimiGUI.Services
             return "OK";
         }
 
-        public async Task<List<Models.Simulation>> GetAllSimulationsAsync(CancellationToken token)
+        public async Task<List<Models.SimulationStatus>> GetAllSimulationsAsync(CancellationToken token)
         {
             // for this method we do not set the Activity.Current to null because we want to group all calls to this method under the same Activity in telemetry. So it shows as one line in the Aspire Dashboard
             using var activity = _activitySource.StartActivity("GetAllSimulations", ActivityKind.Server, parentContext: default);
 
-            GetAllSimulationsResponse reply;
+            GetAllSimulationStatusesResponse reply;
             try
             {
-                reply = await _controllerClient.GetAllSimulationsAsync(new GetAllSimulationsRequest(), cancellationToken: token);
+                reply = await _controllerClient.GetAllSimulationStatusesAsync(new GetAllSimulationStatusesRequest(), cancellationToken: token);
             }
             catch (RpcException ex)
             {
@@ -108,13 +104,12 @@ namespace SurimiGUI.Services
                 throw new Exception(ex.Message);
             }
 
-            return reply.Simulations.Select(sim => new Models.Simulation
+            return reply.SimulationStatuses.Select(sim => new Models.SimulationStatus
             {
                 SimulationId = sim.SimulationId,
                 ScenarioId = sim.ScenarioId,
                 StartDateTime = sim.StartDateTime.ToDateTime(),
-                StepSize = sim.StepSize,
-                Duration = sim.SimulationDuration,
+                EndDateTime = sim.EndDateTime.ToDateTime(),
                 SimulationCreated = sim.SimulationCreated?.ToDateTime(),
                 SimulationCurrent = sim.SimulationCurrent?.ToDateTime(),
                 Status = sim.Status,

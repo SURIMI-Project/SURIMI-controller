@@ -9,8 +9,8 @@ namespace SurimiController.Services
     {
         Task RunSimulationAsync(string simulationId, CancellationToken externalToken);
         void CancelSimulation(string simulationId);
-        Task InitSimulationAsync(string simulationId, string scenarioId, Timestamp startDateTime, string stepSize, string duration);
-        Task<GetAllSimulationsResponse> GetAllSimulationsAsync(CancellationToken cancellationToken);
+        Task InitSimulationAsync(string simulationId, string scenarioId, DateTime endDateTime, Simulation simulation);
+        Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken);
     }
 
 }
