@@ -1,7 +1,6 @@
 using Grpc.Surimi;
 using SURIMI.ConfigurationService;
 using SurimiController.Services;
-using System.Diagnostics;
 
 namespace SurimiController;
 

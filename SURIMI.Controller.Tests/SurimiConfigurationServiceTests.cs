@@ -11,11 +11,11 @@ namespace SURIMI.ConfigurationService.Tests
     """
     simulation:
       case_study_name: Western Med
-      start_time: 2013-01-01T00:00:00
-      end_time: 2024-01-01T00:00:00
+      start_date_time: 2013-01-01T00:00:00
+      maximum_end_date_time: 2024-01-01T00:00:00
       time_step: P1M
       geography:
-        raster_cell_origin: RASTER_CELL_ORIGIN_CENTROID
+        raster_cell_origin: Centroid
         crs:
           name: WGS 84
           authority: EPSG
@@ -35,7 +35,7 @@ namespace SURIMI.ConfigurationService.Tests
       life_stage: dwc:lifeStage
       market_code: UN/LOCODE
       currency: ISO 4217
-      flag: ISO 3166-1 alpha-3
+      country_code: ISO 3166-1 alpha-3
       measurements:
         system: SI
         units:
@@ -170,6 +170,7 @@ namespace SURIMI.ConfigurationService.Tests
         country_code: FRA
       - gear_code: PS
         country_code: FRA
+    
     
     """;
         }

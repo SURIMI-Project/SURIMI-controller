@@ -1,4 +1,4 @@
-﻿using SURIMI.ConfigurationService.Models;
+﻿using SURIMI.Datamodel;
 
 namespace SURIMI.ConfigurationService
 {

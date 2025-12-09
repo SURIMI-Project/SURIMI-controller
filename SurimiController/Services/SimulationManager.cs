@@ -60,9 +60,9 @@ namespace SurimiController.Services
 
             var initRequest = new InitialiseRequest
             {
-                ScenarioId = scenarioId,
-                Simulation = simulation,
                 SimulationId = simulationId,
+                ScenarioId = scenarioId,
+                Simulation = simulation
             };
 
             var ecopathResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, InitialiseRequest, InitialiseResponse>(initRequest, initRequest.SimulationId,

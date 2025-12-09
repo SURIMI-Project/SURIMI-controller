@@ -1,7 +1,7 @@
 ﻿using Grpc.Core;
 using Grpc.Surimi;
 using SURIMI.ConfigurationService;
-using SURIMI.ConfigurationService.Models;
+using SURIMI.Datamodel;
 
 namespace SurimiController.Services
 {
@@ -70,6 +70,11 @@ namespace SurimiController.Services
             return await _simulationManager.GetAllSimulationStatussesAsync(context.CancellationToken);
         }
 
+        /// <summary>
+        /// Mapping method from SurimiConfiguration to Grpc.Surimi.Simulation
+        /// </summary>
+        /// <param name="surimiConfiguration"></param>
+        /// <returns></returns>
         private Grpc.Surimi.Simulation GetSimulation(SurimiConfiguration surimiConfiguration)
         {
             return new Grpc.Surimi.Simulation()
@@ -98,20 +103,20 @@ namespace SurimiController.Services
                 } : null,
                 Standards = new Grpc.Surimi.Standards()
                 {
-                    DateAndTime = surimiConfiguration.Simulation?.Standards?.DateAndTime ?? string.Empty,
-                    SpeciesCode = surimiConfiguration.Simulation?.Standards?.SpeciesCode ?? string.Empty,
-                    GearCode = surimiConfiguration.Simulation?.Standards?.GearCode ?? string.Empty,
-                    LifeStage = surimiConfiguration.Simulation?.Standards?.LifeStage ?? string.Empty,
-                    MarketCode = surimiConfiguration.Simulation?.Standards?.MarketCode ?? string.Empty,
-                    Currency = surimiConfiguration.Simulation?.Standards?.Currency ?? string.Empty,
-                    CountryCode = surimiConfiguration.Simulation?.Standards?.CountryCode ?? string.Empty,
+                    DateAndTime = surimiConfiguration.Standards?.DateAndTime ?? string.Empty,
+                    SpeciesCode = surimiConfiguration.Standards?.SpeciesCode ?? string.Empty,
+                    GearCode = surimiConfiguration.Standards?.GearCode ?? string.Empty,
+                    LifeStage = surimiConfiguration.Standards?.LifeStage ?? string.Empty,
+                    MarketCode = surimiConfiguration.Standards?.MarketCode ?? string.Empty,
+                    Currency = surimiConfiguration.Standards?.Currency ?? string.Empty,
+                    CountryCode = surimiConfiguration.Standards?.CountryCode ?? string.Empty,
                     Measurements = new Grpc.Surimi.Measurement()
                     {
-                        System = surimiConfiguration.Simulation?.Standards?.Measurements?.System ?? string.Empty,
+                        System = surimiConfiguration.Standards?.Measurements?.System ?? string.Empty,
 
                         Units =
                         {
-                            (surimiConfiguration.Simulation?.Standards?.Measurements?.Units ?? Enumerable.Empty<UnitType>())
+                            (surimiConfiguration.Standards ?.Measurements ?.Units ?? Enumerable.Empty<UnitType>())
                                 .Select(u => new Grpc.Surimi.Unit
                                 {
                                     Quantity = u.Quantity ?? string.Empty,
@@ -125,7 +130,7 @@ namespace SurimiController.Services
                 {
                     Species =
                     {
-                        (surimiConfiguration.Items?.Species ?? Enumerable.Empty<SURIMI.ConfigurationService.Models.Species>())
+                        (surimiConfiguration.Items?.Species ?? Enumerable.Empty<SURIMI.Datamodel.Species>())
                             .Select(s => new Grpc.Surimi.Species()
                             {
                                 SpeciesCode = s.SpeciesCode ?? string.Empty,
@@ -136,7 +141,7 @@ namespace SurimiController.Services
                     },
                     FleetSegments =
                     {
-                        (surimiConfiguration.Items?.FleetSegments ?? Enumerable.Empty<SURIMI.ConfigurationService.Models.FleetSegment>())
+                        (surimiConfiguration.Items?.FleetSegments ?? Enumerable.Empty<SURIMI.Datamodel.FleetSegment>())
                             .Select(g => new Grpc.Surimi.FleetSegment()
                             {
                                 GearCode = g.GearCode ?? string.Empty,
@@ -147,12 +152,20 @@ namespace SurimiController.Services
                     },
                     Markets =
                     {
-                        (surimiConfiguration.Items?.Markets ?? Enumerable.Empty<SURIMI.ConfigurationService.Models.Market>())
+                        (surimiConfiguration.Items?.Markets ?? Enumerable.Empty<SURIMI.Datamodel.Market>())
                             .Select(m => new Grpc.Surimi.Market()
                             {
                                 MarketCode = m.MarketCode ?? string.Empty
                             })
                     },
+                    Currencies =
+                    {
+                        (surimiConfiguration.Items?.Currencies ?? Enumerable.Empty<SURIMI.Datamodel.Currency>())
+                            .Select(m => new Grpc.Surimi.Currency()
+                            {
+                                Code = m.CurrencyCode ?? string.Empty
+                            })           
+                    }
                 }
             };
         }
