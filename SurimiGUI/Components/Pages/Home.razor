@@ -44,9 +44,9 @@ else
             </div>
         </div>
         <div class="form-group row">
-            <label class="col-md-2 col-form-label">Simulation duration</label>
+            <label class="col-md-2 col-form-label">End Date</label>
             <div class="col-md-6">
-                <input type="text" class="form-control" @bind="config.SimulationDuration">
+                <input type="text" class="form-control" @bind="config.EndDateTime">
             </div>
         </div>
         <div class="form-group row">
@@ -107,7 +107,7 @@ else
                         <td>@sim.SimulationId</td>
                         <td>@sim.ScenarioId</td>
                         <td>@sim.StartDateTime.ToString("dd-MM-yyyy")</td>
-                        <td>@sim.Duration</td>
+                        <td>@sim.EndDateTime.ToString("dd-MM-yyyy")</td>
                         <td>@sim.Status</td>
                         <td>@(sim.SimulationCreated.HasValue 
                             ? sim.SimulationCreated.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm") 
@@ -128,7 +128,7 @@ else
 @code {
     private bool isInitLoading = false;
     private SimulationConfig? config { get; set; }
-    private List<Simulation>? simulations { get; set; } = new List<Simulation>();
+    private List<SimulationStatus>? simulations { get; set; } = new List<SimulationStatus>();
     private string result = "";
     CancellationTokenSource cts = new CancellationTokenSource();
     private System.Threading.Timer? _refreshTimer;
@@ -178,7 +178,7 @@ else
         }
     }
 
-    private async Task StartSimulationFor(Simulation sim)
+    private async Task StartSimulationFor(SimulationStatus sim)
     {
         if (controllerService != null)
         {
@@ -195,7 +195,7 @@ else
         }
     }
 
-    private async Task CancelSimulationFor(Simulation sim)
+    private async Task CancelSimulationFor(SimulationStatus sim)
     {
         if (controllerService != null)
         {
