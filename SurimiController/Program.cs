@@ -63,6 +63,15 @@ public class Program
         logger.LogInformation("For CMSY write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
         logger.LogInformation("For Value Chain write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("VALUECHAIN_URL"));
 
+        logger.LogInformation("AWS_ACCESS_KEY_ID: {AWS_ACCESS_KEY_ID}", Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"));
+        logger.LogInformation("AWS_SECRET_ACCESS_KEY: {AWS_SECRET_ACCESS_KEY}", Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"));
+        logger.LogInformation("AWS_SESSION_TOKEN: {AWS_SESSION_TOKEN}", Environment.GetEnvironmentVariable("AWS_SESSION_TOKEN"));
+        logger.LogInformation("AWS_S3_ENDPOINT: {AWS_S3_ENDPOINT}", Environment.GetEnvironmentVariable("AWS_S3_ENDPOINT"));
+        logger.LogInformation("AWS_DEFAULT_REGION: {AWS_DEFAULT_REGION}", Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION"));
+        logger.LogInformation("AWS_BUCKET_NAME: {AWS_BUCKET_NAME}", Environment.GetEnvironmentVariable("AWS_BUCKET_NAME"));
+        logger.LogInformation("OTEL_EXPORTER_OTLP_ENDPOINT: {OTEL_EXPORTER_OTLP_ENDPOINT}", Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT"));
+
+
         app.Run();
 
 
