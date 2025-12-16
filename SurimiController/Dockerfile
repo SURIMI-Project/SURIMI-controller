@@ -47,6 +47,9 @@ COPY . .
 WORKDIR "/src/SurimiController"
 RUN dotnet build "./SurimiController.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
+# Remove Includes directory after build
+RUN rm -rf /src/SurimiController/Includes
+
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release

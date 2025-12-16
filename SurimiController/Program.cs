@@ -58,10 +58,10 @@ public class Program
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
         logger.LogInformation("For Ecopath write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("ECOPATH_URL"));
-        logger.LogInformation("For Poseidon write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("POSEIDON_URL"));
-        logger.LogInformation("For Market write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("MARKET_URL"));
-        logger.LogInformation("For CMSY write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
-        logger.LogInformation("For Value Chain write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("VALUECHAIN_URL"));
+        logger.LogInformation("For Poseidon write to: {POSEIDON_URL}", Environment.GetEnvironmentVariable("POSEIDON_URL"));
+        logger.LogInformation("For Market write to: {MARKET_URL}", Environment.GetEnvironmentVariable("MARKET_URL"));
+        logger.LogInformation("For CMSY write to: {CMSY_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
+        logger.LogInformation("For Value Chain write to: {VALUECHAIN_URL}", Environment.GetEnvironmentVariable("VALUECHAIN_URL"));
 
         logger.LogInformation("AWS_ACCESS_KEY_ID: {AWS_ACCESS_KEY_ID}", Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"));
         logger.LogInformation("AWS_SECRET_ACCESS_KEY: {AWS_SECRET_ACCESS_KEY}", Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"));
