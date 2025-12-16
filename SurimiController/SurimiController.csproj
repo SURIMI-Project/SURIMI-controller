@@ -22,8 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="western_med_contract.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Update="Includes\western_med_contract.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

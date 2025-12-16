@@ -1,10 +1,14 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace SURIMI.ConfigurationService.Tests
 {
     public class SurimiConfigurationServiceTests
     {
         private readonly string testYaml;
+        private readonly Mock<ILogger<SurimiConfigurationService>> _loggerMock = new();
+
         public SurimiConfigurationServiceTests()
         {
             testYaml =
@@ -179,10 +183,10 @@ namespace SURIMI.ConfigurationService.Tests
         public void ReadYamlShouldReturnOK()
         {
             // Arrange
-            var service = new SurimiConfigurationService();
+            var service = new SurimiConfigurationService(_loggerMock.Object);
 
             // Act
-            var conf = service.ReadYaml(testYaml);
+            var conf = service.DeserialiseConfiguration(testYaml);
 
             // Assert
             conf.Should().NotBeNull();

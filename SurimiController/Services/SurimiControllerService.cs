@@ -24,8 +24,8 @@ namespace SurimiController.Services
             _logger.LogInformation("Simulation {SimulationId} is initializing scenario {ScenarioId}", request.SimulationId, request.ScenarioId);
             System.Diagnostics.Activity.Current?.SetTag("simulation_id", request.SimulationId);
 
-            string configuration = File.ReadAllText(Directory.GetCurrentDirectory() + "/western_med_contract.yaml");
-            var surimiConfiguration = _surimiConfigurationService.ReadYaml(configuration);
+            // TODO: the name of the contract should come from the request
+            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync("western_med_contract");
 
             var simulation = GetSimulation(surimiConfiguration);
             await _simulationManager.InitSimulationAsync(
