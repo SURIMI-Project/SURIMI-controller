@@ -7,13 +7,45 @@ WORKDIR /app
 EXPOSE 8080
 #EXPOSE 8081
 
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+#ENV OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+ENV OTEL_SERVICE_NAME=surimi-gui
+
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
+ARG GITHUB_TOKEN
+ARG BSR_TOKEN
 WORKDIR /src
-COPY ["NuGet.config", "SurimiGUI/"]
+
+# Copy NuGet configuration
+COPY ["NuGet.config", "."]
+
+# Add authentication for GitHub Packages using add source with credentials
+RUN if [ ! -z "$GITHUB_TOKEN" ]; then \
+    dotnet nuget remove source github-Official-EwE || true; \
+    dotnet nuget add source https://nuget.pkg.github.com/Official-EwE/index.json \
+    --name github-Official-EwE \
+    --username github \
+    --password $GITHUB_TOKEN \
+    --store-password-in-clear-text \
+    --configfile NuGet.config; \
+    fi
+
+# Add authentication for BSR (if token is provided)
+RUN if [ ! -z "$BSR_TOKEN" ]; then \
+    dotnet nuget remove source BSR || true; \
+    dotnet nuget add source https://buf.build/gen/nuget/index.json \
+    --name BSR \
+    --username bsr \
+    --password $BSR_TOKEN \
+    --store-password-in-clear-text \
+    --configfile NuGet.config; \
+    fi
+
 COPY ["SurimiGUI/SurimiGUI.csproj", "SurimiGUI/"]
+COPY ["SURIMI.ServiceDefaults/SURIMI.ServiceDefaults.csproj", "SURIMI.ServiceDefaults/"]
 RUN dotnet restore "./SurimiGUI/SurimiGUI.csproj"
 COPY . .
 WORKDIR "/src/SurimiGUI"

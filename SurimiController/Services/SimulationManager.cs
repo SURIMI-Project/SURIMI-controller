@@ -218,107 +218,115 @@ namespace SurimiController.Services
 
         private async Task ProcessSimulationStep(string simulationId, DateTime current, DateTime endStepDateTime, CancellationToken token)
         {
-            LogStep(simulationId, current, "Market.GetSpeciesPrices");
-            _simulations[simulationId].SimulationCurrent = current;
+            try
+            {
+                LogStep(simulationId, current, "Market.GetSpeciesPrices");
+                _simulations[simulationId].SimulationCurrent = current;
 
-            var speciesPriceResponse = await _marketMarketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, cancellationToken: token);
+                var speciesPriceResponse = await _marketMarketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, cancellationToken: token);
 
-            var updatePriceRequest = CreateUpdateSpeciesPricesRequest(speciesPriceResponse);
-//            var xx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
+                var updatePriceRequest = CreateUpdateSpeciesPricesRequest(speciesPriceResponse);
+                //            var xx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
 
-            var ecopathUpdatePricesResponse = _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updatePriceRequest, simulationId,
-                (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: token));
+                var ecopathUpdatePricesResponse = _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updatePriceRequest, simulationId,
+                    (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: token));
 
-            var poseidonUpdatePricesResponse = _poseidonMarketClient.UpdateSpeciesPricesAsync(updatePriceRequest, cancellationToken: token);
+                var poseidonUpdatePricesResponse = _poseidonMarketClient.UpdateSpeciesPricesAsync(updatePriceRequest, cancellationToken: token);
 
-            LogStep(simulationId, current, "Ecopath.UpdatePrices");
-            await ecopathUpdatePricesResponse;
-            LogStep(simulationId, current, "Poseidon.UpdatePrices");
-            await poseidonUpdatePricesResponse;
+                LogStep(simulationId, current, "Ecopath.UpdatePrices");
+                await ecopathUpdatePricesResponse;
+                LogStep(simulationId, current, "Poseidon.UpdatePrices");
+                await poseidonUpdatePricesResponse;
 
-            var simulationStepRequest = CreateSimulateStepRequest(simulationId);
+                var simulationStepRequest = CreateSimulateStepRequest(simulationId);
 
-            LogStep(simulationId, current, "Ecopath.SimulateStep");
-            await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, SimulateStepRequest, SimulateStepResponse>(simulationStepRequest, simulationId,
-                (client, req) => client.SimulateStepAsync(req, cancellationToken: token));
+                LogStep(simulationId, current, "Ecopath.SimulateStep");
+                await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, SimulateStepRequest, SimulateStepResponse>(simulationStepRequest, simulationId,
+                    (client, req) => client.SimulateStepAsync(req, cancellationToken: token));
 
-            LogStep(simulationId, current, "Ecopath GetBiomass (intermediate)");
-            var getBiomassResponseIntermediate = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
-                (client, req) => client.GetBiomassAsync(req, cancellationToken: token));
+                LogStep(simulationId, current, "Ecopath GetBiomass (intermediate)");
+                var getBiomassResponseIntermediate = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
+                    (client, req) => client.GetBiomassAsync(req, cancellationToken: token));
 
-            // For testing purposes, we can use a fixed biomass response
-//            getBiomassResponseIntermediate = GetTestBiomassIntermediate(getBiomassResponseIntermediate);
+                // For testing purposes, we can use a fixed biomass response
+                //            getBiomassResponseIntermediate = GetTestBiomassIntermediate(getBiomassResponseIntermediate);
 
-            var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponseIntermediate);
+                var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponseIntermediate);
 
-            LogStep(simulationId, current, "Poseidon.UpdateBiomass  (intermediate)");
+                LogStep(simulationId, current, "Poseidon.UpdateBiomass  (intermediate)");
 
-//            xx = GetProtoString<UpdateBiomassRequest>(updateBiomassIntermediateRequest);
+                //            xx = GetProtoString<UpdateBiomassRequest>(updateBiomassIntermediateRequest);
+                CorrectBiomass(updateBiomassIntermediateRequest);
 
-            var poseidonUpdateBiomassResponse = await _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassIntermediateRequest, cancellationToken: token);
+                var poseidonUpdateBiomassResponse = await _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassIntermediateRequest, cancellationToken: token);
 
-            LogStep(simulationId, current, "Poseidon.SimulateStep");
-            var poseidonSimulateStepResponse = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
+                LogStep(simulationId, current, "Poseidon.SimulateStep");
+                var poseidonSimulateStepResponse = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
 
-            var getCatchDispositionRequest = CreateGetCatchDispositionRequest(simulationId, current, endStepDateTime);
+                var getCatchDispositionRequest = CreateGetCatchDispositionRequest(simulationId, current, endStepDateTime);
 
-            LogStep(simulationId, current, "Poseidon.GetCatchDisposition");
-            var poseidonCatchDisposition = await _poseidonFisheryClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: token);
+                LogStep(simulationId, current, "Poseidon.GetCatchDisposition");
+                var poseidonCatchDisposition = await _poseidonFisheryClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: token);
 
-            var updateCatchDispositionIntermediateRequest = CreateUpdateCatchDispositionRequest(poseidonCatchDisposition);
+                var updateCatchDispositionIntermediateRequest = CreateUpdateCatchDispositionRequest(poseidonCatchDisposition);
 
-            LogStep(simulationId, current, "Ecopath.UpdateCatchDisposition Summary");
-            var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionIntermediateRequest, simulationId,
-                (client, req) => client.UpdateCatchDispositionAsync(req, cancellationToken: token));
+                LogStep(simulationId, current, "Ecopath.UpdateCatchDisposition Summary");
+                var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionIntermediateRequest, simulationId,
+                    (client, req) => client.UpdateCatchDispositionAsync(req, cancellationToken: token));
 
-            LogStep(simulationId, current, "Ecopath GetBiomass (total)");
-            var getBiomassResponseTotal = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
-                (client, req) => client.GetBiomassAsync(req, cancellationToken: token));
+                LogStep(simulationId, current, "Ecopath GetBiomass (total)");
+                var getBiomassResponseTotal = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
+                    (client, req) => client.GetBiomassAsync(req, cancellationToken: token));
 
-            var updateBiomassTotalRequest = CreateUpdateBiomassRequest(getBiomassResponseTotal);
+                var updateBiomassTotalRequest = CreateUpdateBiomassRequest(getBiomassResponseTotal);
 
-            LogStep(simulationId, current, "CMSY++.UpdateBiomass (total)");
-            var cmsyUpdateBiomassResponse = await _cmsyEcologyClient.UpdateBiomassAsync(updateBiomassTotalRequest, cancellationToken: token);
+                LogStep(simulationId, current, "CMSY++.UpdateBiomass (total)");
+                var cmsyUpdateBiomassResponse = await _cmsyEcologyClient.UpdateBiomassAsync(updateBiomassTotalRequest, cancellationToken: token);
 
-            LogStep(simulationId, current, "Ecopath.GetCatchDisposition");
-            var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, simulationId,
-                (client, req) => client.GetCatchDispositionAsync(req, cancellationToken: token));
+                LogStep(simulationId, current, "Ecopath.GetCatchDisposition");
+                var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, simulationId,
+                    (client, req) => client.GetCatchDispositionAsync(req, cancellationToken: token));
 
-            var updateCatchDispositionTotalRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary);
+                var updateCatchDispositionTotalRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary);
 
-            LogStep(simulationId, current, "CMSY UpdateCatchDisposition (total)");
-            await _cmsyFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest, cancellationToken: token);
+                LogStep(simulationId, current, "CMSY UpdateCatchDisposition (total)");
+                await _cmsyFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest, cancellationToken: token);
 
-            var getSalesRequest = CreateGetSalesRequest(simulationId, current, endStepDateTime);
+                var getSalesRequest = CreateGetSalesRequest(simulationId, current, endStepDateTime);
 
-            LogStep(simulationId, current, "Ecopath.GetSales");
-            var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, simulationId,
-                (client, req) => client.GetSalesAsync(req, cancellationToken: token));
+                LogStep(simulationId, current, "Ecopath.GetSales");
+                var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, simulationId,
+                    (client, req) => client.GetSalesAsync(req, cancellationToken: token));
 
-            // Update Sales to Market
-            LogStep(simulationId, current, "Market.UpdateSales from Ecopath");
-            var marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
+                // Update Sales to Market
+                LogStep(simulationId, current, "Market.UpdateSales from Ecopath");
+                var marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
 
-            LogStep(simulationId, current, "ValueChain.UpdateSales from Ecopath");
-            var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
+                LogStep(simulationId, current, "ValueChain.UpdateSales from Ecopath");
+                var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
 
-            LogStep(simulationId, current, "Poseidon.GetSalesSummary");
-            var poseidonGetSalesResponse = await _poseidonMarketClient.GetSalesAsync(getSalesRequest, cancellationToken: token);
+                LogStep(simulationId, current, "Poseidon.GetSalesSummary");
+                var poseidonGetSalesResponse = await _poseidonMarketClient.GetSalesAsync(getSalesRequest, cancellationToken: token);
 
-            LogStep(simulationId, current, "Market.UpdateSales from Poseidon");
-            marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
+                LogStep(simulationId, current, "Market.UpdateSales from Poseidon");
+                marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
 
-            LogStep(simulationId, current, "ValueChain.UpdateSales from Poseidon");
-            valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
+                LogStep(simulationId, current, "ValueChain.UpdateSales from Poseidon");
+                valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
 
-            LogStep(simulationId, current, "CMSY.SimulateStep");
-            var cmsySimulateStepResponse = await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
+                LogStep(simulationId, current, "CMSY.SimulateStep");
+                var cmsySimulateStepResponse = await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
 
-            LogStep(simulationId, current, "Market.SimulateStep");
-            var marketSimulateStepResponse = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
+                LogStep(simulationId, current, "Market.SimulateStep");
+                var marketSimulateStepResponse = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
 
-            LogStep(simulationId, current, "ValueChain.SimulateStep");
-            var valueChainSimulateStepResponse = await _valueChainWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
+                LogStep(simulationId, current, "ValueChain.SimulateStep");
+                var valueChainSimulateStepResponse = await _valueChainWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
+            }
+            catch (Exception ex)
+            {
+                throw new RpcException(new Status(StatusCode.Internal, $"Error in ProcessSimulationStep. Error: {ex.Message}"));
+            }
         }
 
         private string GetProtoString<T>(object obj)
@@ -332,6 +340,22 @@ namespace SurimiController.Services
 
             string resultaat = System.Text.Json.JsonSerializer.Serialize(obj, jsonOptions);
             return resultaat;
+        }
+
+        private void CorrectBiomass(UpdateBiomassRequest updateBiomassIntermediateRequest)
+        {
+            foreach (var grid in updateBiomassIntermediateRequest.BiomassSummary.BiomassGrids)
+            {
+                // Set life stage for HKE species
+                if ((grid.Species.SpeciesCode == "HKE") ||
+                    (grid.Species.SpeciesCode == "ANE"))
+                {
+                    if (string.IsNullOrEmpty(grid.Species.LifeStage))
+                    {
+                        grid.Species.LifeStage = "juvenile";
+                    }
+                }
+            }
         }
 
         private void LogStep(string simulationId, DateTime current, string step)
