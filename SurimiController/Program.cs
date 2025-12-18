@@ -11,7 +11,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
 
-        // Add services to the container.
+        // Add services to the container. For communication with the GUI.
         builder.Services.AddGrpc(options =>
         {
             options.Interceptors.Add<ExceptionMetadataInterceptor>();
@@ -98,6 +98,8 @@ public class Program
             registration.ConfigureChannel(options =>
             {
                 options.Credentials = Grpc.Core.ChannelCredentials.Insecure;
+                options.MaxReceiveMessageSize = 100 * 1024 * 1024; // 100 MB
+                options.MaxSendMessageSize = 100 * 1024 * 1024;    // 100 MB
                 options.HttpHandler = new SocketsHttpHandler
                 {
                     EnableMultipleHttp2Connections = true
