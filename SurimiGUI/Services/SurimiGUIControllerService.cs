@@ -29,8 +29,7 @@ namespace SurimiGUI.Services
                 reply = await _controllerClient.InitialiseSimulationAsync(new InitialiseSimulationRequest
                 {
                     ScenarioId = config.ScenarioId ?? "",
-                    StartDateTime = Timestamp.FromDateTime(config.StartDateTime),
-                    EndDateTime = Timestamp.FromDateTime(config.EndDateTime),
+                    EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(config.EndDateTime.Value.ToUniversalTime()) : null,
                     SimulationId = config.SimulationId
                 },
                 cancellationToken: token);

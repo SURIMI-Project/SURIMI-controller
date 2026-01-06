@@ -31,7 +31,7 @@ namespace SurimiController.Services
             await _simulationManager.InitSimulationAsync(
                 request.SimulationId,
                 request.ScenarioId,
-                request.EndDateTime.ToDateTime(),
+                request.EndDateTime != null ? request.EndDateTime.ToDateTime() : null,
                 simulation
                 );
 
