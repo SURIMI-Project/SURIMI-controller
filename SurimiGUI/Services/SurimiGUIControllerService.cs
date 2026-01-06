@@ -110,7 +110,8 @@ namespace SurimiGUI.Services
                 ScenarioId = sim.ScenarioId,
                 StartDateTime = sim.StartDateTime.ToDateTime(),
                 EndDateTime = sim.EndDateTime.ToDateTime(),
-                SimulationCreated = sim.SimulationCreated?.ToDateTime(),
+                SimulationStarted = sim.SimulationStarted?.ToDateTime(),
+                SimulationDuration = sim.SimulationDuration?.ToTimeSpan(),
                 SimulationCurrent = sim.SimulationCurrent?.ToDateTime(),
                 Status = sim.Status,
                 IP = string.IsNullOrEmpty(sim.EcologyHost) ? string.Empty : sim.EcologyHost.Replace("http://", "").Split(':')[3]

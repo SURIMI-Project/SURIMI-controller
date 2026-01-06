@@ -91,7 +91,6 @@ namespace SurimiController.Services
 
                 _simulations[simulationId] = new Models.Simulation
                 {
-                    SimulationCreated = DateTime.UtcNow,
                     ScenarioId = scenarioId,
                     StartDateTime = simulation.StartDateTime.ToDateTime(),
                     StepSize = simulation.TimeStep,
@@ -128,6 +127,8 @@ namespace SurimiController.Services
             var end = _simulations[simulationId].EndDateTime;
 
             _simulations[simulationId].Status = "Running";
+            _simulations[simulationId].SimulationStarted = DateTime.UtcNow;
+            _simulations[simulationId].SimulationDuration = TimeSpan.FromMilliseconds(10);    // so you immediately see a duration, instead of nothing
             var cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
             var task = Task.Run(async () =>
             {
@@ -138,6 +139,7 @@ namespace SurimiController.Services
                         cts.Token.ThrowIfCancellationRequested();
 
                         await ProcessSimulationStep(simulationId, current, AddStepSize(current, _simulations[simulationId].StepSize), cts.Token);
+                        _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
 
                         current = AddStepSize(current, _simulations[simulationId].StepSize);
 
@@ -164,6 +166,7 @@ namespace SurimiController.Services
                     await valueChainFinaliseResponse;
 
                     _simulations[simulationId].Status = "Finished";
+                    _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
                     _logger.LogInformation("{SimulationId} is finished", simulationId);
                 }
                 catch (RpcException ex) when (ex.InnerException is OperationCanceledException)
@@ -478,15 +481,16 @@ namespace SurimiController.Services
                     _simulations.Select(sim => new Grpc.Surimi.SimulationStatus
                     {
                         SimulationId = sim.Key,
-                        //ScenarioId = sim.Value.ScenarioId,
+                        ScenarioId = sim.Value.ScenarioId,
                         StartDateTime = Timestamp.FromDateTime(sim.Value.StartDateTime),
                         //StepSize = sim.Value.StepSize,
                         EndDateTime = Timestamp.FromDateTime(sim.Value.EndDateTime),
                         Status = sim.Value.Status,
                         SimulationCurrent = sim.Value.SimulationCurrent == default ? null : Timestamp.FromDateTime(sim.Value.SimulationCurrent),
-                        SimulationCreated = sim.Value.SimulationCreated == default ? null : Timestamp.FromDateTime(sim.Value.SimulationCreated),
+                        SimulationStarted = sim.Value.SimulationStarted == default ? null : Timestamp.FromDateTime(sim.Value.SimulationStarted),
+                        SimulationDuration = sim.Value.SimulationDuration == default ? null : Duration.FromTimeSpan(sim.Value.SimulationDuration),
                         EcologyHost = sim.Value.EcologyHost
-                    }).OrderByDescending(x => x.SimulationCreated).ToList()
+                    }).OrderByDescending(x => x.SimulationStarted).ToList()
                 }
             });
         }
