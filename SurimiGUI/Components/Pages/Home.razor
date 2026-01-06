@@ -92,9 +92,10 @@ else
                     <th>Simulation Id</th>
                     <th>Scen Id</th>
                     <th>Start Date</th>
-                    <th>Duration</th>
+                    <th>End Date</th>
                     <th>Status</th>
-                    <th>Sim Created</th>
+                    <th>Sim Started</th>
+                    <th>Sim Duration</th>
                     <th>Sim Current</th>
                     <th>EwE IP</th>
                     <th>Actions</th>
@@ -109,8 +110,11 @@ else
                         <td>@sim.StartDateTime.ToString("dd-MM-yyyy")</td>
                         <td>@sim.EndDateTime.ToString("dd-MM-yyyy")</td>
                         <td>@sim.Status</td>
-                        <td>@(sim.SimulationCreated.HasValue 
-                            ? sim.SimulationCreated.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm") 
+                        <td>@(sim.SimulationStarted.HasValue 
+                            ? sim.SimulationStarted.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm") 
+                            : "")</td>
+                        <td>@(sim.SimulationDuration.HasValue
+                            ? sim.SimulationDuration.Value.ToString(@"hh\:mm\:ss")
                             : "")</td>
                         <td>@sim.SimulationCurrent?.ToString("dd-MM-yyyy")</td>
                         <td>@sim.IP</td>
