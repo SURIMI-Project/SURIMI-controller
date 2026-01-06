@@ -2,7 +2,9 @@
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
+using SURIMI.Datamodel;
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 namespace SurimiController.Services
@@ -51,7 +53,16 @@ namespace SurimiController.Services
             _logger = logger;
         }
 
-        public Task InitSimulationAsync(string simulationId, string scenarioId, DateTime endDateTime, Grpc.Surimi.Simulation simulation)
+        /// <summary>
+        /// Initialises a new simulation
+        /// </summary>
+        /// <param name="simulationId">The unique identifier for the simulation</param>
+        /// <param name="scenarioId">The identifier for the scenario</param>
+        /// <param name="endDateTime">An optional end date and time for the simulation. </param>
+        /// <param name="simulation">The simulation details</param>
+        /// <returns></returns>
+        /// <exception cref="RpcException"></exception>
+        public Task InitSimulationAsync(string simulationId, string scenarioId, DateTime? endDateTime, Grpc.Surimi.Simulation simulation)
         {
             if (_simulations.ContainsKey(simulationId))
             {
@@ -94,7 +105,12 @@ namespace SurimiController.Services
                     ScenarioId = scenarioId,
                     StartDateTime = simulation.StartDateTime.ToDateTime(),
                     StepSize = simulation.TimeStep,
-                    EndDateTime = endDateTime,
+                    // If an endDateTime is provided, use the minimum of that and the MaximumEndDateTime from the simulation details
+                    EndDateTime = endDateTime.HasValue
+                        ? (endDateTime.Value > simulation.MaximumEndDateTime.ToDateTime()
+                            ? simulation.MaximumEndDateTime.ToDateTime()
+                            : endDateTime.Value)
+                        : simulation.MaximumEndDateTime.ToDateTime(),
                     Status = "Created",
                     EcologyHost = hostValue ?? string.Empty,
                 };
@@ -302,20 +318,22 @@ namespace SurimiController.Services
                     (client, req) => client.GetSalesAsync(req, cancellationToken: token));
 
                 // Update Sales to Market
+                var ecopathUpdateSalesRequest = CreateUpdateSalesRequest(ecopathGetSalesResponse, current, endStepDateTime);
                 LogStep(simulationId, current, "Market.UpdateSales from Ecopath");
-                var marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
+                var marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(ecopathUpdateSalesRequest, cancellationToken: token);
 
                 LogStep(simulationId, current, "ValueChain.UpdateSales from Ecopath");
-                var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(ecopathGetSalesResponse), cancellationToken: token);
+                var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(ecopathUpdateSalesRequest, cancellationToken: token);
 
                 LogStep(simulationId, current, "Poseidon.GetSalesSummary");
                 var poseidonGetSalesResponse = await _poseidonMarketClient.GetSalesAsync(getSalesRequest, cancellationToken: token);
 
+                var poseidonUpdateSalesRequest = CreateUpdateSalesRequest(poseidonGetSalesResponse, current, endStepDateTime);
                 LogStep(simulationId, current, "Market.UpdateSales from Poseidon");
-                marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
+                marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(poseidonUpdateSalesRequest, cancellationToken: token);
 
                 LogStep(simulationId, current, "ValueChain.UpdateSales from Poseidon");
-                valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(CreateUpdateSalesRequest(poseidonGetSalesResponse), cancellationToken: token);
+                valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(poseidonUpdateSalesRequest, cancellationToken: token);
 
                 LogStep(simulationId, current, "CMSY.SimulateStep");
                 var cmsySimulateStepResponse = await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
@@ -366,23 +384,79 @@ namespace SurimiController.Services
             _logger.LogInformation("{SimulationId} Processing step {Step}. {DateTime}", simulationId, step, current);
         }
 
+        //private static DateTime AddStepSize(DateTime current, string input)
+        //{
+        //    if (input.Length >= 2 && input.StartsWith('P') && input.EndsWith('M') && int.TryParse((input.Substring(1, input.Length - 2)), out int result))
+        //    {
+        //        return current.AddMonths(result);
+        //    }
+        //    else
+        //    {
+        //        return current + XmlConvert.ToTimeSpan(input);
+        //    }
+        //}
+
+
         private static DateTime AddStepSize(DateTime current, string input)
         {
-            if (input.Length >= 2 && input.StartsWith('P') && input.EndsWith('M') && int.TryParse((input.Substring(1, input.Length - 2)), out int result))
+            if (string.IsNullOrWhiteSpace(input))
+                throw new ArgumentException("input must not be null or whitespace.", nameof(input));
+
+            // ISO 8601 months only: "P<n>M" (period with months, without a time component)
+            // Example: "P1M" = add 1 month
+            // NOTE: Do NOT confuse with "PT<n>M" which means minutes.
+            var monthsMatch = Regex.Match(input, @"^P(?<m>\d+)M$");
+            if (monthsMatch.Success)
             {
-                return current.AddMonths(result);
+                int months = int.Parse(monthsMatch.Groups["m"].Value);
+
+                // Add months. When adding months, day-of-month can drift if the current day
+                // doesn't exist in the target month (e.g., starting on the 31st).
+                // To guarantee sequences like 01-01 → 01-02 → 01-03 → 01-04,
+                // normalize to the first day of the resulting month.
+                var next = current.AddMonths(months);
+                return new DateTime(
+                    next.Year, next.Month, 1,
+                    current.Hour, current.Minute, current.Second,
+                    current.Kind
+                );
             }
-            else
+
+            // ISO 8601 years only: "P<n>Y"
+            // Example: "P2Y" = add 2 years
+            var yearsMatch = Regex.Match(input, @"^P(?<y>\d+)Y$");
+            if (yearsMatch.Success)
             {
-                return current + XmlConvert.ToTimeSpan(input);
+                int years = int.Parse(yearsMatch.Groups["y"].Value);
+
+                // Same normalization as for months: set day to 1 to avoid day drift across months/years.
+                var next = current.AddYears(years);
+                return new DateTime(
+                    next.Year, next.Month, 1,
+                    current.Hour, current.Minute, current.Second,
+                    current.Kind
+                );
             }
+
+            // For all other ISO 8601 durations supported by XmlConvert.ToTimeSpan:
+            // - "P<n>D"  => days
+            // - "PT<n>H" => hours
+            // - "PT<n>M" => minutes
+            // - "PT<n>S" => seconds
+            //
+            // IMPORTANT: XmlConvert.ToTimeSpan does NOT support months or years,
+            // which is why those are handled explicitly above.
+            var ts = XmlConvert.ToTimeSpan(input);
+            return current + ts;
         }
 
-        public static UpdateSalesRequest CreateUpdateSalesRequest(GetSalesResponse response)
+        public static UpdateSalesRequest CreateUpdateSalesRequest(GetSalesResponse response, DateTime startDateTime, DateTime endDateTime)
         {
             return new UpdateSalesRequest
             {
                 SimulationId = response.SimulationId,
+                StartDateTime = Timestamp.FromDateTime(startDateTime),
+                EndDateTime = Timestamp.FromDateTime(endDateTime),
                 SalesSummaries = { response.SalesSummaries }
             };
         }

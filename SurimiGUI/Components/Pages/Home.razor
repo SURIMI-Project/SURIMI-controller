@@ -32,21 +32,10 @@ else
             </div>
         </div>
         <div class="form-group row">
-            <label class="col-md-2 col-form-label">Start Date</label>
+            <label class="col-md-2 col-form-label">End Date (optional)</label>
             <div class="col-md-6">
-                <input type="date" class="form-control" @bind="config.StartDateTime" />
-            </div>
-        </div>
-        <div class="form-group row">
-            <label class="col-md-2 col-form-label">Step size</label>
-            <div class="col-md-6">
-                <input type="text" class="form-control" @bind="config.StepSize">
-            </div>
-        </div>
-        <div class="form-group row">
-            <label class="col-md-2 col-form-label">End Date</label>
-            <div class="col-md-6">
-                <input type="text" class="form-control" @bind="config.EndDateTime">
+                <input type="date" class="form-control" @bind="config.EndDateTime" 
+                       title="Optional. Select the end date for the simulation">
             </div>
         </div>
         <div class="form-group row">
@@ -107,8 +96,8 @@ else
                     <tr>
                         <td>@sim.SimulationId</td>
                         <td>@sim.ScenarioId</td>
-                        <td>@sim.StartDateTime.ToString("dd-MM-yyyy")</td>
-                        <td>@sim.EndDateTime.ToString("dd-MM-yyyy")</td>
+                        <td>@sim.StartDateTime.ToLocalTime().ToString("dd-MM-yyyy")</td>
+                        <td>@sim.EndDateTime.ToLocalTime().ToString("dd-MM-yyyy")</td>
                         <td>@sim.Status</td>
                         <td>@(sim.SimulationStarted.HasValue 
                             ? sim.SimulationStarted.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm") 
@@ -116,7 +105,7 @@ else
                         <td>@(sim.SimulationDuration.HasValue
                             ? sim.SimulationDuration.Value.ToString(@"hh\:mm\:ss")
                             : "")</td>
-                        <td>@sim.SimulationCurrent?.ToString("dd-MM-yyyy")</td>
+                        <td>@sim.SimulationCurrent?.ToLocalTime().ToString("dd-MM-yyyy")</td>
                         <td>@sim.IP</td>
                         <td>
                             <a href="#" class="btn btn-link btn-sm" @onclick="() => StartSimulationFor(sim)">Start</a>
@@ -156,7 +145,7 @@ else
             {
                 result = "";
                 config.SimulationId = Guid.NewGuid().ToString();
-                config.StartDateTime = config.StartDateTime.ToUniversalTime().Date; // to set the kind to UTC
+                config.EndDateTime = config.EndDateTime; 
                 var res = await controllerService.Init(config, cts.Token);
                 if (Guid.TryParse(res, out Guid simres))
                 {
