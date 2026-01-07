@@ -69,21 +69,6 @@ namespace SurimiController.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} is already initialised"));
             }
 
-            _simulations[simulationId] = new Models.Simulation
-            {
-                ScenarioId = scenarioId,
-                StartDateTime = simulation.StartDateTime.ToDateTime(),
-                StepSize = simulation.TimeStep,
-                // If an endDateTime is provided, use the minimum of that and the MaximumEndDateTime from the simulation details
-                EndDateTime = endDateTime.HasValue 
-                    ? (endDateTime.Value > simulation.MaximumEndDateTime.ToDateTime() ? simulation.MaximumEndDateTime.ToDateTime() : endDateTime.Value) 
-                    : simulation.MaximumEndDateTime.ToDateTime(),
-                Status = "Initializing",
-                EcologyHost = string.Empty,
-                Order = _simulations.Count + 1
-            };
-
-
             var initRequest = new InitialiseRequest
             {
                 SimulationId = simulationId,
@@ -98,6 +83,20 @@ namespace SurimiController.Services
             var cmsyResponse = _cmsyWorkflowClient.InitialiseAsync(initRequest);
             var marketResponse = _marketWorkflowClient.InitialiseAsync(initRequest);
             var valueChainResponse = _valueChainWorkflowClient.InitialiseAsync(initRequest);
+
+            _simulations[simulationId] = new Models.Simulation
+            {
+                ScenarioId = scenarioId,
+                StartDateTime = simulation.StartDateTime.ToDateTime(),
+                StepSize = simulation.TimeStep,
+                // If an endDateTime is provided, use the minimum of that and the MaximumEndDateTime from the simulation details
+                EndDateTime = endDateTime.HasValue
+                    ? (endDateTime.Value > simulation.MaximumEndDateTime.ToDateTime() ? simulation.MaximumEndDateTime.ToDateTime() : endDateTime.Value)
+                    : simulation.MaximumEndDateTime.ToDateTime(),
+                Status = "Initializing",
+                EcologyHost = string.Empty,
+                Order = _simulations.Count + 1
+            };
 
             // Run the rest of the logic in a background task after all initialisation calls complete
             _ = Task.Run(async () =>

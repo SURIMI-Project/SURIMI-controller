@@ -31,7 +31,8 @@ public class SimulationDispatcher
         Func<TClient, TRequest, AsyncUnaryCall<TResponse>> grpcMethod)
         where TClient : ClientBase<TClient>
     {
-        var address = Environment.GetEnvironmentVariable("ECOPATH_URL");    // for example: http://surimi-ecopath-0.surimi-ecopath.user-rikkert.svc.cluster.local:8080
+        var address = Environment.GetEnvironmentVariable("ECOPATH_URL");    // for example: http://pod.surimi-ecopath.namespace.svc.cluster.local:8080
+        var ns = Environment.GetEnvironmentVariable("POD_NAMESPACE");       // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
         string? pod;
 
         if (!simulationToPodMap.TryGetValue(simulationId, out pod))
@@ -41,9 +42,10 @@ public class SimulationDispatcher
             if (pod == null)
                 throw new Exception("No available pods");
 
-            if (address!.Contains("surimi-ecopath-0"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
+            if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
             {
-                address = address!.Replace("surimi-ecopath-0", pod);
+                address = address!.Replace("pod", pod);
+                address = address!.Replace("namespace", ns);
             }
 
             // Check if the dns address can be resolved. If not, don't use this pod yet
