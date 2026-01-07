@@ -69,6 +69,21 @@ namespace SurimiController.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} is already initialised"));
             }
 
+            _simulations[simulationId] = new Models.Simulation
+            {
+                ScenarioId = scenarioId,
+                StartDateTime = simulation.StartDateTime.ToDateTime(),
+                StepSize = simulation.TimeStep,
+                // If an endDateTime is provided, use the minimum of that and the MaximumEndDateTime from the simulation details
+                EndDateTime = endDateTime.HasValue 
+                    ? (endDateTime.Value > simulation.MaximumEndDateTime.ToDateTime() ? simulation.MaximumEndDateTime.ToDateTime() : endDateTime.Value) 
+                    : simulation.MaximumEndDateTime.ToDateTime(),
+                Status = "Initializing",
+                EcologyHost = string.Empty,
+                Order = _simulations.Count + 1
+            };
+
+
             var initRequest = new InitialiseRequest
             {
                 SimulationId = simulationId,
@@ -100,21 +115,13 @@ namespace SurimiController.Services
                 // Find the header by key (case-insensitive)
                 var hostValue = headers.GetValue("host"); // returns null if not found
 
-                _simulations[simulationId] = new Models.Simulation
-                {
-                    ScenarioId = scenarioId,
-                    StartDateTime = simulation.StartDateTime.ToDateTime(),
-                    StepSize = simulation.TimeStep,
-                    // If an endDateTime is provided, use the minimum of that and the MaximumEndDateTime from the simulation details
-                    EndDateTime = endDateTime.HasValue
-                        ? (endDateTime.Value > simulation.MaximumEndDateTime.ToDateTime()
-                            ? simulation.MaximumEndDateTime.ToDateTime()
-                            : endDateTime.Value)
-                        : simulation.MaximumEndDateTime.ToDateTime(),
-                    Status = "Created",
-                    EcologyHost = hostValue ?? string.Empty,
-                };
+                _simulations[simulationId].Status = "Initialised";
+                _simulations[simulationId].EcologyHost = hostValue ?? string.Empty;
 
+                if(simulationId.Equals(ecopathResponse.ResponseAsync.Result.SimulationId) == false)
+                {
+                    _logger.LogWarning("SimulationId mismatch after initialisation for simulation {SimulationId}", simulationId);
+                }
                 _logger.LogInformation("Simulation {SimulationId} is created and initialised", simulationId);
             });
 
@@ -563,8 +570,9 @@ namespace SurimiController.Services
                         SimulationCurrent = sim.Value.SimulationCurrent == default ? null : Timestamp.FromDateTime(sim.Value.SimulationCurrent),
                         SimulationStarted = sim.Value.SimulationStarted == default ? null : Timestamp.FromDateTime(sim.Value.SimulationStarted),
                         SimulationDuration = sim.Value.SimulationDuration == default ? null : Duration.FromTimeSpan(sim.Value.SimulationDuration),
-                        EcologyHost = sim.Value.EcologyHost
-                    }).OrderByDescending(x => x.SimulationStarted).ToList()
+                        EcologyHost = sim.Value.EcologyHost,
+                        Order = sim.Value.Order
+                    }).OrderByDescending(sim => sim.Order).ToList()
                 }
             });
         }

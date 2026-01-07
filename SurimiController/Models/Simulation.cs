@@ -2,6 +2,7 @@
 {
     public class Simulation
     {
+        public int Order { get; set; }
         public DateTime SimulationStarted { get; set; }
         public TimeSpan SimulationDuration { get; set; }
         public required string ScenarioId { get; set; }
