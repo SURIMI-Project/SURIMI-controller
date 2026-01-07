@@ -83,9 +83,10 @@ public class SimulationDispatcher
             podAvailability[pod] = false;
         }
 
-        if (address!.Contains("surimi-ecopath-0"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
+        if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
         {
-            address = address!.Replace("surimi-ecopath-0", pod);
+            address = address!.Replace("pod", pod);
+            address = address!.Replace("namespace", ns);
         }
 
         _logger.LogInformation("Using address {Address} for pod {Pod} and simulationId {SimulationId}", address, pod, simulationId);
