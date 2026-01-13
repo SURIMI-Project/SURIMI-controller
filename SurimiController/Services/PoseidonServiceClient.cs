@@ -1,0 +1,84 @@
+﻿using Grpc.Net.ClientFactory;
+using Grpc.Surimi;
+
+namespace SurimiController.Services
+{
+    public interface IPoseidonServiceClient : IWorkflowService, IMarketService, IEcologyService, IFisheryService
+    {
+    }
+
+    public class PoseidonServiceClient : IPoseidonServiceClient
+    {
+        private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient;
+        private readonly MarketService.MarketServiceClient _poseidonMarketClient;
+        private readonly FisheryService.FisheryServiceClient _poseidonFisheryClient;
+        private readonly EcologyService.EcologyServiceClient _poseidonEcologyClient;
+
+        private readonly ILogger<PoseidonServiceClient> _logger;
+
+        public PoseidonServiceClient(GrpcClientFactory clientFactory, ILogger<PoseidonServiceClient> logger)
+        {
+            _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
+            _poseidonMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("PoseidonMarket");
+            _poseidonEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("PoseidonEcology");
+            _poseidonFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("PoseidonFishery");
+
+            _logger = logger;
+        }
+
+        public void AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
+        {
+            initializationTasks.Add(_poseidonWorkflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken).ResponseAsync);
+        }
+
+        public Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)
+        {
+            return _poseidonWorkflowClient.CancelAsync(cancelRequest, cancellationToken: token).ResponseAsync;
+        }
+
+        public Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
+        {
+            return _poseidonWorkflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+
+        public Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, CancellationToken cancellationToken)
+        {
+            return _poseidonFisheryClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+
+        public Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, CancellationToken cancellationToken)
+        {
+            return _poseidonMarketClient.GetSalesAsync(getSalesRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+
+        public Task<GetSpeciesPricesResponse> GetSpeciesPricesAsync(GetSpeciesPricesRequest getSpeciesPricesRequest, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, CancellationToken cancellationToken)
+        {
+            return _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+
+        public Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, CancellationToken cancellationToken)
+        {
+            return _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+
+        public Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, CancellationToken cancellationToken)
+        {
+            return _poseidonFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+
+        public Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, CancellationToken cancellationToken)
+        {
+            return _poseidonMarketClient.UpdateSpeciesPricesAsync(updateSpeciesPricesRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+    }
+}

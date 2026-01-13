@@ -36,6 +36,11 @@ public class Program
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddTransient<ISurimiConfigurationService, SurimiConfigurationService>();
+        builder.Services.AddTransient<ICmsyServiceClient, CmsyServiceClient>();
+        builder.Services.AddTransient<IValueChainServiceClient, ValueChainServiceClient>();
+        builder.Services.AddTransient<IPoseidonServiceClient, PoseidonServiceClient>();
+        builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
+
 
         builder.Logging.ClearProviders();
         builder.Services.AddLogging(opt =>
