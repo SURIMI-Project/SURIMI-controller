@@ -2,7 +2,6 @@
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
-using SURIMI.Datamodel;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -281,7 +280,6 @@ namespace SurimiController.Services
                 LogStep(simulationId, current, "Poseidon.UpdateBiomass  (intermediate)");
 
                 //            xx = GetProtoString<UpdateBiomassRequest>(updateBiomassIntermediateRequest);
-                CorrectBiomass(updateBiomassIntermediateRequest);
 
                 var poseidonUpdateBiomassResponse = await _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassIntermediateRequest, cancellationToken: token);
 
@@ -369,39 +367,10 @@ namespace SurimiController.Services
             return resultaat;
         }
 
-        private void CorrectBiomass(UpdateBiomassRequest updateBiomassIntermediateRequest)
-        {
-            foreach (var grid in updateBiomassIntermediateRequest.BiomassSummary.BiomassGrids)
-            {
-                // Set life stage for HKE species
-                if ((grid.Species.SpeciesCode == "HKE") ||
-                    (grid.Species.SpeciesCode == "ANE"))
-                {
-                    if (string.IsNullOrEmpty(grid.Species.LifeStage))
-                    {
-                        grid.Species.LifeStage = "juvenile";
-                    }
-                }
-            }
-        }
-
         private void LogStep(string simulationId, DateTime current, string step)
         {
             _logger.LogInformation("{SimulationId} Processing step {Step}. {DateTime}", simulationId, step, current);
         }
-
-        //private static DateTime AddStepSize(DateTime current, string input)
-        //{
-        //    if (input.Length >= 2 && input.StartsWith('P') && input.EndsWith('M') && int.TryParse((input.Substring(1, input.Length - 2)), out int result))
-        //    {
-        //        return current.AddMonths(result);
-        //    }
-        //    else
-        //    {
-        //        return current + XmlConvert.ToTimeSpan(input);
-        //    }
-        //}
-
 
         private static DateTime AddStepSize(DateTime current, string input)
         {
