@@ -70,8 +70,9 @@ public class Program
         logger.LogInformation("AWS_DEFAULT_REGION: {AWS_DEFAULT_REGION}", Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION"));
         logger.LogInformation("AWS_BUCKET_NAME: {AWS_BUCKET_NAME}", Environment.GetEnvironmentVariable("AWS_BUCKET_NAME"));
         logger.LogInformation("OTEL_EXPORTER_OTLP_ENDPOINT: {OTEL_EXPORTER_OTLP_ENDPOINT}", Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT"));
-        logger.LogInformation("POD_NAMESPACE: {POD_NAMESPACE}", Environment.GetEnvironmentVariable("POD_NAMESPACE"));
-
+        logger.LogInformation("POD_NAMESPACE: {POD_NAMESPACE}", Environment.GetEnvironmentVariable("POD_NAMESPACE"));   // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
+        logger.LogInformation("EXCLUDE_CMSY: {EXCLUDE_CMSY}", Environment.GetEnvironmentVariable("EXCLUDE_CMSY"));
+        logger.LogInformation("EXCLUDE_VALUECHAIN: {EXCLUDE_VALUECHAIN}", Environment.GetEnvironmentVariable("EXCLUDE_VALUECHAIN"));
 
         app.Run();
 

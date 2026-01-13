@@ -103,13 +103,13 @@ else
                         <td>@sim.IP</td>
                         <td>
                             <a href="#" 
-                               class="btn btn-link btn-sm @(sim.Status == "Initializing" ? "disabled" : "")" 
+                               class="btn btn-link btn-sm @(sim.Status != "Initialised" ? "disabled" : "")" 
                                @onclick="() => StartSimulationFor(sim)"
                                @onclick:preventDefault="true">
                                 Start
                             </a>
                             <a href="#" 
-                                class="btn btn-link btn-sm text-danger @(sim.Status == "Initializing" ? "disabled" : "")" 
+                                class="btn btn-link btn-sm text-danger @(sim.Status != "Running" ? "disabled" : "")" 
                                 @onclick="() => CancelSimulationFor(sim)">
                                 Cancel
                             </a>
