@@ -6,8 +6,8 @@ var poseidon = builder.AddContainer("poseidon", "nicolaspayette/poseidon", "late
 var market = builder.AddContainer("market", "rikkert242/market", "latest")
     .WithHttpEndpoint(port: 5001, targetPort: 5001, name: "market");
 
-//var cmsy = builder.AddContainer("cmsy", "rikkert242/cmsy", "latest")
-//    .WithHttpEndpoint(port: 5020, targetPort: 5020, name: "cmsy");
+var cmsy = builder.AddContainer("cmsy", "rikkert242/cmsy", "latest")
+    .WithHttpEndpoint(port: 5020, targetPort: 5020, name: "cmsy");
 
 //var ecopath = builder.AddProject<Projects.Ecopath>("ecopath")
 //    .WithReplicas(5);
@@ -15,8 +15,8 @@ var market = builder.AddContainer("market", "rikkert242/market", "latest")
 var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
     .WithHttpEndpoint(port: 7890, targetPort: 8080, name: "ecopath");
 
-//var valueChain = builder.AddContainer("valuechain", "rikkert242/surimivaluechain", "latest")
-//    .WithHttpEndpoint(port: 7990, targetPort: 8080, name: "valuechain");
+var valueChain = builder.AddContainer("valuechain", "rikkert242/surimivaluechain", "latest")
+    .WithHttpEndpoint(port: 7990, targetPort: 8080, name: "valuechain");
 
 var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicontroller")
 //    .WithReference(poseidon)                                      // Strange that you can't use this reference here...
