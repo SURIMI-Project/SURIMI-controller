@@ -3,10 +3,6 @@ using Grpc.Surimi;
 
 namespace SurimiController.Services
 {
-    public interface IPoseidonServiceClient : IWorkflowService, IMarketService, IEcologyService, IFisheryService
-    {
-    }
-
     public class PoseidonServiceClient : IPoseidonServiceClient
     {
         private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient;
@@ -41,28 +37,27 @@ namespace SurimiController.Services
             return _poseidonWorkflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
-        public Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, CancellationToken cancellationToken)
+        public Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
+            LogStep(getCatchDispositionRequest.SimulationId, current, "GetCatchDisposition");
             return _poseidonFisheryClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
-        public Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, CancellationToken cancellationToken)
+        public Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
+            LogStep(getSalesRequest.SimulationId, current, "GetSalesSummary");
             return _poseidonMarketClient.GetSalesAsync(getSalesRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
-        public Task<GetSpeciesPricesResponse> GetSpeciesPricesAsync(GetSpeciesPricesRequest getSpeciesPricesRequest, CancellationToken cancellationToken)
+        public Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-        }
-
-        public Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, CancellationToken cancellationToken)
-        {
+            LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
             return _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
-        public Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, CancellationToken cancellationToken)
+        public Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, DateTime current, CancellationToken cancellationToken)
         {
+            LogStep(updateBiomassRequest.SimulationId, current, "UpdateBiomass");
             return _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
@@ -71,14 +66,16 @@ namespace SurimiController.Services
             return _poseidonFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
-        public Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, CancellationToken cancellationToken)
+
+        public Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdatePrices");
+            return _poseidonMarketClient.UpdateSpeciesPricesAsync(updateSpeciesPricesRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
-        public Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, CancellationToken cancellationToken)
+        private void LogStep(string simulationId, DateTime current, string step)
         {
-            return _poseidonMarketClient.UpdateSpeciesPricesAsync(updateSpeciesPricesRequest, cancellationToken: cancellationToken).ResponseAsync;
+            _logger.LogInformation("{SimulationId} Processing step Poseidon.{Step}. {DateTime}", simulationId, step, current);
         }
     }
 }

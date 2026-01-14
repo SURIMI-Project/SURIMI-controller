@@ -3,10 +3,6 @@ using Grpc.Surimi;
 
 namespace SurimiController.Services
 {
-    public interface IValueChainServiceClient : IWorkflowService, IMarketService
-    {
-    }
-
     public class ValueChainServiceClient : IValueChainServiceClient
     {
         private readonly ILogger<ValueChainServiceClient> _logger;
@@ -58,21 +54,21 @@ namespace SurimiController.Services
             throw new NotImplementedException();
         }
 
-        public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, CancellationToken cancellationToken)
+        public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeValueChain)
             {
-                LogStep(simulationStepRequest.SimulationId, "ValueChain.SimulateStep");
+                LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
                 return await _valueChainWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
             }
             return new SimulateStepResponse();
         }
 
-        public async Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, CancellationToken cancellationToken)
+        public async Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeValueChain)
             {
-                LogStep(updateSalesRequest.SimulationId, "ValueChain.UpdateSales");
+                LogStep(updateSalesRequest.SimulationId, current, "UpdateSales");
                 var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
             }
             return new UpdateSalesResponse();
@@ -83,9 +79,9 @@ namespace SurimiController.Services
             throw new NotImplementedException();
         }
 
-        private void LogStep(string simulationId, string step)
+        private void LogStep(string simulationId, DateTime current, string step)
         {
-            _logger.LogInformation("{SimulationId} Processing step {Step}.", simulationId, step);
+            _logger.LogInformation("{SimulationId} Processing step ValueChain.{Step}. {DateTime}", simulationId, step, current);
         }
     }
 }

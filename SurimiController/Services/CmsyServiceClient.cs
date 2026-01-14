@@ -3,10 +3,6 @@ using Grpc.Surimi;
 
 namespace SurimiController.Services
 {
-    public interface ICmsyServiceClient : IWorkflowService, IEcologyService, IFisheryService
-    {
-    }
-
     public class CmsyServiceClient : ICmsyServiceClient
     {
         private readonly ILogger<CmsyServiceClient> _logger;
@@ -50,44 +46,49 @@ namespace SurimiController.Services
             return new FinaliseResponse();
         }
 
+        public Task<GetBiomassResponse> GetBiomassAsync(GetBiomassRequest getBiomassRequest, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, CancellationToken cancellationToken)
+        public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeCmsy)
             {
-                LogStep(simulationStepRequest.SimulationId, "CMSY.SimulateStep");
+                LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
                 return await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
             }
             return new SimulateStepResponse();
         }
 
-        public async Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, CancellationToken cancellationToken)
+        public async Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeCmsy)
             {
-                LogStep(updateBiomassRequest.SimulationId, "CMSY++.UpdateBiomass (total)");
+                LogStep(updateBiomassRequest.SimulationId, current, "UpdateBiomass");
                 return await _cmsyEcologyClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken);
             }
             return new UpdateBiomassResponse();
         }
 
-        public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, CancellationToken cancellationToken)
+        public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeCmsy)
             {
-                LogStep(updateCatchDispositionRequest.SimulationId, "CMSY UpdateCatchDisposition (total)");
+                LogStep(updateCatchDispositionRequest.SimulationId, current, "UpdateCatchDisposition");
                 return await _cmsyFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
             }
             return new UpdateCatchDispositionResponse();
         }
 
-        private void LogStep(string simulationId, string step)
+        private void LogStep(string simulationId, DateTime current, string step)
         {
-            _logger.LogInformation("{SimulationId} Processing step {Step}.", simulationId, step);
+            _logger.LogInformation("{SimulationId} Processing step CMSY.{Step}. {DateTime}", simulationId, step, current);
         }
     }
 }

@@ -40,6 +40,7 @@ public class Program
         builder.Services.AddTransient<IValueChainServiceClient, ValueChainServiceClient>();
         builder.Services.AddTransient<IPoseidonServiceClient, PoseidonServiceClient>();
         builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
+        builder.Services.AddTransient<IEcopathServiceClient, EcopathServiceClient>();
 
 
         builder.Logging.ClearProviders();
