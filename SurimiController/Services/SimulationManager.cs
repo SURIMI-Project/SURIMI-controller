@@ -4,6 +4,7 @@ using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Xml;
 
 namespace SurimiController.Services
@@ -265,29 +266,46 @@ namespace SurimiController.Services
             return resultaat;
         }
 
-        private static DateTime AddStepSize(DateTime current, string input)
+        public static DateTime AddStepSize(DateTime current, string input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 throw new ArgumentException("input must not be null or whitespace.", nameof(input));
+
+            // Convert current time to CET for month/year calculations because the current time is in UTC.
+            // So 1-1-2013 is 31-12-2012 23:00 UTC. And we want to do the calculations in CET.
+            // we want to have the original month number (01-01-2013 -> 01-02-2013 -> etc)
+            // This is because adding a month to 31-1-2013 would give 31-2-2013 (not 27-2-2013).
+            TimeZoneInfo cetZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            DateTime cetTime = TimeZoneInfo.ConvertTimeFromUtc(current, cetZone);
+
 
             // ISO 8601 months only: "P<n>M" (period with months, without a time component)
             // Example: "P1M" = add 1 month
             // NOTE: Do NOT confuse with "PT<n>M" which means minutes.
             var monthsMatch = Regex.Match(input, @"^P(?<m>\d+)M$");
             if (monthsMatch.Success)
-            {
+             {
                 int months = int.Parse(monthsMatch.Groups["m"].Value);
 
                 // Add months. When adding months, day-of-month can drift if the current day
                 // doesn't exist in the target month (e.g., starting on the 31st).
-                // To guarantee sequences like 01-01 → 01-02 → 01-03 → 01-04,
-                // normalize to the first day of the resulting month.
-                var next = current.AddMonths(months);
-                return new DateTime(
-                    next.Year, next.Month, 1,
-                    current.Hour, current.Minute, current.Second,
-                    current.Kind
+                // To guarantee sequences like 01-01 → 01-02 → 01-03 → 01-04  and 10-01 → 10-02 → 10-03 → 10-04 etc,
+                // calculate the resulting month and year, but use the rest.
+                int year = cetTime.Year;
+                int month = cetTime.Month + months;
+                if (month > 12)
+                {
+                    year += 1;
+                    month = month % 12;
+                }
+                var next = cetTime.AddMonths(months);
+
+                var resultMonth = new DateTime(
+                    year, month, next.Day,
+                    cetTime.Hour, cetTime.Minute, cetTime.Second,
+                    cetTime.Kind
                 );
+                return TimeZoneInfo.ConvertTimeToUtc(resultMonth);
             }
 
             // ISO 8601 years only: "P<n>Y"
@@ -298,11 +316,11 @@ namespace SurimiController.Services
                 int years = int.Parse(yearsMatch.Groups["y"].Value);
 
                 // Same normalization as for months: set day to 1 to avoid day drift across months/years.
-                var next = current.AddYears(years);
+                var next = cetTime.AddYears(years);
                 return new DateTime(
                     next.Year, next.Month, 1,
-                    current.Hour, current.Minute, current.Second,
-                    current.Kind
+                    cetTime.Hour, cetTime.Minute, cetTime.Second,
+                    cetTime.Kind
                 );
             }
 
@@ -315,7 +333,8 @@ namespace SurimiController.Services
             // IMPORTANT: XmlConvert.ToTimeSpan does NOT support months or years,
             // which is why those are handled explicitly above.
             var ts = XmlConvert.ToTimeSpan(input);
-            return current + ts;
+            var result = cetTime + ts;
+            return TimeZoneInfo.ConvertTimeToUtc(result);
         }
 
         public static UpdateSalesRequest CreateUpdateSalesRequest(GetSalesResponse response, DateTime startDateTime, DateTime endDateTime)
@@ -366,18 +385,6 @@ namespace SurimiController.Services
                 BiomassSummary = getBiomassResponse.BiomassSummary
             };
 
-            // TODO: Remove this when the issue is fixed in Ecopath. This is a workaround to TEST
-            foreach (var grid in updateRequest.BiomassSummary.BiomassGrids)
-            {
-                foreach (var cell in grid.BiomassCells)
-                {
-                    if (cell.Biomass < 0)
-                    {
-                        _logger.LogWarning("GetBiomassResponse of Simulation {SimulationId} has a cell with a negative Biomass {Biomass}. It is set to 0. Fix this.", getBiomassResponse.SimulationId, cell.Biomass);
-                        cell.Biomass = 0;
-                    }
-                }
-            }
             return updateRequest;
         }
 

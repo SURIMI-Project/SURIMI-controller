@@ -1,6 +1,8 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
+using SurimiController.Services;
 
 namespace SURIMI.ConfigurationService.Tests
 {
@@ -193,5 +195,28 @@ namespace SURIMI.ConfigurationService.Tests
             conf.Simulation.Should().NotBeNull();
 
         }
+
+        public static TheoryData<string, DateTime, DateTime> Cases =
+            new()
+            {
+                { "P1M",  new DateTime(2012, 12, 31, 23, 0, 0), new DateTime(2013, 1, 31, 23, 0, 0) },
+                { "P1M", new DateTime(2013, 1, 31, 23, 0, 0), new DateTime(2013, 2, 28, 23, 0, 0) }
+            };
+
+        [Theory, MemberData(nameof(Cases))]
+        public async Task TestSimulationManagerAddStepSize(
+            string input,
+            DateTime current,
+            DateTime expectedDate)
+        {
+            // Arrange
+
+            // Act
+            var result = SimulationManager.AddStepSize(current, input);
+
+            // Assert
+            result.Should().Be(expectedDate);
+        }
+
     }
 }
