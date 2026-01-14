@@ -44,16 +44,6 @@ namespace SurimiController.Services
             return new FinaliseResponse();
         }
 
-        public Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<GetSpeciesPricesResponse> GetSpeciesPricesAsync(GetSpeciesPricesRequest getSpeciesPricesRequest, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeValueChain)
@@ -72,11 +62,6 @@ namespace SurimiController.Services
                 var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
             }
             return new UpdateSalesResponse();
-        }
-
-        public Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
         }
 
         private void LogStep(string simulationId, DateTime current, string step)

@@ -46,16 +46,6 @@ namespace SurimiController.Services
             return new FinaliseResponse();
         }
 
-        public Task<GetBiomassResponse> GetBiomassAsync(GetBiomassRequest getBiomassRequest, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeCmsy)
