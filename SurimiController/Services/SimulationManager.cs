@@ -4,6 +4,7 @@ using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Xml;
 
 namespace SurimiController.Services
@@ -12,48 +13,22 @@ namespace SurimiController.Services
     public class SimulationManager : ISimulationManager
     {
         private readonly ConcurrentDictionary<string, Models.Simulation> _simulations = new();
-        private readonly SimulationDispatcher _ecopathSimDispatcher;
         private readonly ILogger<SimulationManager> _logger;
 
-        private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient;
-        private readonly MarketService.MarketServiceClient _poseidonMarketClient;
-        private readonly FisheryService.FisheryServiceClient _poseidonFisheryClient;
-        private readonly EcologyService.EcologyServiceClient _poseidonEcologyClient;
+        private readonly IEcopathServiceClient _ecopathServiceClient;
+        private readonly IPoseidonServiceClient _poseidonServiceClient;
+        private readonly ICmsyServiceClient _cmsyServiceClient;
+        private readonly IValueChainServiceClient _valueChainServiceClient;
+        private readonly IMarketServiceClient _marketServiceClient;
 
-        private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient;
-        private readonly MarketService.MarketServiceClient _marketMarketClient;
-
-        private readonly WorkflowService.WorkflowServiceClient _cmsyWorkflowClient;
-        private readonly EcologyService.EcologyServiceClient _cmsyEcologyClient;
-        private readonly FisheryService.FisheryServiceClient _cmsyFisheryClient;
-
-        private readonly WorkflowService.WorkflowServiceClient _valueChainWorkflowClient;
-        private readonly MarketService.MarketServiceClient _valueChainMarketClient;
-
-        private readonly bool _includeCmsy = Environment.GetEnvironmentVariable("EXCLUDE_CMSY")?.ToLower() != "true";
-        private readonly bool _includeValueChain = Environment.GetEnvironmentVariable("EXCLUDE_VALUECHAIN")?.ToLower() != "true";
-
-        public SimulationManager(GrpcClientFactory clientFactory, SimulationDispatcher ecopathSimDispatcher, ILogger<SimulationManager> logger)
+        public SimulationManager(GrpcClientFactory clientFactory, ILogger<SimulationManager> logger, ICmsyServiceClient cmsyServiceClient, IValueChainServiceClient valueChainServiceClient, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient)
         {
-            _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
-            _poseidonMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("PoseidonMarket");
-            _poseidonEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("PoseidonEcology");
-            _poseidonFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("PoseidonFishery");
-
-            _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
-            _marketMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("MarketMarket");
-
-            _cmsyWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow");
-            _cmsyEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("CmsyEcology");
-            _cmsyFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("CmsyFishery");
-
-            _ecopathSimDispatcher = ecopathSimDispatcher;
-
-            _valueChainWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow");
-            _valueChainMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("ValueChainMarket");
-
             _logger = logger;
-
+            _cmsyServiceClient = cmsyServiceClient;
+            _valueChainServiceClient = valueChainServiceClient;
+            _marketServiceClient = marketServiceClient;
+            _poseidonServiceClient = poseidonServiceClient;
+            _ecopathServiceClient = ecopathServiceClient;
         }
 
         /// <summary>
@@ -79,25 +54,13 @@ namespace SurimiController.Services
                 Simulation = simulation
             };
 
-            var ecopathResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, InitialiseRequest, InitialiseResponse>(initRequest, initRequest.SimulationId,
-                (client, req) => client.InitialiseAsync(req));
-
-            var poseidonResponse = _poseidonWorkflowClient.InitialiseAsync(initRequest);
-            var marketResponse = _marketWorkflowClient.InitialiseAsync(initRequest);
-
             var initializationTasks = new List<Task<InitialiseResponse>>();
-            initializationTasks.Add(ecopathResponse.ResponseAsync);
-            initializationTasks.Add(poseidonResponse.ResponseAsync);
-            initializationTasks.Add(marketResponse.ResponseAsync);
 
-            if (_includeCmsy)
-            {
-                initializationTasks.Add(_cmsyWorkflowClient.InitialiseAsync(initRequest).ResponseAsync);
-            }
-            if (_includeValueChain)
-            {
-                initializationTasks.Add(_valueChainWorkflowClient.InitialiseAsync(initRequest).ResponseAsync);
-            }
+            _ecopathServiceClient.AddInitialise(initializationTasks, initRequest);
+            _poseidonServiceClient.AddInitialise(initializationTasks, initRequest);
+            _marketServiceClient.AddInitialise(initializationTasks, initRequest);
+            _cmsyServiceClient.AddInitialise(initializationTasks, initRequest);
+            _valueChainServiceClient.AddInitialise(initializationTasks, initRequest);
 
             _simulations[simulationId] = new Models.Simulation
             {
@@ -118,19 +81,11 @@ namespace SurimiController.Services
             {
                 await Task.WhenAll(initializationTasks);
 
-                // Await the response headers
-                var headers = await ecopathResponse.ResponseHeadersAsync;
-
-                // Find the header by key (case-insensitive)
-                var hostValue = headers.GetValue("host"); // returns null if not found
+                var hostValue = await _ecopathServiceClient.GetHostValueAsync();
 
                 _simulations[simulationId].Status = "Initialised";
                 _simulations[simulationId].EcologyHost = hostValue ?? string.Empty;
 
-                if (simulationId.Equals(ecopathResponse.ResponseAsync.Result.SimulationId) == false)
-                {
-                    _logger.LogWarning("SimulationId mismatch after initialisation for simulation {SimulationId}", simulationId);
-                }
                 _logger.LogInformation("Simulation {SimulationId} is created and initialised", simulationId);
             });
 
@@ -174,21 +129,11 @@ namespace SurimiController.Services
                     // Finalise the simulation
                     var finaliseRequest = CreateFinaliseRequest(simulationId);
 
-                    var ecopathFinaliseResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, FinaliseRequest, FinaliseResponse>(finaliseRequest, simulationId,
-                        (client, req) => client.FinaliseAsync(req));
-                    _ecopathSimDispatcher.ReleasePodFromSimulation(simulationId);
-
-                    var marketFinaliseResponse = _marketWorkflowClient.FinaliseAsync(finaliseRequest);
-                    var poseidonFinaliseResponse = _poseidonWorkflowClient.FinaliseAsync(finaliseRequest);
-
-                    await ecopathFinaliseResponse;
-                    await marketFinaliseResponse;
-                    await poseidonFinaliseResponse;
-
-                    if (_includeCmsy)
-                        await _cmsyWorkflowClient.FinaliseAsync(finaliseRequest);
-                    if (_includeValueChain)
-                        await _valueChainWorkflowClient.FinaliseAsync(finaliseRequest);
+                    await _ecopathServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
+                    await _poseidonServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
+                    await _marketServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
+                    await _cmsyServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
+                    await _valueChainServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
 
                     _simulations[simulationId].Status = "Finished";
                     _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
@@ -199,21 +144,12 @@ namespace SurimiController.Services
                     // cancel the simulation
                     var cancelRequest = CreateCancelRequest(simulationId);
 
-                    var ecopathCancelResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, CancelRequest, CancelResponse>(cancelRequest, simulationId,
-                        (client, req) => client.CancelAsync(req));
-                    _ecopathSimDispatcher.ReleasePodFromSimulation(simulationId);
 
-                    var marketCancelResponse = _marketWorkflowClient.CancelAsync(cancelRequest);
-                    var poseidonCancelResponse = _poseidonWorkflowClient.CancelAsync(cancelRequest);
-
-                    await ecopathCancelResponse;
-                    await marketCancelResponse;
-                    await poseidonCancelResponse;
-
-                    if (_includeCmsy)
-                        await _cmsyWorkflowClient.CancelAsync(cancelRequest);
-                    if (_includeValueChain)
-                        await _valueChainWorkflowClient.CancelAsync(cancelRequest);
+                    await _poseidonServiceClient.CancelAsync(cancelRequest, cts.Token);
+                    await _ecopathServiceClient.CancelAsync(cancelRequest, cts.Token);
+                    await _marketServiceClient.CancelAsync(cancelRequest, cts.Token); 
+                    await _cmsyServiceClient.CancelAsync(cancelRequest, cts.Token); 
+                    await _valueChainServiceClient.CancelAsync(cancelRequest, cts.Token);
 
                     _simulations[simulationId].Status = "Canceled";
                     _logger.LogInformation("{SimulationId} is canceled", simulationId);
@@ -251,123 +187,70 @@ namespace SurimiController.Services
 
         private async Task ProcessSimulationStep(string simulationId, DateTime current, DateTime endStepDateTime, CancellationToken token)
         {
-            LogStep(simulationId, current, "Market.GetSpeciesPrices");
             _simulations[simulationId].SimulationCurrent = current;
 
-            var speciesPriceResponse = await _marketMarketClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, cancellationToken: token);
+            var speciesPriceResponse = await _marketServiceClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, current, cancellationToken: token);
 
             var updatePriceRequest = CreateUpdateSpeciesPricesRequest(speciesPriceResponse);
 //            var xx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
 
-            var ecopathUpdatePricesResponse = _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updatePriceRequest, simulationId,
-                (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: token));
+            var poseidonUpdatePricesResponse = _poseidonServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
 
-            var poseidonUpdatePricesResponse = _poseidonMarketClient.UpdateSpeciesPricesAsync(updatePriceRequest, cancellationToken: token);
-
-            LogStep(simulationId, current, "Ecopath.UpdatePrices");
-            await ecopathUpdatePricesResponse;
-            LogStep(simulationId, current, "Poseidon.UpdatePrices");
+            await _ecopathServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
             await poseidonUpdatePricesResponse;
 
-            var simulationStepRequest = CreateSimulateStepRequest(simulationId);
+            var simulationStepRequest = CreateSimulateStepRequest(simulationId, current);
 
-            LogStep(simulationId, current, "Ecopath.SimulateStep");
-            await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, SimulateStepRequest, SimulateStepResponse>(simulationStepRequest, simulationId,
-                (client, req) => client.SimulateStepAsync(req, cancellationToken: token));
+            await _ecopathServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 
-            LogStep(simulationId, current, "Ecopath GetBiomass (intermediate)");
-            var getBiomassResponseIntermediate = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
-                (client, req) => client.GetBiomassAsync(req, cancellationToken: token));
+            var getBiomassResponseIntermediate = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId }, current, cancellationToken: token);
 
             var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponseIntermediate);
 
-            LogStep(simulationId, current, "Poseidon.UpdateBiomass  (intermediate)");
-
 //            xx = GetProtoString<UpdateBiomassRequest>(updateBiomassIntermediateRequest);
 
-            var poseidonUpdateBiomassResponse = await _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassIntermediateRequest, cancellationToken: token);
+            var poseidonUpdateBiomassResponse = await _poseidonServiceClient.UpdateBiomassAsync(updateBiomassIntermediateRequest, current, cancellationToken: token);
 
-            LogStep(simulationId, current, "Poseidon.SimulateStep");
-            var poseidonSimulateStepResponse = await _poseidonWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
+            var poseidonSimulateStepResponse = await _poseidonServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 
             var getCatchDispositionRequest = CreateGetCatchDispositionRequest(simulationId, current, endStepDateTime);
 
-            LogStep(simulationId, current, "Poseidon.GetCatchDisposition");
-            var poseidonCatchDisposition = await _poseidonFisheryClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: token);
+            var poseidonCatchDisposition = await _poseidonServiceClient.GetCatchDispositionAsync(getCatchDispositionRequest, current, cancellationToken: token);
 
             var updateCatchDispositionIntermediateRequest = CreateUpdateCatchDispositionRequest(poseidonCatchDisposition);
 
-            LogStep(simulationId, current, "Ecopath.UpdateCatchDisposition Summary");
-            var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionIntermediateRequest, simulationId,
-                (client, req) => client.UpdateCatchDispositionAsync(req, cancellationToken: token));
+            var catchDispositionResponse = await _ecopathServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionIntermediateRequest, current, cancellationToken: token);
+            var getBiomassResponseTotal = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId }, current, cancellationToken: token);
 
-            LogStep(simulationId, current, "Ecopath GetBiomass (total)");
-            var getBiomassResponseTotal = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(new GetBiomassRequest() { SimulationId = simulationId }, simulationId,
-                (client, req) => client.GetBiomassAsync(req, cancellationToken: token));
+            await _cmsyServiceClient.UpdateBiomassAsync(CreateUpdateBiomassRequest(getBiomassResponseTotal), current, cancellationToken: token);
 
-            if (_includeCmsy)
-            {
-                var updateBiomassTotalRequest = CreateUpdateBiomassRequest(getBiomassResponseTotal);
-                LogStep(simulationId, current, "CMSY++.UpdateBiomass (total)");
-                var cmsyUpdateBiomassResponse = await _cmsyEcologyClient.UpdateBiomassAsync(updateBiomassTotalRequest, cancellationToken: token);
-            }
+            var ecopathCatchDispositionSummary = await _ecopathServiceClient.GetCatchDispositionAsync(getCatchDispositionRequest, current, cancellationToken: token);
 
-            LogStep(simulationId, current, "Ecopath.GetCatchDisposition");
-            var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, simulationId,
-                (client, req) => client.GetCatchDispositionAsync(req, cancellationToken: token));
-
-            if (_includeCmsy)
-            {
-                var updateCatchDispositionTotalRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary);
-                LogStep(simulationId, current, "CMSY UpdateCatchDisposition (total)");
-                await _cmsyFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest, cancellationToken: token);
-            }
+            await _cmsyServiceClient.UpdateCatchDispositionAsync(CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary), current, cancellationToken: token);
 
             var getSalesRequest = CreateGetSalesRequest(simulationId, current, endStepDateTime);
 
-            LogStep(simulationId, current, "Ecopath.GetSales");
-            var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, simulationId,
-                (client, req) => client.GetSalesAsync(req, cancellationToken: token));
+            var ecopathGetSalesResponse = await _ecopathServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
 
             // Update Sales to Market
+            
             var ecopathUpdateSalesRequest = CreateUpdateSalesRequest(ecopathGetSalesResponse, current, endStepDateTime);
-            LogStep(simulationId, current, "Market.UpdateSales from Ecopath");
-            var marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(ecopathUpdateSalesRequest, cancellationToken: token);
+            var marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, token);
 
-            if (_includeValueChain)
-            {
-                LogStep(simulationId, current, "ValueChain.UpdateSales from Ecopath");
-                var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(ecopathUpdateSalesRequest, cancellationToken: token);
-            }
+            await _valueChainServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, cancellationToken: token);
 
-            LogStep(simulationId, current, "Poseidon.GetSalesSummary");
-            var poseidonGetSalesResponse = await _poseidonMarketClient.GetSalesAsync(getSalesRequest, cancellationToken: token);
+            var poseidonGetSalesResponse = await _poseidonServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
 
             var poseidonUpdateSalesRequest = CreateUpdateSalesRequest(poseidonGetSalesResponse, current, endStepDateTime);
-            LogStep(simulationId, current, "Market.UpdateSales from Poseidon");
-            marketUpdateSalesResponse = await _marketMarketClient.UpdateSalesAsync(poseidonUpdateSalesRequest, cancellationToken: token);
+            marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, token);
 
-            if (_includeValueChain)
-            {
-                LogStep(simulationId, current, "ValueChain.UpdateSales from Poseidon");
-                var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(poseidonUpdateSalesRequest, cancellationToken: token);
-            }
+            await _valueChainServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
 
-            if (_includeCmsy)
-            {
-                LogStep(simulationId, current, "CMSY.SimulateStep");
-                var cmsySimulateStepResponse = await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
-            }
+            await _cmsyServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 
-            LogStep(simulationId, current, "Market.SimulateStep");
-            var marketSimulateStepResponse = await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
+            await _marketServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 
-            if (_includeValueChain)
-            {
-                LogStep(simulationId, current, "ValueChain.SimulateStep");
-                var valueChainSimulateStepResponse = await _valueChainWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: token);
-            }
-
+            await _valueChainServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
         }
 
         private string GetProtoString<T>(object obj)
@@ -383,34 +266,46 @@ namespace SurimiController.Services
             return resultaat;
         }
 
-        private void LogStep(string simulationId, DateTime current, string step)
-        {
-            _logger.LogInformation("{SimulationId} Processing step {Step}. {DateTime}", simulationId, step, current);
-        }
-
-        private static DateTime AddStepSize(DateTime current, string input)
+        public static DateTime AddStepSize(DateTime current, string input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 throw new ArgumentException("input must not be null or whitespace.", nameof(input));
+
+            // Convert current time to CET for month/year calculations because the current time is in UTC.
+            // So 1-1-2013 is 31-12-2012 23:00 UTC. And we want to do the calculations in CET.
+            // we want to have the original month number (01-01-2013 -> 01-02-2013 -> etc)
+            // This is because adding a month to 31-1-2013 would give 31-2-2013 (not 27-2-2013).
+            TimeZoneInfo cetZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            DateTime cetTime = TimeZoneInfo.ConvertTimeFromUtc(current, cetZone);
+
 
             // ISO 8601 months only: "P<n>M" (period with months, without a time component)
             // Example: "P1M" = add 1 month
             // NOTE: Do NOT confuse with "PT<n>M" which means minutes.
             var monthsMatch = Regex.Match(input, @"^P(?<m>\d+)M$");
             if (monthsMatch.Success)
-            {
+             {
                 int months = int.Parse(monthsMatch.Groups["m"].Value);
 
                 // Add months. When adding months, day-of-month can drift if the current day
                 // doesn't exist in the target month (e.g., starting on the 31st).
-                // To guarantee sequences like 01-01 → 01-02 → 01-03 → 01-04,
-                // normalize to the first day of the resulting month.
-                var next = current.AddMonths(months);
-                return new DateTime(
-                    next.Year, next.Month, 1,
-                    current.Hour, current.Minute, current.Second,
-                    current.Kind
+                // To guarantee sequences like 01-01 → 01-02 → 01-03 → 01-04  and 10-01 → 10-02 → 10-03 → 10-04 etc,
+                // calculate the resulting month and year, but use the rest.
+                int year = cetTime.Year;
+                int month = cetTime.Month + months;
+                if (month > 12)
+                {
+                    year += 1;
+                    month = month % 12;
+                }
+                var next = cetTime.AddMonths(months);
+
+                var resultMonth = new DateTime(
+                    year, month, next.Day,
+                    cetTime.Hour, cetTime.Minute, cetTime.Second,
+                    cetTime.Kind
                 );
+                return TimeZoneInfo.ConvertTimeToUtc(resultMonth);
             }
 
             // ISO 8601 years only: "P<n>Y"
@@ -421,11 +316,11 @@ namespace SurimiController.Services
                 int years = int.Parse(yearsMatch.Groups["y"].Value);
 
                 // Same normalization as for months: set day to 1 to avoid day drift across months/years.
-                var next = current.AddYears(years);
+                var next = cetTime.AddYears(years);
                 return new DateTime(
                     next.Year, next.Month, 1,
-                    current.Hour, current.Minute, current.Second,
-                    current.Kind
+                    cetTime.Hour, cetTime.Minute, cetTime.Second,
+                    cetTime.Kind
                 );
             }
 
@@ -438,7 +333,8 @@ namespace SurimiController.Services
             // IMPORTANT: XmlConvert.ToTimeSpan does NOT support months or years,
             // which is why those are handled explicitly above.
             var ts = XmlConvert.ToTimeSpan(input);
-            return current + ts;
+            var result = cetTime + ts;
+            return TimeZoneInfo.ConvertTimeToUtc(result);
         }
 
         public static UpdateSalesRequest CreateUpdateSalesRequest(GetSalesResponse response, DateTime startDateTime, DateTime endDateTime)
@@ -489,26 +385,15 @@ namespace SurimiController.Services
                 BiomassSummary = getBiomassResponse.BiomassSummary
             };
 
-            // TODO: Remove this when the issue is fixed in Ecopath. This is a workaround to TEST
-            foreach (var grid in updateRequest.BiomassSummary.BiomassGrids)
-            {
-                foreach (var cell in grid.BiomassCells)
-                {
-                    if (cell.Biomass < 0)
-                    {
-                        _logger.LogWarning("GetBiomassResponse of Simulation {SimulationId} has a cell with a negative Biomass {Biomass}. It is set to 0. Fix this.", getBiomassResponse.SimulationId, cell.Biomass);
-                        cell.Biomass = 0;
-                    }
-                }
-            }
             return updateRequest;
         }
 
-        private static SimulateStepRequest CreateSimulateStepRequest(string simulationId)
+        private static SimulateStepRequest CreateSimulateStepRequest(string simulationId, DateTime currentDateTime)
         {
             return new SimulateStepRequest
             {
-                SimulationId = simulationId
+                SimulationId = simulationId,
+                CurrentDateTime = Timestamp.FromDateTime(currentDateTime)
             };
         }
 
