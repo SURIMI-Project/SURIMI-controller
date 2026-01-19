@@ -77,13 +77,19 @@ namespace SurimiController.Services
         /// <returns></returns>
         private Grpc.Surimi.Simulation GetSimulation(SurimiConfiguration surimiConfiguration)
         {
+            if (surimiConfiguration.Simulation is null)
+            {
+                throw new ArgumentNullException(nameof(surimiConfiguration.Simulation), "Simulation configuration cannot be null.");
+            }
+            surimiConfiguration.Simulation.StartDateTime = DateTime.SpecifyKind(surimiConfiguration.Simulation.StartDateTime, DateTimeKind.Utc);
+            surimiConfiguration.Simulation.MaximumEndDateTime = DateTime.SpecifyKind(surimiConfiguration.Simulation.MaximumEndDateTime, DateTimeKind.Utc);
             return new Grpc.Surimi.Simulation()
             {
-                CaseStudyName = surimiConfiguration.Simulation?.CaseStudyName ?? string.Empty,
-                StartDateTime = surimiConfiguration.Simulation != null ? Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(surimiConfiguration.Simulation.StartDateTime.ToUniversalTime()) : null,
-                MaximumEndDateTime = surimiConfiguration.Simulation != null ? Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(surimiConfiguration.Simulation.MaximumEndDateTime.ToUniversalTime()) : null,
-                TimeStep = surimiConfiguration.Simulation?.TimeStep ?? string.Empty,
-                Geography = surimiConfiguration.Simulation?.Geography != null ? new Grpc.Surimi.Geography()
+                CaseStudyName = surimiConfiguration.Simulation.CaseStudyName ?? string.Empty,
+                StartDateTime = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(surimiConfiguration.Simulation.StartDateTime),
+                MaximumEndDateTime = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(surimiConfiguration.Simulation.MaximumEndDateTime),
+                TimeStep = surimiConfiguration.Simulation.TimeStep ?? string.Empty,
+                Geography = surimiConfiguration.Simulation.Geography != null ? new Grpc.Surimi.Geography()
                 {
                     RasterCellOrigin = Enum.Parse<Grpc.Surimi.RasterCellOrigin>(surimiConfiguration.Simulation.Geography.RasterCellOrigin.ToString()),
                     Crs = new Grpc.Surimi.CoordinateReferenceSystem()

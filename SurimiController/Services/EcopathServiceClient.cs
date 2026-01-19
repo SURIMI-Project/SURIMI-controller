@@ -7,7 +7,6 @@ namespace SurimiController.Services
     {
         private readonly ILogger<MarketServiceClient> _logger;
         private readonly SimulationDispatcher _ecopathSimDispatcher;
-        private AsyncUnaryCall<InitialiseResponse>? _initialiseResponse;
 
         public EcopathServiceClient(ILogger<MarketServiceClient> logger, SimulationDispatcher ecopathSimDispatcher)
         {
@@ -15,27 +14,12 @@ namespace SurimiController.Services
             _ecopathSimDispatcher = ecopathSimDispatcher;
         }
 
-        public async Task<string> GetHostValueAsync()
+        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
         {
-            if (_initialiseResponse == null)
-            {
-                return string.Empty;
-            }
-
-            // Await the response headers
-            var headers = await _initialiseResponse.ResponseHeadersAsync;
-
-            // Find the header by key (case-insensitive)
-            var hostValue = headers.GetValue("host"); // returns null if not found
-
-            return hostValue ?? string.Empty;
-        }
-
-        public void AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
-        {
-            _initialiseResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, InitialiseRequest, InitialiseResponse>(initialiseRequest, initialiseRequest.SimulationId,
+            var initialiseResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, InitialiseRequest, InitialiseResponse>(initialiseRequest, initialiseRequest.SimulationId,
                 (client, req) => client.InitialiseAsync(req));
-            initializationTasks.Add(_initialiseResponse.ResponseAsync);
+            initializationTasks.Add(initialiseResponse.ResponseAsync);
+            return initialiseResponse;
         }
 
         public async Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)

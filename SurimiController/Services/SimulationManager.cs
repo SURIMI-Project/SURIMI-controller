@@ -56,7 +56,7 @@ namespace SurimiController.Services
 
             var initializationTasks = new List<Task<InitialiseResponse>>();
 
-            _ecopathServiceClient.AddInitialise(initializationTasks, initRequest);
+            var ecopathInitialiseResponse = _ecopathServiceClient.AddInitialise(initializationTasks, initRequest);
             _poseidonServiceClient.AddInitialise(initializationTasks, initRequest);
             _marketServiceClient.AddInitialise(initializationTasks, initRequest);
             _cmsyServiceClient.AddInitialise(initializationTasks, initRequest);
@@ -81,12 +81,20 @@ namespace SurimiController.Services
             {
                 await Task.WhenAll(initializationTasks);
 
-                var hostValue = await _ecopathServiceClient.GetHostValueAsync();
+                string hostValue = string.Empty;
+                if (ecopathInitialiseResponse != null)
+                {
+                    // Await the response headers
+                    var headers = await ecopathInitialiseResponse.ResponseHeadersAsync;
 
-                _simulations[simulationId].Status = "Initialised";
+                    // Find the header by key (case-insensitive)
+                    hostValue = headers.GetValue("host") ?? string.Empty; // returns string.Empty if not found
+                }
+
                 _simulations[simulationId].EcologyHost = hostValue ?? string.Empty;
+                _simulations[simulationId].Status = "Initialised";
 
-                _logger.LogInformation("Simulation {SimulationId} is created and initialised", simulationId);
+                _logger.LogInformation("Simulation {SimulationId} is created and initialised on {EcologyHost}", simulationId, hostValue);
             });
 
             // Return promptly, do not await the initialisation calls
@@ -271,14 +279,6 @@ namespace SurimiController.Services
             if (string.IsNullOrWhiteSpace(input))
                 throw new ArgumentException("input must not be null or whitespace.", nameof(input));
 
-            // Convert current time to CET for month/year calculations because the current time is in UTC.
-            // So 1-1-2013 is 31-12-2012 23:00 UTC. And we want to do the calculations in CET.
-            // we want to have the original month number (01-01-2013 -> 01-02-2013 -> etc)
-            // This is because adding a month to 31-1-2013 would give 31-2-2013 (not 27-2-2013).
-            TimeZoneInfo cetZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-            DateTime cetTime = TimeZoneInfo.ConvertTimeFromUtc(current, cetZone);
-
-
             // ISO 8601 months only: "P<n>M" (period with months, without a time component)
             // Example: "P1M" = add 1 month
             // NOTE: Do NOT confuse with "PT<n>M" which means minutes.
@@ -291,21 +291,20 @@ namespace SurimiController.Services
                 // doesn't exist in the target month (e.g., starting on the 31st).
                 // To guarantee sequences like 01-01 → 01-02 → 01-03 → 01-04  and 10-01 → 10-02 → 10-03 → 10-04 etc,
                 // calculate the resulting month and year, but use the rest.
-                int year = cetTime.Year;
-                int month = cetTime.Month + months;
+                int year = current.Year;
+                int month = current.Month + months;
                 if (month > 12)
                 {
                     year += 1;
                     month = month % 12;
                 }
-                var next = cetTime.AddMonths(months);
+                var next = current.AddMonths(months);
 
-                var resultMonth = new DateTime(
+                return new DateTime(
                     year, month, next.Day,
-                    cetTime.Hour, cetTime.Minute, cetTime.Second,
-                    cetTime.Kind
+                    current.Hour, current.Minute, current.Second,
+                    current.Kind
                 );
-                return TimeZoneInfo.ConvertTimeToUtc(resultMonth);
             }
 
             // ISO 8601 years only: "P<n>Y"
@@ -316,11 +315,11 @@ namespace SurimiController.Services
                 int years = int.Parse(yearsMatch.Groups["y"].Value);
 
                 // Same normalization as for months: set day to 1 to avoid day drift across months/years.
-                var next = cetTime.AddYears(years);
+                var next = current.AddYears(years);
                 return new DateTime(
                     next.Year, next.Month, 1,
-                    cetTime.Hour, cetTime.Minute, cetTime.Second,
-                    cetTime.Kind
+                    current.Hour, current.Minute, current.Second,
+                    current.Kind
                 );
             }
 
@@ -333,7 +332,7 @@ namespace SurimiController.Services
             // IMPORTANT: XmlConvert.ToTimeSpan does NOT support months or years,
             // which is why those are handled explicitly above.
             var ts = XmlConvert.ToTimeSpan(input);
-            var result = cetTime + ts;
+            var result = current + ts;
             return TimeZoneInfo.ConvertTimeToUtc(result);
         }
 
