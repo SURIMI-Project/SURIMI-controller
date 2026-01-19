@@ -1,4 +1,5 @@
-﻿using Grpc.Net.ClientFactory;
+﻿using Grpc.Core;
+using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
 namespace SurimiController.Services
@@ -22,9 +23,11 @@ namespace SurimiController.Services
             _logger = logger;
         }
 
-        public void AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
+        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
         {
-            initializationTasks.Add(_poseidonWorkflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken).ResponseAsync);
+            var initialiseResponse = _poseidonWorkflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken);
+            initializationTasks.Add(initialiseResponse.ResponseAsync);
+            return initialiseResponse;
         }
 
         public Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)

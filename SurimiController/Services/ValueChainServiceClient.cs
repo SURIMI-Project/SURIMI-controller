@@ -1,4 +1,5 @@
-﻿using Grpc.Net.ClientFactory;
+﻿using Grpc.Core;
+using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
 namespace SurimiController.Services
@@ -18,12 +19,15 @@ namespace SurimiController.Services
             _logger = logger;
         }
 
-        public void AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default(CancellationToken))
+        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_includeValueChain)
             {
-                initializationTasks.Add(_valueChainWorkflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken).ResponseAsync);
+                var initialiseResponse = _valueChainWorkflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken);
+                initializationTasks.Add(initialiseResponse.ResponseAsync);
+                return initialiseResponse;
             }
+            return null;
         }
 
         public async Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)
