@@ -34,6 +34,7 @@ namespace SurimiController.Services
         {
             var _finaliseResponse = await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, FinaliseRequest, FinaliseResponse>(finaliseRequest, finaliseRequest.SimulationId,
                 (client, req) => client.FinaliseAsync(req));
+            _ecopathSimDispatcher.ReleasePodFromSimulation(finaliseRequest.SimulationId);
             return _finaliseResponse;
         }
 

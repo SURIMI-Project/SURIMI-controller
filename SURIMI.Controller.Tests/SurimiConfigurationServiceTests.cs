@@ -10,6 +10,7 @@ namespace SURIMI.ConfigurationService.Tests
     {
         private readonly string testYaml;
         private readonly Mock<ILogger<SurimiConfigurationService>> _loggerMock = new();
+        private readonly Mock<IS3Services> _s3ServicesMock = new();
 
         public SurimiConfigurationServiceTests()
         {
@@ -185,7 +186,7 @@ namespace SURIMI.ConfigurationService.Tests
         public void ReadYamlShouldReturnOK()
         {
             // Arrange
-            var service = new SurimiConfigurationService(_loggerMock.Object);
+            var service = new SurimiConfigurationService(_loggerMock.Object, _s3ServicesMock.Object);
 
             // Act
             var conf = service.DeserialiseConfiguration(testYaml);

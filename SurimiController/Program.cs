@@ -1,6 +1,7 @@
 using Grpc.Surimi;
 using SURIMI.ConfigurationService;
 using SurimiController.Services;
+using System.Collections;
 
 namespace SurimiController;
 
@@ -41,6 +42,8 @@ public class Program
         builder.Services.AddTransient<IPoseidonServiceClient, PoseidonServiceClient>();
         builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
         builder.Services.AddTransient<IEcopathServiceClient, EcopathServiceClient>();
+        builder.Services.AddTransient<IOAuth2Services, OAuth2Services>();
+        builder.Services.AddTransient<IS3Services, S3Services>();
 
 
         builder.Logging.ClearProviders();
@@ -55,6 +58,8 @@ public class Program
         var app = builder.Build();
 
         app.MapDefaultEndpoints();
+        
+        app.AddVaultSecretsAsEnvironmentVariables();    // Load secrets from HashiCorp Vault and set them as environment variables. DATALAB_USERNAME, DATALAB_PASSWORD, etc.
 
         // Configure the HTTP request pipeline.
         app.MapGrpcService<Services.SurimiControllerService>();
@@ -69,19 +74,12 @@ public class Program
         logger.LogInformation("For CMSY write to: {CMSY_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
         logger.LogInformation("For Value Chain write to: {VALUECHAIN_URL}", Environment.GetEnvironmentVariable("VALUECHAIN_URL"));
 
-        logger.LogInformation("AWS_ACCESS_KEY_ID: {AWS_ACCESS_KEY_ID}", Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"));
-        logger.LogInformation("AWS_SECRET_ACCESS_KEY: {AWS_SECRET_ACCESS_KEY}", Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"));
-        logger.LogInformation("AWS_SESSION_TOKEN: {AWS_SESSION_TOKEN}", Environment.GetEnvironmentVariable("AWS_SESSION_TOKEN"));
-        logger.LogInformation("AWS_S3_ENDPOINT: {AWS_S3_ENDPOINT}", Environment.GetEnvironmentVariable("AWS_S3_ENDPOINT"));
-        logger.LogInformation("AWS_DEFAULT_REGION: {AWS_DEFAULT_REGION}", Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION"));
-        logger.LogInformation("AWS_BUCKET_NAME: {AWS_BUCKET_NAME}", Environment.GetEnvironmentVariable("AWS_BUCKET_NAME"));
-        logger.LogInformation("OTEL_EXPORTER_OTLP_ENDPOINT: {OTEL_EXPORTER_OTLP_ENDPOINT}", Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT"));
-        logger.LogInformation("POD_NAMESPACE: {POD_NAMESPACE}", Environment.GetEnvironmentVariable("POD_NAMESPACE"));   // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
-        logger.LogInformation("EXCLUDE_CMSY: {EXCLUDE_CMSY}", Environment.GetEnvironmentVariable("EXCLUDE_CMSY"));
-        logger.LogInformation("EXCLUDE_VALUECHAIN: {EXCLUDE_VALUECHAIN}", Environment.GetEnvironmentVariable("EXCLUDE_VALUECHAIN"));
+        foreach (DictionaryEntry e in System.Environment.GetEnvironmentVariables())
+        {
+            Console.WriteLine(e.Key + ":" + e.Value);
+        }
 
         app.Run();
-
 
         // Local helper function for registering gRPC clients
         void AddConfiguredGrpcClient<TClient>(string? name, string envVar)
