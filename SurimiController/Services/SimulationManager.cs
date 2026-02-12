@@ -54,6 +54,8 @@ namespace SurimiController.Services
                 Simulation = simulation
             };
 
+            //var xx = GetProtoString<InitialiseRequest>(initRequest);
+
             var initializationTasks = new List<Task<InitialiseResponse>>();
 
             var ecopathInitialiseResponse = _ecopathServiceClient.AddInitialise(initializationTasks, initRequest);
@@ -152,7 +154,6 @@ namespace SurimiController.Services
                     // cancel the simulation
                     var cancelRequest = CreateCancelRequest(simulationId);
 
-
                     await _poseidonServiceClient.CancelAsync(cancelRequest, cts.Token);
                     await _ecopathServiceClient.CancelAsync(cancelRequest, cts.Token);
                     await _marketServiceClient.CancelAsync(cancelRequest, cts.Token); 
@@ -162,9 +163,17 @@ namespace SurimiController.Services
                     _simulations[simulationId].Status = "Canceled";
                     _logger.LogInformation("{SimulationId} is canceled", simulationId);
                 }
+                catch (RpcException ex)
+                {
+                    _simulations[simulationId].Status = "Error";
+                    _logger.LogError(ex, "{SimulationId} encountered a RpcException", simulationId);
+                    throw;
+                }
                 catch (Exception ex)
                 {
-
+                    _simulations[simulationId].Status = "Error";
+                    _logger.LogError(ex, "{SimulationId} encountered an Exception", simulationId);
+                    throw;
                 }
             }, cts.Token);
 
@@ -173,7 +182,7 @@ namespace SurimiController.Services
             return task;
         }
 
-        public void CancelSimulation(string simulationId)
+        public Task CancelSimulationAsync(string simulationId)
         {
             if (_simulations.ContainsKey(simulationId) == false)
             {
@@ -191,6 +200,7 @@ namespace SurimiController.Services
             }
             _simulations[simulationId].Status = "Canceled";
             _simulations[simulationId].Cts?.Cancel();
+            return Task.CompletedTask;
         }
 
         private async Task ProcessSimulationStep(string simulationId, DateTime current, DateTime endStepDateTime, CancellationToken token)
@@ -202,16 +212,14 @@ namespace SurimiController.Services
             var updatePriceRequest = CreateUpdateSpeciesPricesRequest(speciesPriceResponse);
 //            var xx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
 
-            var poseidonUpdatePricesResponse = _poseidonServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
-
+            await _poseidonServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
             await _ecopathServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
-            await poseidonUpdatePricesResponse;
 
             var simulationStepRequest = CreateSimulateStepRequest(simulationId, current);
 
             await _ecopathServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 
-            var getBiomassResponseIntermediate = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId }, current, cancellationToken: token);
+            var getBiomassResponseIntermediate = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId, DateTime = current.ToTimestamp() }, current, cancellationToken: token);
 
             var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponseIntermediate);
 
@@ -224,10 +232,13 @@ namespace SurimiController.Services
             var getCatchDispositionRequest = CreateGetCatchDispositionRequest(simulationId, current, endStepDateTime);
 
             var poseidonCatchDisposition = await _poseidonServiceClient.GetCatchDispositionAsync(getCatchDispositionRequest, current, cancellationToken: token);
+            // TODO: check start_date_time and end_date_time in the response, to make sure they are correct and consistent with the request and the current simulation step
 
             var updateCatchDispositionIntermediateRequest = CreateUpdateCatchDispositionRequest(poseidonCatchDisposition);
 
-            var catchDispositionResponse = await _ecopathServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionIntermediateRequest, current, cancellationToken: token);
+            var updateCatchDispositionResponse = await _ecopathServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionIntermediateRequest, current, cancellationToken: token);
+            // TODO: check start_date_time and end_date_time in the response, to make sure they are correct and consistent with the request and the current simulation step
+
             var getBiomassResponseTotal = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId }, current, cancellationToken: token);
 
             await _cmsyServiceClient.UpdateBiomassAsync(CreateUpdateBiomassRequest(getBiomassResponseTotal), current, cancellationToken: token);
@@ -240,8 +251,9 @@ namespace SurimiController.Services
 
             var ecopathGetSalesResponse = await _ecopathServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
 
+            // TODO: check start_date_time and end_date_time in the response, to make sure they are correct and consistent with the request and the current simulation step
             // Update Sales to Market
-            
+
             var ecopathUpdateSalesRequest = CreateUpdateSalesRequest(ecopathGetSalesResponse, current, endStepDateTime);
             var marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, token);
 
@@ -250,6 +262,7 @@ namespace SurimiController.Services
             var poseidonGetSalesResponse = await _poseidonServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
 
             var poseidonUpdateSalesRequest = CreateUpdateSalesRequest(poseidonGetSalesResponse, current, endStepDateTime);
+//            string xx = GetProtoString<UpdateSalesRequest>(poseidonUpdateSalesRequest);
             marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, token);
 
             await _valueChainServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
@@ -362,7 +375,9 @@ namespace SurimiController.Services
             return new UpdateCatchDispositionRequest()
             {
                 SimulationId = catchDisposition.SimulationId,
-                CatchDispositionSummary = catchDisposition.CatchDispositionSummary
+                CatchDispositionSummary = catchDisposition.CatchDispositionSummary,
+                StartDateTime = catchDisposition.StartDateTime,
+                EndDateTime = catchDisposition.EndDateTime
             };
         }
 
@@ -381,7 +396,8 @@ namespace SurimiController.Services
             var updateRequest = new UpdateBiomassRequest
             {
                 SimulationId = getBiomassResponse.SimulationId,
-                BiomassSummary = getBiomassResponse.BiomassSummary
+                BiomassSummary = getBiomassResponse.BiomassSummary,
+                DateTime = getBiomassResponse.DateTime
             };
 
             return updateRequest;
