@@ -1,5 +1,5 @@
+using Eii.BlobStore;
 using FluentAssertions;
-using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
 using SurimiController.Services;
@@ -10,6 +10,8 @@ namespace SURIMI.ConfigurationService.Tests
     {
         private readonly string testYaml;
         private readonly Mock<ILogger<SurimiConfigurationService>> _loggerMock = new();
+        private readonly Mock<IBlobStore> _blobStore = new();
+
 
         public SurimiConfigurationServiceTests()
         {
@@ -49,44 +51,44 @@ namespace SURIMI.ConfigurationService.Tests
           unit: kg
     items:
       markets:
-      - market_code: ESSCR
+      - market_code: ESALC
       - market_code: ESAQA
+      - market_code: ESARN
+      - market_code: ESBCN
+      - market_code: ESBLA
+      - market_code: ESBNI
+      - market_code: ESBRX
+      - market_code: ESCAR
       - market_code: ESCAS
       - market_code: ESCBL
-      - market_code: ESTOR
-      - market_code: ESVZR
-      - market_code: ESBCN
-      - market_code: ESTAR
-      - market_code: ESCLP
-      - market_code: ESROS
-      - market_code: ESGAN
-      - market_code: ESPAL
-      - market_code: ESBRX
-      - market_code: ESSPP
-      - market_code: ESQAJ
-      - market_code: ESDNA
-      - market_code: ESPNL
-      - market_code: ESARN
-      - market_code: ESSPO
-      - market_code: ESBLA
-      - market_code: ESCAR
-      - market_code: ESVLC
-      - market_code: ESLLC
-      - market_code: ESLAA
-      - market_code: ESGLE
-      - market_code: ESTRR
-      - market_code: ESBNI
-      - market_code: ESZME
-      - market_code: ESSFU
-      - market_code: ESSAG
-      - market_code: ESVJY
-      - market_code: ESJAV
-      - market_code: ESERA
-      - market_code: ESVLG
-      - market_code: ESKLL
-      - market_code: ESALC
       - market_code: ESCDK
       - market_code: ESCFE
+      - market_code: ESCLP
+      - market_code: ESDNA
+      - market_code: ESERA
+      - market_code: ESGAN
+      - market_code: ESGLE
+      - market_code: ESJAV
+      - market_code: ESKLL
+      - market_code: ESLAA
+      - market_code: ESLLC
+      - market_code: ESPAL
+      - market_code: ESPNL
+      - market_code: ESQAJ
+      - market_code: ESROS
+      - market_code: ESSAG
+      - market_code: ESSCR
+      - market_code: ESSFU
+      - market_code: ESSPO
+      - market_code: ESSPP
+      - market_code: ESTAR
+      - market_code: ESTOR
+      - market_code: ESTRR
+      - market_code: ESVJY
+      - market_code: ESVLC
+      - market_code: ESVLG
+      - market_code: ESVZR
+      - market_code: ESZME
       currencies:
       - currency_code: EUR
       species:
@@ -105,10 +107,22 @@ namespace SURIMI.ConfigurationService.Tests
       - species_code: BOY
       - species_code: BRF
       - species_code: BSH
+      - species_code: BSK
+      - species_code: CDI
       - species_code: CIL
       - species_code: COE
+      - species_code: CVV
+      - species_code: DAZ
+      - species_code: DBO
+      - species_code: DKH
+      - species_code: DRR
+      - species_code: DST
+      - species_code: DTR
+      - species_code: DTY
       - species_code: EOI
       - species_code: FAM
+      - species_code: FBP
+      - species_code: FPA
       - species_code: GLI
       - species_code: GRQ
       - species_code: HKE
@@ -118,22 +132,28 @@ namespace SURIMI.ConfigurationService.Tests
       - species_code: HMM
       - species_code: HOM
       - species_code: HQB
-      - species_code: IOD
+      - species_code: ISY
       - species_code: JAA
       - species_code: JDP
       - species_code: JRS
+      - species_code: LCW
       - species_code: LDB
       - species_code: LDV
       - species_code: LKO
       - species_code: LKT
+      - species_code: LOW
+      - species_code: LQZ
+      - species_code: LVH
+      - species_code: LXQ
       - species_code: MAC
-      - species_code: MAZ
       - species_code: MON
+      - species_code: MOX
       - species_code: MTS
       - species_code: MUT
         life_stage: juvenile
       - species_code: MUT
         life_stage: adult
+      - species_code: MVB
       - species_code: NEP
       - species_code: OCC
       - species_code: OLV
@@ -145,39 +165,59 @@ namespace SURIMI.ConfigurationService.Tests
         life_stage: juvenile
       - species_code: PIL
         life_stage: adult
+      - species_code: PIW
       - species_code: POD
       - species_code: RJC
+      - species_code: RMM
       - species_code: SAA
       - species_code: SBA
       - species_code: SCK
       - species_code: SFS
       - species_code: SHO
       - species_code: SKM
-      - species_code: SLM
+      - species_code: SOO
       - species_code: SPC
-      - species_code: SPF
+      - species_code: SPR
+      - species_code: SPW
       - species_code: SQE
       - species_code: SQM
+      - species_code: SRG
       - species_code: SRJ
-      - species_code: SWO
       - species_code: SYC
       - species_code: TSU
+      - species_code: TTL
+      - species_code: TVA
+      - species_code: UIM
+      - species_code: UYE
       - species_code: WHB
       fleet_segments:
-      - gear_code: OTB
+      - gear_code: EwE:ART
         country_code: ESP
-      - gear_code: PS
+        model: EwE
+      - gear_code: EwE:ART
+        country_code: FRA
+        model: EwE
+      - gear_code: EwE:RECT
         country_code: ESP
+        model: EwE
       - gear_code: LLS
         country_code: ESP
+        model: EwE
+      - gear_code: OTB
+        country_code: ESP
+        model: POSEIDON
       - gear_code: OTB
         country_code: FRA
-      - gear_code: TM
-        country_code: FRA
+        model: EwE
+      - gear_code: PS
+        country_code: ESP
+        model: POSEIDON
       - gear_code: PS
         country_code: FRA
-    
-    
+        model: EwE
+      - gear_code: TM
+        country_code: FRA
+        model: EwE
     """;
         }
 
@@ -185,7 +225,7 @@ namespace SURIMI.ConfigurationService.Tests
         public void ReadYamlShouldReturnOK()
         {
             // Arrange
-            var service = new SurimiConfigurationService(_loggerMock.Object);
+            var service = new SurimiConfigurationService(_loggerMock.Object, _blobStore.Object);
 
             // Act
             var conf = service.DeserialiseConfiguration(testYaml);

@@ -60,7 +60,7 @@ namespace SurimiController.Services
         {
             _logger.LogInformation("Cancel Simulation {SimulationId}", request.SimulationId);
             System.Diagnostics.Activity.Current?.SetTag("simulation_id", request.SimulationId);
-            _simulationManager.CancelSimulation(request.SimulationId);
+            _simulationManager.CancelSimulationAsync(request.SimulationId);
 
             return Task.FromResult(new CancelSimulationResponse() { SimulationId = request.SimulationId });
         }
