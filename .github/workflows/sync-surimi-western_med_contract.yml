@@ -1,0 +1,111 @@
+name: Sync SURIMI contract inputs
+
+on:
+  # 02:00 UTC ≈ 03:00 CET (winter) / 04:00 CEST (summer)
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-surimi-inputs
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout target repo (SURIMI-controller)
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Checkout source repo (SURIMI-western_med) with LFS (sparse)
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: Official-EwE/SURIMI-western_med
+          token: ${{ secrets.SURIMI_SYNC_CSVS_TOKEN }}
+          path: source
+          sparse-checkout: |
+            SURIMI-contracts
+          sparse-checkout-cone-mode: true
+          lfs: true
+          fetch-depth: 1
+          # ref: main  # uncomment if needed
+
+      - name: Copy files if changed
+        id: sync
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          src_dir="source/SURIMI-contracts"
+          dest_dir="Includes"
+          mkdir -p "$dest_dir"
+
+          files=( "western_med_contract.yaml" )
+
+          changed=0
+          for f in "${files[@]}"; do
+            src="${src_dir}/${f}"
+            dest="${dest_dir}/${f}"
+
+            if [[ ! -f "$src" ]]; then
+              echo "ERROR: Source file not found: $src"
+              exit 1
+            fi
+
+            if [[ -f "$dest" ]] && cmp -s "$src" "$dest"; then
+              echo "No change in $f"
+              continue
+            fi
+
+            echo "Updating $f"
+            install -m 0644 "$src" "$dest"
+            git add "$dest"
+            changed=1
+          done
+
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Commit changes (only if changed)
+        if: steps.sync.outputs.changed == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: sync from SURIMI-western_med (western_med_contract.yaml)"
+
+      - name: Create or update pull request
+        if: steps.sync.outputs.changed == '1'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: sync SURIMI inputs"
+          branch: chore/sync-surimi-inputs
+          title: "chore: sync SURIMI inputs from SURIMI-western_med"
+          body: |
+            Automated sync from **Official-EwE/SURIMI-western_med** → **SURIMI-controller**.
+
+            **Files updated**
+            - [x] `Includes/western_med_contract.yaml`
+
+            Source path: `SURIMI-western_med/SURIMI-contracts`
+
+            cc @rik-kreeftenberg
+          labels: |
+            chore
+            automation
+          delete-branch: true
+          # reviewers: rik-kreeftenberg      # uncomment to ensure a review request (and email)
+           assignees: rik-kreeftenberg      # uncomment to assign to you (also emails you)
+
+      - name: No changes
+        if: steps.sync.outputs.changed != '1'
+        run: echo "No changes detected. Nothing to commit or PR."
