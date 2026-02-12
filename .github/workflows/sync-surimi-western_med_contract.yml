@@ -104,7 +104,7 @@ jobs:
             automation
           delete-branch: true
           # reviewers: rik-kreeftenberg      # uncomment to ensure a review request (and email)
-           assignees: rik-kreeftenberg      # uncomment to assign to you (also emails you)
+          assignees: rik-kreeftenberg      # uncomment to assign to you (also emails you)
 
       - name: No changes
         if: steps.sync.outputs.changed != '1'
