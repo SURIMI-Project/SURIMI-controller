@@ -62,6 +62,10 @@ public class Program
         AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("CmsyEcology", "CMSY_URL");
         AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("CmsyFishery", "CMSY_URL");
 
+        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("AggregatorWorkflow", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("AggregatorEcology", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("AggregatorFishery", "AGGREGATOR_URL");
+
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow", "VALUECHAIN_URL");
         AddConfiguredGrpcClient<MarketService.MarketServiceClient>("ValueChainMarket", "VALUECHAIN_URL");
 
@@ -69,6 +73,7 @@ public class Program
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddTransient<ISurimiConfigurationService, SurimiConfigurationService>();
         builder.Services.AddTransient<ICmsyServiceClient, CmsyServiceClient>();
+        builder.Services.AddTransient<IAggregatorServiceClient, AggregatorServiceClient>();
         builder.Services.AddTransient<IValueChainServiceClient, ValueChainServiceClient>();
         builder.Services.AddTransient<IPoseidonServiceClient, PoseidonServiceClient>();
         builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
@@ -99,6 +104,7 @@ public class Program
         logger.LogInformation("For Poseidon write to: {POSEIDON_URL}", Environment.GetEnvironmentVariable("POSEIDON_URL"));
         logger.LogInformation("For Market write to: {MARKET_URL}", Environment.GetEnvironmentVariable("MARKET_URL"));
         logger.LogInformation("For CMSY write to: {CMSY_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
+        logger.LogInformation("For Aggregator write to: {AGGREGATOR_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
         logger.LogInformation("For Value Chain write to: {VALUECHAIN_URL}", Environment.GetEnvironmentVariable("VALUECHAIN_URL"));
 
         logger.LogInformation("AWS_ACCESS_KEY_ID: {AWS_ACCESS_KEY_ID}", Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"));
@@ -111,6 +117,7 @@ public class Program
         logger.LogInformation("POD_NAMESPACE: {POD_NAMESPACE}", Environment.GetEnvironmentVariable("POD_NAMESPACE"));   // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
         logger.LogInformation("EXCLUDE_CMSY: {EXCLUDE_CMSY}", Environment.GetEnvironmentVariable("EXCLUDE_CMSY"));
         logger.LogInformation("EXCLUDE_VALUECHAIN: {EXCLUDE_VALUECHAIN}", Environment.GetEnvironmentVariable("EXCLUDE_VALUECHAIN"));
+        logger.LogInformation("EXCLUDE_AGGREGATOR: {EXCLUDE_AGGREGATOR}", Environment.GetEnvironmentVariable("EXCLUDE_AGGREGATOR"));
 
         app.Run();
 

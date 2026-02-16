@@ -9,8 +9,8 @@ var market = builder.AddContainer("market", "rikkert242/market", "latest")
 var cmsy = builder.AddContainer("cmsy", "rikkert242/cmsy", "latest")
     .WithHttpEndpoint(port: 5020, targetPort: 5020, name: "cmsy");
 
-//var ecopath = builder.AddProject<Projects.Ecopath>("ecopath")
-//    .WithReplicas(5);
+var aggregator = builder.AddContainer("aggregator", "rikkert242/aggregator", "latest")
+    .WithHttpEndpoint(port: 5188, targetPort: 5188, name: "aggregator");
 
 var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
     .WithHttpEndpoint(port: 7890, targetPort: 8080, name: "ecopath");
@@ -24,6 +24,7 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
     .WithEnvironment("POSEIDON_URL", "http://localhost:50051")      // I don't know why you can't use http://poseidon:50051 in this place... but this also works
     .WithEnvironment("MARKET_URL", "http://localhost:5001")         // idem. Didn't test
     .WithEnvironment("CMSY_URL", "http://localhost:5020")
+    .WithEnvironment("AGGREGATOR_URL", "http://localhost:5188")
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")
 
