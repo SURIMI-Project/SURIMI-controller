@@ -18,13 +18,15 @@ namespace SurimiController.Services
         private readonly IEcopathServiceClient _ecopathServiceClient;
         private readonly IPoseidonServiceClient _poseidonServiceClient;
         private readonly ICmsyServiceClient _cmsyServiceClient;
+        private readonly IAggregatorServiceClient _aggregatorServiceClient;
         private readonly IValueChainServiceClient _valueChainServiceClient;
         private readonly IMarketServiceClient _marketServiceClient;
 
-        public SimulationManager(GrpcClientFactory clientFactory, ILogger<SimulationManager> logger, ICmsyServiceClient cmsyServiceClient, IValueChainServiceClient valueChainServiceClient, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient)
+        public SimulationManager(GrpcClientFactory clientFactory, ILogger<SimulationManager> logger, ICmsyServiceClient cmsyServiceClient, IAggregatorServiceClient aggregatorServiceClient, IValueChainServiceClient valueChainServiceClient, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient)
         {
             _logger = logger;
             _cmsyServiceClient = cmsyServiceClient;
+            _aggregatorServiceClient = aggregatorServiceClient;
             _valueChainServiceClient = valueChainServiceClient;
             _marketServiceClient = marketServiceClient;
             _poseidonServiceClient = poseidonServiceClient;
@@ -242,10 +244,13 @@ namespace SurimiController.Services
             var getBiomassResponseTotal = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId }, current, cancellationToken: token);
 
             await _cmsyServiceClient.UpdateBiomassAsync(CreateUpdateBiomassRequest(getBiomassResponseTotal), current, cancellationToken: token);
+            await _aggregatorServiceClient.UpdateBiomassAsync(CreateUpdateBiomassRequest(getBiomassResponseTotal), current, cancellationToken: token);
 
             var ecopathCatchDispositionSummary = await _ecopathServiceClient.GetCatchDispositionAsync(getCatchDispositionRequest, current, cancellationToken: token);
 
-            await _cmsyServiceClient.UpdateCatchDispositionAsync(CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary), current, cancellationToken: token);
+            await _cmsyServiceClient.UpdateCatchDispositionAsync(CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary), cancellationToken: token);
+            await _aggregatorServiceClient.UpdateCatchDispositionAsync(CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary), cancellationToken: token);
+
 
             var getSalesRequest = CreateGetSalesRequest(simulationId, current, endStepDateTime);
 
