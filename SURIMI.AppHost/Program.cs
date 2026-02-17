@@ -28,9 +28,11 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")
 
-    .WithEnvironment("AWS_ACCESS_KEY_ID", "VIcpt2rkxtapSFbKhP3X")
-    .WithEnvironment("AWS_SECRET_ACCESS_KEY", "AZRoc8XYCqpmMwLx2NO75clmWbr6btQDdZXGL8jS")
-    .WithEnvironment("AWS_SESSION_TOKEN", "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NLZXkiOiI5UDBOR0NFTTk3NEE2QllSMjRFMiIsImFjciI6IjAiLCJhbGxvd2VkLW9yaWdpbnMiOlsiKiJdLCJhdWQiOlsibWluaW8iLCJhY2NvdW50Il0sImF1dGhfdGltZSI6MTc2NTg5MjQyOCwiYXpwIjoib255eGlhLW1pbmlvIiwiZW1haWwiOiJyaWsua3JlZWZ0ZW5iZXJnQHNwaW5zb2Z0Lm5sIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc2NjAwNjkwMiwiZmFtaWx5X25hbWUiOiJLcmVlZnRlbmJlcmciLCJnaXZlbl9uYW1lIjoiUmlrIiwiZ3JvdXBzIjpbIkVESVRPX1VTRVIiLCJzdXJpbWkiXSwiaWF0IjoxNzY1OTIwNTAyLCJpc3MiOiJodHRwczovL2F1dGguZGl2ZS5lZGl0by5ldS9hdXRoL3JlYWxtcy9kYXRhbGFiIiwianRpIjoiZGM1NWRmNjItN2NiYi00NDA0LTk2YTAtZTg2Y2QxMzUxNTEzIiwibmFtZSI6IlJpayBLcmVlZnRlbmJlcmciLCJwb2xpY3kiOiJzdHNvbmx5IiwicHJlZmVycmVkX3VzZXJuYW1lIjoicmlra2VydCIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLWRhdGFsYWIiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19LCJtaW5pbyI6eyJyb2xlcyI6WyJzdHNvbmx5Il19fSwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsInNlc3Npb25fc3RhdGUiOiIwYTA4YmJlNy1iODZkLTQzNjQtYjBmZC01ZDM0ZDU5NGQ5NzAiLCJzaWQiOiIwYTA4YmJlNy1iODZkLTQzNjQtYjBmZC01ZDM0ZDU5NGQ5NzAiLCJzdWIiOiIzMTJmZDE4MC1jYzVjLTQ1YmQtYTY4OS1hNDBjMDI4NmJjYjQiLCJ0eXAiOiJCZWFyZXIifQ.lPnAiSeBUyo6Oek8CXX54Ej0_BnEMf9bvQsvm17XZ_Gc8QTTQ-fx8KWV_nquWfrs__llegSVJF-2pEjnWckSPw")
+    .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
+    .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")
+    .WithEnvironment("VAULT_TOP_DIR", "rikkert")
+    .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
+    .WithEnvironment("VAULT_MOUNT", "secret-kv")
     .WithEnvironment("AWS_S3_ENDPOINT", "minio.dive.edito.eu")
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
