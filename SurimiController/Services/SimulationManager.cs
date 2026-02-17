@@ -4,7 +4,6 @@ using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Xml;
 
 namespace SurimiController.Services
@@ -65,6 +64,7 @@ namespace SurimiController.Services
             _marketServiceClient.AddInitialise(initializationTasks, initRequest);
             _cmsyServiceClient.AddInitialise(initializationTasks, initRequest);
             _valueChainServiceClient.AddInitialise(initializationTasks, initRequest);
+            _aggregatorServiceClient.AddInitialise(initializationTasks, initRequest);
 
             _simulations[simulationId] = new Models.Simulation
             {
@@ -146,6 +146,7 @@ namespace SurimiController.Services
                     await _marketServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
                     await _cmsyServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
                     await _valueChainServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
+                    await _aggregatorServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
 
                     _simulations[simulationId].Status = "Finished";
                     _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
@@ -161,6 +162,7 @@ namespace SurimiController.Services
                     await _marketServiceClient.CancelAsync(cancelRequest, cts.Token); 
                     await _cmsyServiceClient.CancelAsync(cancelRequest, cts.Token); 
                     await _valueChainServiceClient.CancelAsync(cancelRequest, cts.Token);
+                    await _aggregatorServiceClient.CancelAsync(cancelRequest, cts.Token);
 
                     _simulations[simulationId].Status = "Canceled";
                     _logger.LogInformation("{SimulationId} is canceled", simulationId);
@@ -289,6 +291,8 @@ namespace SurimiController.Services
             };
 
             string resultaat = System.Text.Json.JsonSerializer.Serialize(obj, jsonOptions);
+
+            // TODO replace "unit_" with "unit"
             return resultaat;
         }
 

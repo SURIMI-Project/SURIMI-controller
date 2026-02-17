@@ -39,7 +39,7 @@ public class Program
             }
 
             // Default local Filesystem
-            return new LocalBlobStore( inputRoot: "Includes", outputRoot: "Output");
+            return new LocalBlobStore(inputRoot: "Includes", outputRoot: "Output");
         });
 
 
@@ -94,30 +94,19 @@ public class Program
         app.MapDefaultEndpoints();
 
         // Configure the HTTP request pipeline.
-        app.MapGrpcService<Services.SurimiControllerService>();
+        app.MapGrpcService<SurimiControllerService>();
         app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
         // Retrieve the logger
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-        logger.LogInformation("For Ecopath write to: {ECOPATH_URL}", Environment.GetEnvironmentVariable("ECOPATH_URL"));
-        logger.LogInformation("For Poseidon write to: {POSEIDON_URL}", Environment.GetEnvironmentVariable("POSEIDON_URL"));
-        logger.LogInformation("For Market write to: {MARKET_URL}", Environment.GetEnvironmentVariable("MARKET_URL"));
-        logger.LogInformation("For CMSY write to: {CMSY_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
-        logger.LogInformation("For Aggregator write to: {AGGREGATOR_URL}", Environment.GetEnvironmentVariable("CMSY_URL"));
-        logger.LogInformation("For Value Chain write to: {VALUECHAIN_URL}", Environment.GetEnvironmentVariable("VALUECHAIN_URL"));
-
-        logger.LogInformation("AWS_ACCESS_KEY_ID: {AWS_ACCESS_KEY_ID}", Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"));
-        logger.LogInformation("AWS_SECRET_ACCESS_KEY: {AWS_SECRET_ACCESS_KEY}", Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"));
-        logger.LogInformation("AWS_SESSION_TOKEN: {AWS_SESSION_TOKEN}", Environment.GetEnvironmentVariable("AWS_SESSION_TOKEN"));
-        logger.LogInformation("AWS_S3_ENDPOINT: {AWS_S3_ENDPOINT}", Environment.GetEnvironmentVariable("AWS_S3_ENDPOINT"));
-        logger.LogInformation("AWS_DEFAULT_REGION: {AWS_DEFAULT_REGION}", Environment.GetEnvironmentVariable("AWS_DEFAULT_REGION"));
-        logger.LogInformation("AWS_BUCKET_NAME: {AWS_BUCKET_NAME}", Environment.GetEnvironmentVariable("AWS_BUCKET_NAME"));
-        logger.LogInformation("OTEL_EXPORTER_OTLP_ENDPOINT: {OTEL_EXPORTER_OTLP_ENDPOINT}", Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT"));
-        logger.LogInformation("POD_NAMESPACE: {POD_NAMESPACE}", Environment.GetEnvironmentVariable("POD_NAMESPACE"));   // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
-        logger.LogInformation("EXCLUDE_CMSY: {EXCLUDE_CMSY}", Environment.GetEnvironmentVariable("EXCLUDE_CMSY"));
-        logger.LogInformation("EXCLUDE_VALUECHAIN: {EXCLUDE_VALUECHAIN}", Environment.GetEnvironmentVariable("EXCLUDE_VALUECHAIN"));
-        logger.LogInformation("EXCLUDE_AGGREGATOR: {EXCLUDE_AGGREGATOR}", Environment.GetEnvironmentVariable("EXCLUDE_AGGREGATOR"));
+        LoadVaultSecretsInEnvironmentVariables();
+        logger.LogInformation("============================= Logging All Environment Variables =============================");
+        foreach (System.Collections.DictionaryEntry envVar in Environment.GetEnvironmentVariables())
+        {
+            logger.LogInformation("{Key}: {Value}", envVar.Key, envVar.Value);
+        }
+        logger.LogInformation("============================= End of Environment Variables =============================");
 
         app.Run();
 
@@ -152,7 +141,30 @@ public class Program
                     EnableMultipleHttp2Connections = true
                 };
             });
-//            .EnableCallContextPropagation();
+            //            .EnableCallContextPropagation();
+        }
+
+        void LoadVaultSecretsInEnvironmentVariables()
+        {
+            var vaultAddr = Environment.GetEnvironmentVariable("VAULT_ADDR");
+            var vaultToken = Environment.GetEnvironmentVariable("VAULT_TOKEN");
+            var vaultTopDir = Environment.GetEnvironmentVariable("VAULT_TOP_DIR");
+            var vaultRelativePath = Environment.GetEnvironmentVariable("VAULT_RELATIVE_PATH");
+            var vaultMount = Environment.GetEnvironmentVariable("VAULT_MOUNT");
+            if (string.IsNullOrEmpty(vaultAddr) || string.IsNullOrEmpty(vaultToken) || string.IsNullOrEmpty(vaultTopDir) || string.IsNullOrEmpty(vaultRelativePath) || string.IsNullOrEmpty(vaultMount))
+            {
+                Console.WriteLine("Vault Addr, Token, Top Dir, Relative Path, or Mount not set in environment variables. Skipping Vault loading.");
+                return;
+            }
+            var vaultClient = new VaultSharp.VaultClient(new VaultSharp.VaultClientSettings(vaultAddr, new VaultSharp.V1.AuthMethods.Token.TokenAuthMethodInfo(vaultToken)));
+            // Assuming secrets are stored under "secret/data/surimi"
+            var secretPath = $"{vaultTopDir}/{vaultRelativePath}";
+            var secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(secretPath, mountPoint: vaultMount).Result;
+            foreach (var kv in secret.Data.Data)
+            {
+                Environment.SetEnvironmentVariable(kv.Key, kv.Value.ToString());
+                Console.WriteLine($"Loaded secret '{kv.Key}' from Vault into environment variables.");
+            }
         }
     }
 }
