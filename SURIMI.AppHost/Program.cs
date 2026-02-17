@@ -13,7 +13,15 @@ var aggregator = builder.AddContainer("aggregator", "rikkert242/aggregator", "la
     .WithHttpEndpoint(port: 5188, targetPort: 5188, name: "aggregator");
 
 var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
-    .WithHttpEndpoint(port: 7890, targetPort: 8080, name: "ecopath");
+    .WithHttpEndpoint(port: 7890, targetPort: 8080, name: "ecopath")
+    .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
+    .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")
+    .WithEnvironment("VAULT_TOP_DIR", "rikkert")
+    .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
+    .WithEnvironment("VAULT_MOUNT", "secret-kv")
+    .WithEnvironment("AWS_S3_ENDPOINT", "minio.dive.edito.eu")
+    .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
+    .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
 var valueChain = builder.AddContainer("valuechain", "rikkert242/surimivaluechain", "latest")
     .WithHttpEndpoint(port: 7990, targetPort: 8080, name: "valuechain");
