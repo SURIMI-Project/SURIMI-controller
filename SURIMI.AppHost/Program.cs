@@ -7,7 +7,16 @@ var market = builder.AddContainer("market", "rikkert242/market", "latest")
     .WithHttpEndpoint(port: 5001, targetPort: 5001, name: "market");
 
 var cmsy = builder.AddContainer("cmsy", "rikkert242/cmsy", "latest")
-    .WithHttpEndpoint(port: 5020, targetPort: 5020, name: "cmsy");
+    .WithHttpEndpoint(port: 5020, targetPort: 5020, name: "cmsy")
+    .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
+    .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")
+    .WithEnvironment("VAULT_TOP_DIR", "rikkert")
+    .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
+    .WithEnvironment("VAULT_MOUNT", "secret-kv")
+    .WithEnvironment("AWS_S3_ENDPOINT", "minio.dive.edito.eu")
+    .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
+    .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
+;
 
 var aggregator = builder.AddContainer("aggregator", "rikkert242/aggregator", "latest")
     .WithHttpEndpoint(port: 5188, targetPort: 5188, name: "aggregator");
