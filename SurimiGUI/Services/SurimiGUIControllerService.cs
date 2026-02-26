@@ -2,7 +2,6 @@
 using Google.Rpc;
 using Grpc.Core;
 using Grpc.Surimi;
-using SurimiGUI.Models;
 using System.Diagnostics;
 using System.Text;
 
@@ -20,7 +19,7 @@ namespace SurimiGUI.Services
             _logger = logger;
         }
 
-        public async Task<string> Init(SimulationConfig config, CancellationToken token)
+        public async Task<string> Init(Models.SimulationConfig config, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set. In a Blazor application, the Activity.Current might be unaltered which causes telemetry to use the same TraceId for all requests, leading to confusion in telemetry data.
             InitialiseSimulationResponse reply;

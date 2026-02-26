@@ -64,6 +64,11 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
 
 builder.AddProject<Projects.SurimiGUI>("surimigui")
     .WithReference(surimicontroller)
-    .WithEnvironment("CONTROLLER_URL", "http://surimicontroller:8080");
+    .WithEnvironment("CONTROLLER_URL", "http://surimicontroller:8080")
+    .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
+    .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")
+    .WithEnvironment("VAULT_TOP_DIR", "rikkert")
+    .WithEnvironment("VAULT_RELATIVE_PATH", "edito-datalab-credentials")
+    .WithEnvironment("VAULT_MOUNT", "secret-kv");
 
 builder.Build().Run();
