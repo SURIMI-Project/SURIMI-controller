@@ -1,9 +1,10 @@
 ﻿namespace SurimiGUI.Models
 {
-    public class SimulationConfig
+    public class ExperimentConfig
     {
         public string? ScenarioId {get;set;} = "";
         public DateTime? EndDateTime { get; set; }
-        public string SimulationId { get; set; } = "";
+        public int NumberOfRuns { get; set; } = 1;
+        public string ExperimentId { get; set; } = "";
     }
 }

@@ -7,7 +7,7 @@ var market = builder.AddContainer("market", "rikkert242/market", "latest")
     .WithHttpEndpoint(port: 5001, targetPort: 5001, name: "market");
 
 var cmsy = builder.AddContainer("cmsy", "rikkert242/cmsy", "latest")
-    .WithHttpEndpoint(port: 5020, targetPort: 5020, name: "cmsy")
+    .WithHttpEndpoint(port: 5021, targetPort: 5021, name: "cmsy")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")
     .WithEnvironment("VAULT_TOP_DIR", "rikkert")
@@ -48,7 +48,7 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
 //    .WithReference(ecopath)
     .WithEnvironment("POSEIDON_URL", "http://localhost:50051")      // I don't know why you can't use http://poseidon:50051 in this place... but this also works
     .WithEnvironment("MARKET_URL", "http://localhost:5001")         // idem. Didn't test
-    .WithEnvironment("CMSY_URL", "http://localhost:5020")
+    .WithEnvironment("CMSY_URL", "http://localhost:5021")
     .WithEnvironment("AGGREGATOR_URL", "http://localhost:5188")
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")

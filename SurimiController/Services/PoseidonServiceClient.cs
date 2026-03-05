@@ -7,18 +7,20 @@ namespace SurimiController.Services
     public class PoseidonServiceClient : IPoseidonServiceClient
     {
         private readonly WorkflowService.WorkflowServiceClient _poseidonWorkflowClient;
-        private readonly MarketService.MarketServiceClient _poseidonMarketClient;
-        private readonly FisheryService.FisheryServiceClient _poseidonFisheryClient;
-        private readonly EcologyService.EcologyServiceClient _poseidonEcologyClient;
+        private readonly SalesProviderService.SalesProviderServiceClient _poseidonSalesProviderClient;
+        private readonly SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient _poseidonSpeciesPriceConsumerClient;
+        private readonly CatchProviderService.CatchProviderServiceClient _poseidonCatchProviderClient;
+        private readonly EcologyConsumerService.EcologyConsumerServiceClient _poseidonEcologyConsumerClient;
 
         private readonly ILogger<PoseidonServiceClient> _logger;
 
         public PoseidonServiceClient(GrpcClientFactory clientFactory, ILogger<PoseidonServiceClient> logger)
         {
             _poseidonWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow");
-            _poseidonMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("PoseidonMarket");
-            _poseidonEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("PoseidonEcology");
-            _poseidonFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("PoseidonFishery");
+            _poseidonSalesProviderClient = clientFactory.CreateClient<SalesProviderService.SalesProviderServiceClient>("PoseidonSalesProvider");
+            _poseidonSpeciesPriceConsumerClient = clientFactory.CreateClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("PoseidonSpeciesPriceConsumer");
+            _poseidonEcologyConsumerClient = clientFactory.CreateClient<EcologyConsumerService.EcologyConsumerServiceClient>("PoseidonEcologyConsumer");
+            _poseidonCatchProviderClient = clientFactory.CreateClient<CatchProviderService.CatchProviderServiceClient>("PoseidonCatchProvider");
 
             _logger = logger;
         }
@@ -43,13 +45,13 @@ namespace SurimiController.Services
         public Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getCatchDispositionRequest.SimulationId, current, "GetCatchDisposition");
-            return _poseidonFisheryClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
+            return _poseidonCatchProviderClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
         public Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getSalesRequest.SimulationId, current, "GetSalesSummary");
-            return _poseidonMarketClient.GetSalesAsync(getSalesRequest, cancellationToken: cancellationToken).ResponseAsync;
+            return _poseidonSalesProviderClient.GetSalesAsync(getSalesRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
         public Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
@@ -61,19 +63,13 @@ namespace SurimiController.Services
         public Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateBiomassRequest.SimulationId, current, "UpdateBiomass");
-            return _poseidonEcologyClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken).ResponseAsync;
+            return _poseidonEcologyConsumerClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
-
-        public Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, CancellationToken cancellationToken)
-        {
-            return _poseidonFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
-        }
-
 
         public Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdatePrices");
-            return _poseidonMarketClient.UpdateSpeciesPricesAsync(updateSpeciesPricesRequest, cancellationToken: cancellationToken).ResponseAsync;
+            return _poseidonSpeciesPriceConsumerClient.UpdateSpeciesPricesAsync(updateSpeciesPricesRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
         private void LogStep(string simulationId, DateTime current, string step)

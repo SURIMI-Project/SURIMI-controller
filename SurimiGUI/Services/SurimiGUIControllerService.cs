@@ -19,17 +19,18 @@ namespace SurimiGUI.Services
             _logger = logger;
         }
 
-        public async Task<string> Init(Models.SimulationConfig config, CancellationToken token)
+        public async Task<string> Init(Models.ExperimentConfig config, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set. In a Blazor application, the Activity.Current might be unaltered which causes telemetry to use the same TraceId for all requests, leading to confusion in telemetry data.
-            InitialiseSimulationResponse reply;
+            InitialiseExperimentResponse reply;
             try
             {
-                reply = await _controllerClient.InitialiseSimulationAsync(new InitialiseSimulationRequest
+                reply = await _controllerClient.InitialiseExperimentAsync(new InitialiseExperimentRequest
                 {
                     ScenarioId = config.ScenarioId ?? "",
                     EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(config.EndDateTime.Value.ToUniversalTime()) : null,
-                    SimulationId = config.SimulationId
+                    ExperimentId = config.ExperimentId,
+                    NumberOfRuns = config.NumberOfRuns
                 },
                 cancellationToken: token);
             }
@@ -43,15 +44,15 @@ namespace SurimiGUI.Services
                 return ex.Message;
             }
 
-            return reply.SimulationId;
+            return reply.ExperimentId;
         }
 
-        public Task<string> RunSimulationAsync(string simulationId, CancellationToken token)
+        public Task<string> RunExperimentAsync(string experimentId, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set. In a Blazor application, the Activity.Current might be unaltered which causes telemetry to use the same TraceId for all requests, leading to confusion in telemetry data.
             try
             {
-                var reply = _controllerClient.RunSimulationAsync(new RunSimulationRequest() { SimulationId = simulationId }, cancellationToken: token);
+                var reply = _controllerClient.RunExperimentAsync(new RunExperimentRequest() { ExperimentId = experimentId }, cancellationToken: token);
                 return Task.FromResult("OK");
             }
             catch (RpcException ex)
@@ -64,12 +65,12 @@ namespace SurimiGUI.Services
             }
         }
 
-        public async Task<string> CancelSimulationAsync(string simulationId, CancellationToken token)
+        public async Task<string> CancelExperimentAsync(string experimentId, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set
             try
             {
-                var reply = await _controllerClient.CancelSimulationAsync(new CancelSimulationRequest() { SimulationId = simulationId }, cancellationToken: token);
+                var reply = await _controllerClient.CancelExperimentAsync(new CancelExperimentRequest() { ExperimentId = experimentId }, cancellationToken: token);
             }
             catch (RpcException ex)
             {
@@ -105,6 +106,7 @@ namespace SurimiGUI.Services
             return reply.SimulationStatuses.Select(sim => new Models.SimulationStatus
             {
                 SimulationId = sim.SimulationId,
+                ExperimentId = sim.ExperimentId,
                 ScenarioId = sim.ScenarioId,
                 StartDateTime = sim.StartDateTime.ToDateTime(),
                 EndDateTime = sim.EndDateTime.ToDateTime(),

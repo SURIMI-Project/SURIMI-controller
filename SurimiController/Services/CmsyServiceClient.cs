@@ -8,15 +8,15 @@ namespace SurimiController.Services
     {
         private readonly ILogger<CmsyServiceClient> _logger;
         private readonly WorkflowService.WorkflowServiceClient _cmsyWorkflowClient;
-        private readonly EcologyService.EcologyServiceClient _cmsyEcologyClient;
-        private readonly FisheryService.FisheryServiceClient _cmsyFisheryClient;
+        private readonly EcologyConsumerService.EcologyConsumerServiceClient _cmsyEcologyConsumerClient;
+        private readonly CatchConsumerService.CatchConsumerServiceClient _cmsyCatchConsumerClient;
         private readonly bool _includeCmsy = Environment.GetEnvironmentVariable("EXCLUDE_CMSY")?.ToLower() != "true";
 
         public CmsyServiceClient(GrpcClientFactory clientFactory, ILogger<CmsyServiceClient> logger)
         {
             _cmsyWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow");
-            _cmsyEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("CmsyEcology");
-            _cmsyFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("CmsyFishery");
+            _cmsyEcologyConsumerClient = clientFactory.CreateClient<EcologyConsumerService.EcologyConsumerServiceClient>("CmsyEcologyConsumer");
+            _cmsyCatchConsumerClient = clientFactory.CreateClient<CatchConsumerService.CatchConsumerServiceClient>("CmsyCatchConsumer");
 
             _logger = logger;
         }
@@ -38,7 +38,7 @@ namespace SurimiController.Services
             {
                 return await _cmsyWorkflowClient.CancelAsync(cancelRequest, cancellationToken: token);
             }
-            return new CancelResponse();
+            return new CancelResponse() { SimulationId = cancelRequest.SimulationId };
         }
 
         public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
@@ -47,7 +47,7 @@ namespace SurimiController.Services
             {
                 return await _cmsyWorkflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken);
             }
-            return new FinaliseResponse();
+            return new FinaliseResponse() { SimulationId = finaliseRequest.SimulationId };
         }
 
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
@@ -57,7 +57,7 @@ namespace SurimiController.Services
                 LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
                 return await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
             }
-            return new SimulateStepResponse();
+            return new SimulateStepResponse() { SimulationId = simulationStepRequest.SimulationId };
         }
 
         public async Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, DateTime current, CancellationToken cancellationToken)
@@ -65,9 +65,9 @@ namespace SurimiController.Services
             if (_includeCmsy)
             {
                 LogStep(updateBiomassRequest.SimulationId, current, "UpdateBiomass");
-                return await _cmsyEcologyClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken);
+                return await _cmsyEcologyConsumerClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken);
             }
-            return new UpdateBiomassResponse();
+            return new UpdateBiomassResponse() { SimulationId = updateBiomassRequest.SimulationId };
         }
 
         public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, CancellationToken cancellationToken)
@@ -75,9 +75,9 @@ namespace SurimiController.Services
             if (_includeCmsy)
             {
                 LogStep(updateCatchDispositionRequest.SimulationId, updateCatchDispositionRequest.StartDateTime.ToDateTime(), "UpdateCatchDisposition");
-                return await _cmsyFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
+                return await _cmsyCatchConsumerClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
             }
-            return new UpdateCatchDispositionResponse();
+            return new UpdateCatchDispositionResponse() { SimulationId = updateCatchDispositionRequest.SimulationId };
         }
 
         private void LogStep(string simulationId, DateTime current, string step)

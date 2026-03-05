@@ -41,7 +41,7 @@ namespace SurimiController.Services
         /// <param name="simulation">The simulation details</param>
         /// <returns></returns>
         /// <exception cref="RpcException"></exception>
-        public Task InitSimulationAsync(string simulationId, string scenarioId, DateTime? endDateTime, Grpc.Surimi.Simulation simulation)
+        public Task InitSimulationAsync(string simulationId, string experimentId, string scenarioId, DateTime? endDateTime, Grpc.Surimi.Simulation simulation)
         {
             if (_simulations.ContainsKey(simulationId))
             {
@@ -69,6 +69,7 @@ namespace SurimiController.Services
             _simulations[simulationId] = new Models.Simulation
             {
                 ScenarioId = scenarioId,
+                ExperimentId = experimentId,
                 StartDateTime = simulation.StartDateTime.ToDateTime(),
                 StepSize = simulation.TimeStep,
                 // If an endDateTime is provided, use the minimum of that and the MaximumEndDateTime from the simulation details
@@ -245,14 +246,17 @@ namespace SurimiController.Services
 
             var getBiomassResponseTotal = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId }, current, cancellationToken: token);
 
-            await _cmsyServiceClient.UpdateBiomassAsync(CreateUpdateBiomassRequest(getBiomassResponseTotal), current, cancellationToken: token);
-            await _aggregatorServiceClient.UpdateBiomassAsync(CreateUpdateBiomassRequest(getBiomassResponseTotal), current, cancellationToken: token);
+            var updateBiomassRequest = CreateUpdateBiomassRequest(getBiomassResponseTotal);
+            await _cmsyServiceClient.UpdateBiomassAsync(updateBiomassRequest, current, cancellationToken: token);
+            await _aggregatorServiceClient.UpdateBiomassAsync(updateBiomassRequest, current, cancellationToken: token);
 
             var ecopathCatchDispositionSummary = await _ecopathServiceClient.GetCatchDispositionAsync(getCatchDispositionRequest, current, cancellationToken: token);
 
-            await _cmsyServiceClient.UpdateCatchDispositionAsync(CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary), cancellationToken: token);
-            await _aggregatorServiceClient.UpdateCatchDispositionAsync(CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary), cancellationToken: token);
+            var updateCatchDispositionRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary);
+            var xx = GetProtoString<UpdateCatchDispositionRequest>(updateCatchDispositionRequest);
 
+            await _cmsyServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: token);
+            await _aggregatorServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: token);
 
             var getSalesRequest = CreateGetSalesRequest(simulationId, current, endStepDateTime);
 
@@ -263,7 +267,7 @@ namespace SurimiController.Services
 
             var ecopathUpdateSalesRequest = CreateUpdateSalesRequest(ecopathGetSalesResponse, current, endStepDateTime);
             var marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, token);
-
+            await _aggregatorServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, cancellationToken: token);
             await _valueChainServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, cancellationToken: token);
 
             var poseidonGetSalesResponse = await _poseidonServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
@@ -271,7 +275,7 @@ namespace SurimiController.Services
             var poseidonUpdateSalesRequest = CreateUpdateSalesRequest(poseidonGetSalesResponse, current, endStepDateTime);
 //            string xx = GetProtoString<UpdateSalesRequest>(poseidonUpdateSalesRequest);
             marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, token);
-
+            await _aggregatorServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
             await _valueChainServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
 
             await _cmsyServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
@@ -455,6 +459,7 @@ namespace SurimiController.Services
                     _simulations.Select(sim => new Grpc.Surimi.SimulationStatus
                     {
                         SimulationId = sim.Key,
+                        ExperimentId = sim.Value.ExperimentId,
                         ScenarioId = sim.Value.ScenarioId,
                         StartDateTime = Timestamp.FromDateTime(sim.Value.StartDateTime),
                         //StepSize = sim.Value.StepSize,
