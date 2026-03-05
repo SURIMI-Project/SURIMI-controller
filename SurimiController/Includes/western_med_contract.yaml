@@ -172,13 +172,13 @@ items:
   - species_code: UYE
   - species_code: WHB
   fleet_segments:
-  - gear_code: EwE:ART
+  - gear_code: ART
     country_code: ESP
     model: EwE
-  - gear_code: EwE:ART
+  - gear_code: ART
     country_code: FRA
     model: EwE
-  - gear_code: EwE:RECT
+  - gear_code: RECT
     country_code: ESP
     model: EwE
   - gear_code: LLS

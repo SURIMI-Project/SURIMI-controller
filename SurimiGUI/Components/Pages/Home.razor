@@ -5,26 +5,25 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>SURIMI</h1>
-
-<p>
-    This is a SURIMI Test webapp
-</p>
-
-<p>
-    <a href="https://www.surimi-project.eu/">SURIMI</a>
-</p>
-
-<h2>Initialize the simulation</h2>
-
-
 <div class="row mt-3">
 
     <!-- LEFT COLUMN: Your existing content -->
     <div class="col-8">
+        <h1>SURIMI</h1>
+
+        <p>
+            This is a SURIMI Test webapp
+        </p>
+
+        <p>
+            <a href="https://www.surimi-project.eu/">SURIMI</a>
+        </p>
+
+        <h2>Initialize the simulation</h2>
+
         @if (config == null)
         {
-            <p><em>Loading...</em></p>
+                    <p><em>Loading...</em></p>
         }
         else
         {
@@ -36,9 +35,16 @@
                     </div>
                 </div>
                 <div class="form-group row">
+                    <label class="col-md-2 col-form-label">Number of runs</label>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control" @bind="config.NumberOfRuns"
+                               title="Select the number of runs for the simulation">
+                    </div>
+                </div>
+                <div class="form-group row">
                     <label class="col-md-2 col-form-label">End Date (optional)</label>
                     <div class="col-md-2">
-                        <input type="date" class="form-control" @bind="config.EndDateTime" 
+                        <input type="date" class="form-control" @bind="config.EndDateTime"
                                title="Optional. Select the end date for the simulation">
                     </div>
                 </div>
@@ -61,83 +67,89 @@
                     Response: @result
                 </div>
             </EditForm>
-
-            <h3 class="mt-4">Simulations</h3>
-            @if (simulations == null)
-            {
-                <p><em>Loading simulations...</em></p>
-            }
-            else if (simulations.Count == 0)
-            {
-                <p><em>No simulations found.</em></p>
-            }
-            else
-            {
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Simulation Id</th>
-                            <th>Scen Id</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Status</th>
-                            <th>Sim Started</th>
-                            <th>Sim Duration</th>
-                            <th>Sim Current</th>
-                            <th>EwE IP</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var sim in simulations)
-                        {
-                            <tr>
-                                <td>@sim.SimulationId</td>
-                                <td>@sim.ScenarioId</td>
-                                <td>@sim.StartDateTime.ToLocalTime().ToString("dd-MM-yyyy")</td>
-                                <td>@sim.EndDateTime.ToLocalTime().ToString("dd-MM-yyyy")</td>
-                                <td>@sim.Status</td>
-                                <td>@(sim.SimulationStarted.HasValue 
-                                    ? sim.SimulationStarted.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm") 
-                                    : "")</td>
-                                <td>@(sim.SimulationDuration.HasValue
-                                    ? sim.SimulationDuration.Value.ToString(@"hh\:mm\:ss")
-                                    : "")</td>
-                                <td>@sim.SimulationCurrent?.ToLocalTime().ToString("dd-MM-yyyy")</td>
-                                <td>@sim.IP</td>
-                                <td>
-                                    <a href="#" 
-                                       class="btn btn-link btn-sm @(sim.Status != "Initialised" ? "disabled" : "")" 
-                                       @onclick="() => StartSimulationFor(sim)"
-                                       @onclick:preventDefault="true">
-                                        Start
-                                    </a>
-                                    <a href="#" 
-                                        class="btn btn-link btn-sm text-danger @(sim.Status != "Running" ? "disabled" : "")" 
-                                        @onclick="() => CancelSimulationFor(sim)">
-                                        Cancel
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
         }
     </div>
-
-
     <div class="col-4">
-        <EditoAppList Apps="@editoApps"
-                      Loading="@editoAppsLoading"
-                      Error="@editoAppsError" />
+            <EditoAppList Apps="@editoApps"
+                          Loading="@editoAppsLoading"
+                          Error="@editoAppsError" />
     </div>
-
 </div>
+
+<h3 class="mt-4">Simulations</h3>
+@if (simulations == null)
+{
+    <p><em>Loading simulations...</em></p>
+}
+else if (simulations.Count == 0)
+{
+    <p><em>No simulations found.</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Simulation Id</th>
+                <th>Experiment Id</th>
+                <th>Scen Id</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Status</th>
+                <th>Sim Started</th>
+                <th>Sim Duration</th>
+                <th>Sim Current</th>
+                <th>EwE IP</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var sim in simulations)
+            {
+                <tr>
+                    <td>@sim.SimulationId.Split('-')[0]</td>
+                    <td>@sim.ExperimentId.Split('-')[0]</td>
+                    <td>@sim.ScenarioId</td>
+                    <td>@sim.StartDateTime.ToLocalTime().ToString("dd-MM-yyyy")</td>
+                    <td>@sim.EndDateTime.ToLocalTime().ToString("dd-MM-yyyy")</td>
+                    <td>@sim.Status</td>
+                    <td>
+                        @(sim.SimulationStarted.HasValue
+                                        ? sim.SimulationStarted.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm")
+                                        : "")
+                                            </td>
+                                            <td>
+                        @(sim.SimulationDuration.HasValue
+                                        ? sim.SimulationDuration.Value.ToString(@"hh\:mm\:ss")
+                                        : "")
+        </td>
+        <td>@sim.SimulationCurrent?.ToLocalTime().ToString("dd-MM-yyyy")</td>
+        <td>@sim.IP</td>
+        <td>
+            <a href="#"
+                class="btn btn-link btn-sm @(sim.Status != "Initialised" ? "disabled" : "")"
+                @onclick="() => StartSimulationFor(sim)"
+                @onclick:preventDefault="true">
+                Start
+            </a>
+            <a href="#"
+                class="btn btn-link btn-sm text-danger @(sim.Status != "Running" ? "disabled" : "")"
+                @onclick="() => CancelSimulationFor(sim)">
+                Cancel
+            </a>
+        </td>
+    </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+
 
 @code {
     private bool isInitLoading = false;
-    private SurimiGUI.Models.SimulationConfig? config { get; set; }
+    private SurimiGUI.Models.ExperimentConfig? config { get; set; }
     private List<SurimiGUI.Models.SimulationStatus>? simulations { get; set; } = new List<SurimiGUI.Models.SimulationStatus>();
     private string result = "";
     CancellationTokenSource cts = new CancellationTokenSource();
@@ -151,13 +163,13 @@
 
     [Inject]
     private SurimiGUIControllerService? controllerService { get; set; }
-    
+
     [Inject]
     private EditoDataLabService? editoDataLabService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        config = new SurimiGUI.Models.SimulationConfig();
+        config = new SurimiGUI.Models.ExperimentConfig();
         StartRefreshTimer();
 
         // Load EDITO DataLab services
@@ -195,11 +207,11 @@
             try
             {
                 result = "";
-                config.SimulationId = Guid.NewGuid().ToString();
+                config.ExperimentId = Guid.NewGuid().ToString();
                 var res = await controllerService.Init(config, cts.Token);
                 if (Guid.TryParse(res, out Guid simres))
                 {
-                    config = new SurimiGUI.Models.SimulationConfig();    // Reset form
+                    config = new SurimiGUI.Models.ExperimentConfig();    // Reset form
                     // Fetch updated simulations list after successful init
                     simulations = await controllerService.GetAllSimulationsAsync(cts.Token);
                     result = $"OK";
@@ -228,7 +240,7 @@
             try
             {
                 result = "";
-                result = await controllerService.RunSimulationAsync(sim.SimulationId, CancellationToken.None);
+                result = await controllerService.RunExperimentAsync(sim.ExperimentId, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -243,7 +255,7 @@
         if (controllerService != null)
         {
             result = "";
-            result = await controllerService.CancelSimulationAsync(sim.SimulationId, CancellationToken.None);
+            result = await controllerService.CancelExperimentAsync(sim.ExperimentId, CancellationToken.None);
             // Optionally refresh simulations list
             simulations = await controllerService.GetAllSimulationsAsync(CancellationToken.None);
 

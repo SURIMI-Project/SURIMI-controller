@@ -51,26 +51,30 @@ public class Program
 
         // Use the helper for all your gRPC clients
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", "POSEIDON_URL");
-        AddConfiguredGrpcClient<MarketService.MarketServiceClient>("PoseidonMarket", "POSEIDON_URL");
-        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("PoseidonFishery", "POSEIDON_URL");
-        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("PoseidonEcology", "POSEIDON_URL");
+        AddConfiguredGrpcClient<SalesProviderService.SalesProviderServiceClient>("PoseidonSalesProvider", "POSEIDON_URL");
+        AddConfiguredGrpcClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("PoseidonSpeciesPriceConsumer", "POSEIDON_URL");
+        AddConfiguredGrpcClient<CatchProviderService.CatchProviderServiceClient>("PoseidonCatchProvider", "POSEIDON_URL");
+        AddConfiguredGrpcClient<EcologyConsumerService.EcologyConsumerServiceClient>("PoseidonEcologyConsumer", "POSEIDON_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", "MARKET_URL");
-        AddConfiguredGrpcClient<MarketService.MarketServiceClient>("MarketMarket", "MARKET_URL");
+        AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("MarketMarketProvider", "MARKET_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow", "CMSY_URL");
-        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("CmsyEcology", "CMSY_URL");
-        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("CmsyFishery", "CMSY_URL");
+        AddConfiguredGrpcClient<EcologyConsumerService.EcologyConsumerServiceClient>("CmsyEcologyConsumer", "CMSY_URL");
+        AddConfiguredGrpcClient<CatchConsumerService.CatchConsumerServiceClient>("CmsyCatchConsumer", "CMSY_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("AggregatorWorkflow", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("AggregatorEcology", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("AggregatorFishery", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<EcologyConsumerService.EcologyConsumerServiceClient>("AggregatorEcologyConsumer", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<CatchConsumerService.CatchConsumerServiceClient>("AggregatorCatchConsumer", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("AggregatorMarketProvider", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<AggregatorService.AggregatorServiceClient>("Aggregator", "AGGREGATOR_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow", "VALUECHAIN_URL");
-        AddConfiguredGrpcClient<MarketService.MarketServiceClient>("ValueChainMarket", "VALUECHAIN_URL");
+        AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("ValueChainMarketProvider", "VALUECHAIN_URL");
 
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
+        builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();
         builder.Services.AddTransient<ISurimiConfigurationService, SurimiConfigurationService>();
         builder.Services.AddTransient<ICmsyServiceClient, CmsyServiceClient>();
         builder.Services.AddTransient<IAggregatorServiceClient, AggregatorServiceClient>();

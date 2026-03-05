@@ -2,6 +2,7 @@
 {
     public class SimulationStatus
     {
+        public required string ExperimentId { get; set; }
         public required string SimulationId { get; set; }
         public DateTime? SimulationStarted { get; set; }
         public TimeSpan? SimulationDuration { get; set; }

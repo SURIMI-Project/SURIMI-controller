@@ -14,6 +14,6 @@
         public required string EcologyHost { get; set; }
         public Task? Task { get; set; }
         public CancellationTokenSource? Cts { get; set; }
-
+        public required string ExperimentId { get; set; }
     }
 }

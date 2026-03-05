@@ -8,13 +8,13 @@ namespace SurimiController.Services
     {
         private readonly ILogger<ValueChainServiceClient> _logger;
         private readonly WorkflowService.WorkflowServiceClient _valueChainWorkflowClient;
-        private readonly MarketService.MarketServiceClient _valueChainMarketClient;
+        private readonly MarketProviderService.MarketProviderServiceClient _valueChainMarketProviderClient;
         private readonly bool _includeValueChain = Environment.GetEnvironmentVariable("EXCLUDE_VALUECHAIN")?.ToLower() != "true";
 
         public ValueChainServiceClient(GrpcClientFactory clientFactory, ILogger<ValueChainServiceClient> logger)
         {
             _valueChainWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow");
-            _valueChainMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("ValueChainMarket");
+            _valueChainMarketProviderClient = clientFactory.CreateClient<MarketProviderService.MarketProviderServiceClient>("ValueChainMarketProvider");
 
             _logger = logger;
         }
@@ -63,7 +63,7 @@ namespace SurimiController.Services
             if (_includeValueChain)
             {
                 LogStep(updateSalesRequest.SimulationId, current, "UpdateSales");
-                var valueChainUpdateSalesResponse = await _valueChainMarketClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
+                var valueChainUpdateSalesResponse = await _valueChainMarketProviderClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
             }
             return new UpdateSalesResponse();
         }

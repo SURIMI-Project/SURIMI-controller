@@ -8,15 +8,18 @@ namespace SurimiController.Services
     {
         private readonly ILogger<AggregatorServiceClient> _logger;
         private readonly WorkflowService.WorkflowServiceClient _aggregatorWorkflowClient;
-        private readonly EcologyService.EcologyServiceClient _aggregatorEcologyClient;
-        private readonly FisheryService.FisheryServiceClient _aggregatorFisheryClient;
+        private readonly EcologyConsumerService.EcologyConsumerServiceClient _aggregatorEcologyConsumerClient;
+        private readonly CatchConsumerService.CatchConsumerServiceClient _aggregatorCatchConsumerClient;
+        private readonly MarketProviderService.MarketProviderServiceClient _aggregatorMarketProviderClient;
+
         private readonly bool _includeAggregator = Environment.GetEnvironmentVariable("EXCLUDE_AGGREGATOR")?.ToLower() != "true";
 
         public AggregatorServiceClient(GrpcClientFactory clientFactory, ILogger<AggregatorServiceClient> logger)
         {
             _aggregatorWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("AggregatorWorkflow");
-            _aggregatorEcologyClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("AggregatorEcology");
-            _aggregatorFisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("AggregatorFishery");
+            _aggregatorEcologyConsumerClient = clientFactory.CreateClient<EcologyConsumerService.EcologyConsumerServiceClient>("AggregatorEcologyConsumer");
+            _aggregatorCatchConsumerClient = clientFactory.CreateClient<CatchConsumerService.CatchConsumerServiceClient>("AggregatorCatchConsumer");
+            _aggregatorMarketProviderClient = clientFactory.CreateClient<MarketProviderService.MarketProviderServiceClient>("AggregatorMarketProvider"); ;
 
             _logger = logger;
         }
@@ -38,7 +41,7 @@ namespace SurimiController.Services
             {
                 return await _aggregatorWorkflowClient.CancelAsync(cancelRequest, cancellationToken: token);
             }
-            return new CancelResponse();
+            return new CancelResponse() { SimulationId = cancelRequest.SimulationId };
         }
 
         public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
@@ -47,7 +50,7 @@ namespace SurimiController.Services
             {
                 return await _aggregatorWorkflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken);
             }
-            return new FinaliseResponse();
+            return new FinaliseResponse() { SimulationId = finaliseRequest.SimulationId };
         }
 
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
@@ -57,7 +60,7 @@ namespace SurimiController.Services
                 LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
                 return await _aggregatorWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
             }
-            return new SimulateStepResponse();
+            return new SimulateStepResponse() { SimulationId = simulationStepRequest.SimulationId };
         }
 
         public async Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, DateTime current, CancellationToken cancellationToken)
@@ -65,9 +68,9 @@ namespace SurimiController.Services
             if (_includeAggregator)
             {
                 LogStep(updateBiomassRequest.SimulationId, current, "UpdateBiomass");
-                return await _aggregatorEcologyClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken);
+                return await _aggregatorEcologyConsumerClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken);
             }
-            return new UpdateBiomassResponse();
+            return new UpdateBiomassResponse() { SimulationId = updateBiomassRequest.SimulationId };
         }
 
         public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, CancellationToken cancellationToken)
@@ -75,9 +78,19 @@ namespace SurimiController.Services
             if (_includeAggregator)
             {
                 LogStep(updateCatchDispositionRequest.SimulationId, updateCatchDispositionRequest.StartDateTime.ToDateTime(), "UpdateCatchDisposition");
-                return await _aggregatorFisheryClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
+                return await _aggregatorCatchConsumerClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
             }
-            return new UpdateCatchDispositionResponse();
+            return new UpdateCatchDispositionResponse() { SimulationId = updateCatchDispositionRequest.SimulationId };
+        }
+
+        public async Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            if (_includeAggregator)
+            {
+                LogStep(updateSalesRequest.SimulationId, updateSalesRequest.StartDateTime.ToDateTime(), "UpdateSales");
+                return await _aggregatorMarketProviderClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
+            }
+            return new UpdateSalesResponse() { SimulationId = updateSalesRequest.SimulationId };
         }
 
         private void LogStep(string simulationId, DateTime current, string step)

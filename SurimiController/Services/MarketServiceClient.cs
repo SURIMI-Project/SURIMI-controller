@@ -7,13 +7,13 @@ namespace SurimiController.Services
     public class MarketServiceClient : IMarketServiceClient
     {
         private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient;
-        private readonly MarketService.MarketServiceClient _marketMarketClient;
+        private readonly MarketProviderService.MarketProviderServiceClient _marketMarketProviderClient;
         private readonly ILogger<MarketServiceClient> _logger;
 
         public MarketServiceClient(GrpcClientFactory clientFactory, ILogger<MarketServiceClient> logger)
         {
             _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
-            _marketMarketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("MarketMarket");
+            _marketMarketProviderClient = clientFactory.CreateClient<MarketProviderService.MarketProviderServiceClient>("MarketMarketProvider");
             _logger = logger;
         }
 
@@ -37,7 +37,7 @@ namespace SurimiController.Services
         public async Task<GetSpeciesPricesResponse> GetSpeciesPricesAsync(GetSpeciesPricesRequest getSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getSpeciesPricesRequest.SimulationId, current, "GetSpeciesPrices");
-            return await _marketMarketClient.GetSpeciesPricesAsync(getSpeciesPricesRequest, cancellationToken: cancellationToken);
+            return await _marketMarketProviderClient.GetSpeciesPricesAsync(getSpeciesPricesRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
@@ -49,13 +49,7 @@ namespace SurimiController.Services
         public async Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateSalesRequest.SimulationId, current, "UpdateSales");
-            return await _marketMarketClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
-        }
-
-        public Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
-        {
-            LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdateSpeciesPrices");
-            return _marketMarketClient.UpdateSpeciesPricesAsync(updateSpeciesPricesRequest, cancellationToken: cancellationToken).ResponseAsync;
+            return await _marketMarketProviderClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
         }
 
         private void LogStep(string simulationId, DateTime current, string step)

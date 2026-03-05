@@ -40,7 +40,7 @@ namespace SurimiController.Services
         public async Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getCatchDispositionRequest.SimulationId, current, "GetCatchDisposition");
-            var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, getCatchDispositionRequest.SimulationId,
+            var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<CatchProviderService.CatchProviderServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, getCatchDispositionRequest.SimulationId,
             (client, req) => client.GetCatchDispositionAsync(req, cancellationToken: cancellationToken));
             return ecopathCatchDispositionSummary;
         }
@@ -48,7 +48,7 @@ namespace SurimiController.Services
         public async Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getSalesRequest.SimulationId, current, "GetSales");
-            var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, getSalesRequest.SimulationId,
+            var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<SalesProviderService.SalesProviderServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, getSalesRequest.SimulationId,
                 (client, req) => client.GetSalesAsync(req, cancellationToken: cancellationToken));
             return ecopathGetSalesResponse;
         }
@@ -64,7 +64,7 @@ namespace SurimiController.Services
         public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateCatchDispositionRequest.SimulationId, current, "UpdateCatchDisposition Summary");
-            var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<FisheryService.FisheryServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionRequest, updateCatchDispositionRequest.SimulationId,
+            var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<CatchConsumerService.CatchConsumerServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionRequest, updateCatchDispositionRequest.SimulationId,
               (client, req) => client.UpdateCatchDispositionAsync(req, cancellationToken: cancellationToken));
             return catchDispositionResponse;
         }
@@ -72,7 +72,7 @@ namespace SurimiController.Services
         public async Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdatePrices");
-            var ecopathUpdatePricesResponse = await _ecopathSimDispatcher.DispatchAsync<MarketService.MarketServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updateSpeciesPricesRequest, updateSpeciesPricesRequest.SimulationId,
+            var ecopathUpdatePricesResponse = await _ecopathSimDispatcher.DispatchAsync<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updateSpeciesPricesRequest, updateSpeciesPricesRequest.SimulationId,
                (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: cancellationToken));
             return ecopathUpdatePricesResponse;
         }
@@ -80,7 +80,7 @@ namespace SurimiController.Services
         public async Task<GetBiomassResponse> GetBiomassAsync(GetBiomassRequest getBiomassRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getBiomassRequest.SimulationId, current, "GetBiomass");
-            var getBiomassResponseIntermediate = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(getBiomassRequest, getBiomassRequest.SimulationId,
+            var getBiomassResponseIntermediate = await _ecopathSimDispatcher.DispatchAsync<EcologyProviderService.EcologyProviderServiceClient, GetBiomassRequest, GetBiomassResponse>(getBiomassRequest, getBiomassRequest.SimulationId,
                 (client, req) => client.GetBiomassAsync(req, cancellationToken: cancellationToken));
             return getBiomassResponseIntermediate;
         }
