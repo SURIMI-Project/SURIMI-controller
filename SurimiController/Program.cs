@@ -72,6 +72,9 @@ public class Program
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow", "VALUECHAIN_URL");
         AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("ValueChainMarketProvider", "VALUECHAIN_URL");
 
+        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("EnvironmentWorkflow", "ENVIRONMENT_URL");
+        AddConfiguredGrpcClient<EnvironmentProviderService.EnvironmentProviderServiceClient>("EnvironmentEnvironmentProvider", "ENVIRONMENT_URL");
+
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();
@@ -82,6 +85,7 @@ public class Program
         builder.Services.AddTransient<IPoseidonServiceClient, PoseidonServiceClient>();
         builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
         builder.Services.AddTransient<IEcopathServiceClient, EcopathServiceClient>();
+        builder.Services.AddTransient<IEnvironmentServiceClient, EnvironmentServiceClient>();
 
 
         builder.Logging.ClearProviders();

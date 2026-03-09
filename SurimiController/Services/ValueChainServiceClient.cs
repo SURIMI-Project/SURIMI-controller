@@ -36,7 +36,7 @@ namespace SurimiController.Services
             {
                 return await _valueChainWorkflowClient.CancelAsync(cancelRequest, cancellationToken: token);
             }
-            return new CancelResponse();
+            return new CancelResponse() { SimulationId = cancelRequest.SimulationId };
         }
 
         public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
@@ -45,7 +45,7 @@ namespace SurimiController.Services
             {
                 return await _valueChainWorkflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken);
             }
-            return new FinaliseResponse();
+            return new FinaliseResponse() { SimulationId = finaliseRequest.SimulationId };
         }
 
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
@@ -55,7 +55,7 @@ namespace SurimiController.Services
                 LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
                 return await _valueChainWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
             }
-            return new SimulateStepResponse();
+            return new SimulateStepResponse() { SimulationId = simulationStepRequest.SimulationId };
         }
 
         public async Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, DateTime current, CancellationToken cancellationToken)
@@ -65,7 +65,7 @@ namespace SurimiController.Services
                 LogStep(updateSalesRequest.SimulationId, current, "UpdateSales");
                 var valueChainUpdateSalesResponse = await _valueChainMarketProviderClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
             }
-            return new UpdateSalesResponse();
+            return new UpdateSalesResponse() { SimulationId = updateSalesRequest.SimulationId };
         }
 
         private void LogStep(string simulationId, DateTime current, string step)

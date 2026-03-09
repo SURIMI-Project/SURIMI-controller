@@ -71,7 +71,7 @@ namespace SurimiController.Services
 
         public async Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdatePrices");
+            LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdateSpeciesPrices");
             var ecopathUpdatePricesResponse = await _ecopathSimDispatcher.DispatchAsync<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updateSpeciesPricesRequest, updateSpeciesPricesRequest.SimulationId,
                (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: cancellationToken));
             return ecopathUpdatePricesResponse;
@@ -88,6 +88,14 @@ namespace SurimiController.Services
         private void LogStep(string simulationId, DateTime current, string step)
         {
             _logger.LogInformation("{SimulationId} Processing step Ecopath.{Step}. {DateTime}", simulationId, step, current);
+        }
+
+        public async Task<UpdateEnvironmentVariablesResponse> UpdateEnvironmentVariablesAsync(UpdateEnvironmentVariablesRequest updateEnvironmentVariablesRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            LogStep(updateEnvironmentVariablesRequest.SimulationId, current, "UpdateEnvironmentVariables");
+            var response = await _ecopathSimDispatcher.DispatchAsync<EnvironmentConsumerService.EnvironmentConsumerServiceClient, UpdateEnvironmentVariablesRequest, UpdateEnvironmentVariablesResponse>(updateEnvironmentVariablesRequest, updateEnvironmentVariablesRequest.SimulationId,
+                (client, req) => client.UpdateEnvironmentVariablesAsync(req, cancellationToken: cancellationToken));
+            return response;
         }
     }
 }

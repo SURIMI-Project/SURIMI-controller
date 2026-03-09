@@ -20,13 +20,15 @@ namespace SurimiController.Services
         private readonly IAggregatorServiceClient _aggregatorServiceClient;
         private readonly IValueChainServiceClient _valueChainServiceClient;
         private readonly IMarketServiceClient _marketServiceClient;
+        private readonly IEnvironmentServiceClient _environmentServiceClient;
 
-        public SimulationManager(GrpcClientFactory clientFactory, ILogger<SimulationManager> logger, ICmsyServiceClient cmsyServiceClient, IAggregatorServiceClient aggregatorServiceClient, IValueChainServiceClient valueChainServiceClient, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient)
+        public SimulationManager(GrpcClientFactory clientFactory, ILogger<SimulationManager> logger, ICmsyServiceClient cmsyServiceClient, IAggregatorServiceClient aggregatorServiceClient, IValueChainServiceClient valueChainServiceClient, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient, IEnvironmentServiceClient environmentServiceClient)
         {
             _logger = logger;
             _cmsyServiceClient = cmsyServiceClient;
             _aggregatorServiceClient = aggregatorServiceClient;
             _valueChainServiceClient = valueChainServiceClient;
+            _environmentServiceClient = environmentServiceClient;
             _marketServiceClient = marketServiceClient;
             _poseidonServiceClient = poseidonServiceClient;
             _ecopathServiceClient = ecopathServiceClient;
@@ -160,8 +162,8 @@ namespace SurimiController.Services
 
                     await _poseidonServiceClient.CancelAsync(cancelRequest, cts.Token);
                     await _ecopathServiceClient.CancelAsync(cancelRequest, cts.Token);
-                    await _marketServiceClient.CancelAsync(cancelRequest, cts.Token); 
-                    await _cmsyServiceClient.CancelAsync(cancelRequest, cts.Token); 
+                    await _marketServiceClient.CancelAsync(cancelRequest, cts.Token);
+                    await _cmsyServiceClient.CancelAsync(cancelRequest, cts.Token);
                     await _valueChainServiceClient.CancelAsync(cancelRequest, cts.Token);
                     await _aggregatorServiceClient.CancelAsync(cancelRequest, cts.Token);
 
@@ -171,7 +173,8 @@ namespace SurimiController.Services
                 catch (RpcException ex)
                 {
                     _simulations[simulationId].Status = "Error";
-                    _logger.LogError(ex, "{SimulationId} encountered a RpcException", simulationId);
+                    _logger.LogError(ex, "{SimulationId} encountered RpcException. StatusCode: {StatusCode}, Method: {Method}",
+                           simulationId, ex.StatusCode, ex.Status.Detail);
                     throw;
                 }
                 catch (Exception ex)
@@ -215,10 +218,14 @@ namespace SurimiController.Services
             var speciesPriceResponse = await _marketServiceClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, current, cancellationToken: token);
 
             var updatePriceRequest = CreateUpdateSpeciesPricesRequest(speciesPriceResponse);
-//            var xx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
+            //            var xx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
 
             await _poseidonServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
             await _ecopathServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
+
+            var getEnvironmentVariablesResponse = await _environmentServiceClient.GetEnvironmentVariables(new GetEnvironmentVariablesRequest() { SimulationId = simulationId }, current, cancellationToken: token);
+
+            await _ecopathServiceClient.UpdateEnvironmentVariablesAsync(CreateUpdateEnvironmentVariablesRequest(getEnvironmentVariablesResponse), current, cancellationToken: token);
 
             var simulationStepRequest = CreateSimulateStepRequest(simulationId, current);
 
@@ -228,7 +235,7 @@ namespace SurimiController.Services
 
             var updateBiomassIntermediateRequest = CreateUpdateBiomassRequest(getBiomassResponseIntermediate);
 
-//            xx = GetProtoString<UpdateBiomassRequest>(updateBiomassIntermediateRequest);
+            //            xx = GetProtoString<UpdateBiomassRequest>(updateBiomassIntermediateRequest);
 
             var poseidonUpdateBiomassResponse = await _poseidonServiceClient.UpdateBiomassAsync(updateBiomassIntermediateRequest, current, cancellationToken: token);
 
@@ -273,7 +280,7 @@ namespace SurimiController.Services
             var poseidonGetSalesResponse = await _poseidonServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
 
             var poseidonUpdateSalesRequest = CreateUpdateSalesRequest(poseidonGetSalesResponse, current, endStepDateTime);
-//            string xx = GetProtoString<UpdateSalesRequest>(poseidonUpdateSalesRequest);
+            //            string xx = GetProtoString<UpdateSalesRequest>(poseidonUpdateSalesRequest);
             marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, token);
             await _aggregatorServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
             await _valueChainServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
@@ -283,6 +290,15 @@ namespace SurimiController.Services
             await _marketServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 
             await _valueChainServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
+        }
+
+        private UpdateEnvironmentVariablesRequest CreateUpdateEnvironmentVariablesRequest(GetEnvironmentVariablesResponse getEnvironmentVariablesResponse)
+        {
+            return new UpdateEnvironmentVariablesRequest()
+            {
+                SimulationId = getEnvironmentVariablesResponse.SimulationId,
+                EnvironmentVariablesSummary = getEnvironmentVariablesResponse.EnvironmentVariablesSummary
+            };
         }
 
         private string GetProtoString<T>(object obj)
@@ -310,7 +326,7 @@ namespace SurimiController.Services
             // NOTE: Do NOT confuse with "PT<n>M" which means minutes.
             var monthsMatch = Regex.Match(input, @"^P(?<m>\d+)M$");
             if (monthsMatch.Success)
-             {
+            {
                 int months = int.Parse(monthsMatch.Groups["m"].Value);
 
                 // Add months. When adding months, day-of-month can drift if the current day
