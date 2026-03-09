@@ -16,7 +16,6 @@ var cmsy = builder.AddContainer("cmsy", "rikkert242/cmsy", "latest")
     .WithEnvironment("AWS_S3_ENDPOINT", "minio.dive.edito.eu")
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
-;
 
 var aggregator = builder.AddContainer("aggregator", "rikkert242/aggregator", "latest")
     .WithHttpEndpoint(port: 5188, targetPort: 5188, name: "aggregator")
@@ -40,6 +39,9 @@ var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
+var environment = builder.AddContainer("environment", "rikkert242/surimienvironment", "latest")
+    .WithHttpEndpoint(port: 5839, targetPort: 8080, name: "environment");
+
 var valueChain = builder.AddContainer("valuechain", "rikkert242/surimivaluechain", "latest")
     .WithHttpEndpoint(port: 7990, targetPort: 8080, name: "valuechain");
 
@@ -52,6 +54,7 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
     .WithEnvironment("AGGREGATOR_URL", "http://localhost:5188")
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")
+    .WithEnvironment("ENVIRONMENT_URL", "http://localhost:5839")
 
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")
