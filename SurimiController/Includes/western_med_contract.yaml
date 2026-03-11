@@ -1,7 +1,7 @@
 simulation:
   case_study_name: Western Med
   start_date_time: 2013-01-01T00:00:00
-  maximum_end_date_time: 2024-01-01T00:00:00
+  maximum_end_date_time: 2050-01-01T00:00:00
   time_step: P1M
   geography:
     raster_cell_origin: Centroid
@@ -178,9 +178,6 @@ items:
   - gear_code: ART
     country_code: FRA
     model: EwE
-  - gear_code: RECT
-    country_code: ESP
-    model: EwE
   - gear_code: LLS
     country_code: ESP
     model: EwE
@@ -195,6 +192,9 @@ items:
     model: POSEIDON
   - gear_code: PS
     country_code: FRA
+    model: EwE
+  - gear_code: RECT
+    country_code: ESP
     model: EwE
   - gear_code: TM
     country_code: FRA

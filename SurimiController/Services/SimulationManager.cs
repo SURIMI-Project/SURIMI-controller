@@ -21,8 +21,9 @@ namespace SurimiController.Services
         private readonly IValueChainServiceClient _valueChainServiceClient;
         private readonly IMarketServiceClient _marketServiceClient;
         private readonly IEnvironmentServiceClient _environmentServiceClient;
+        private readonly IFisheriesAuthorityServiceClient _fisheriesAuthorityServiceClient;
 
-        public SimulationManager(GrpcClientFactory clientFactory, ILogger<SimulationManager> logger, ICmsyServiceClient cmsyServiceClient, IAggregatorServiceClient aggregatorServiceClient, IValueChainServiceClient valueChainServiceClient, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient, IEnvironmentServiceClient environmentServiceClient)
+        public SimulationManager(GrpcClientFactory clientFactory, ILogger<SimulationManager> logger, ICmsyServiceClient cmsyServiceClient, IAggregatorServiceClient aggregatorServiceClient, IValueChainServiceClient valueChainServiceClient, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient, IEnvironmentServiceClient environmentServiceClient, IFisheriesAuthorityServiceClient fisheriesAuthorityServiceClient)
         {
             _logger = logger;
             _cmsyServiceClient = cmsyServiceClient;
@@ -32,6 +33,7 @@ namespace SurimiController.Services
             _marketServiceClient = marketServiceClient;
             _poseidonServiceClient = poseidonServiceClient;
             _ecopathServiceClient = ecopathServiceClient;
+            _fisheriesAuthorityServiceClient = fisheriesAuthorityServiceClient;
         }
 
         /// <summary>
@@ -43,7 +45,7 @@ namespace SurimiController.Services
         /// <param name="simulation">The simulation details</param>
         /// <returns></returns>
         /// <exception cref="RpcException"></exception>
-        public Task InitSimulationAsync(string simulationId, string experimentId, string scenarioId, DateTime? endDateTime, Grpc.Surimi.Simulation simulation)
+        public Task InitSimulationAsync(string simulationId, string experimentId, string scenarioId, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, Grpc.Surimi.RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken)
         {
             if (_simulations.ContainsKey(simulationId))
             {
@@ -67,6 +69,8 @@ namespace SurimiController.Services
             _cmsyServiceClient.AddInitialise(initializationTasks, initRequest);
             _valueChainServiceClient.AddInitialise(initializationTasks, initRequest);
             _aggregatorServiceClient.AddInitialise(initializationTasks, initRequest);
+            _environmentServiceClient.AddInitialise(initializationTasks, initRequest);
+            _fisheriesAuthorityServiceClient.AddInitialise(initializationTasks, initRequest);
 
             _simulations[simulationId] = new Models.Simulation
             {
@@ -103,6 +107,12 @@ namespace SurimiController.Services
 
                 _logger.LogInformation("Simulation {SimulationId} is created and initialised on {EcologyHost}", simulationId, hostValue);
             });
+
+            _fisheriesAuthorityServiceClient.CreateRegulationsAsync(new CreateRegulationsRequest()
+            {
+                SimulationId = simulationId,
+                RegulationsSummary = regulationsSummary
+            }, cancellationToken);
 
             // Return promptly, do not await the initialisation calls
             return Task.CompletedTask;
@@ -150,6 +160,8 @@ namespace SurimiController.Services
                     await _cmsyServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
                     await _valueChainServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
                     await _aggregatorServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
+                    await _environmentServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
+                    await _fisheriesAuthorityServiceClient.FinaliseAsync(finaliseRequest, cts.Token);
 
                     _simulations[simulationId].Status = "Finished";
                     _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
@@ -166,6 +178,8 @@ namespace SurimiController.Services
                     await _cmsyServiceClient.CancelAsync(cancelRequest, cts.Token);
                     await _valueChainServiceClient.CancelAsync(cancelRequest, cts.Token);
                     await _aggregatorServiceClient.CancelAsync(cancelRequest, cts.Token);
+                    await _environmentServiceClient.CancelAsync(cancelRequest, cts.Token);
+                    await _fisheriesAuthorityServiceClient.CancelAsync(cancelRequest, cts.Token);
 
                     _simulations[simulationId].Status = "Canceled";
                     _logger.LogInformation("{SimulationId} is canceled", simulationId);
@@ -213,6 +227,18 @@ namespace SurimiController.Services
 
         private async Task ProcessSimulationStep(string simulationId, DateTime current, DateTime endStepDateTime, CancellationToken token)
         {
+            // check if it's the first step of a new year (assuming steps are in monthly intervals), by comparing the month of the current step with the month of the last processed step (SimulationCurrent).
+            // If it's a new year, get and update regulations, as they can be different each year (or if it's the first step of the simulation, as indicated by SimulationCurrent being DateTime.MinValue, then also get and update regulations)
+            if (current.Month < _simulations[simulationId].SimulationCurrent.Month || _simulations[simulationId].SimulationCurrent == DateTime.MinValue)
+            {
+                _logger.LogInformation("{SimulationId} It's a new year {Year}", simulationId, current.Year);
+                var regulationsResponse = await _fisheriesAuthorityServiceClient.GetRegulationsAsync(new GetRegulationsRequest() { SimulationId = simulationId }, current, cancellationToken: token);
+
+                var updateRegulationsRequest = CreateUpdateRegulationsRequest(regulationsResponse);
+
+                await _ecopathServiceClient.UpdateRegulationsAsync(updateRegulationsRequest, current, cancellationToken: token);
+                await _poseidonServiceClient.UpdateRegulationsAsync(updateRegulationsRequest, current, cancellationToken: token);
+            }
             _simulations[simulationId].SimulationCurrent = current;
 
             var speciesPriceResponse = await _marketServiceClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, current, cancellationToken: token);
@@ -259,11 +285,12 @@ namespace SurimiController.Services
 
             var ecopathCatchDispositionSummary = await _ecopathServiceClient.GetCatchDispositionAsync(getCatchDispositionRequest, current, cancellationToken: token);
 
-            var updateCatchDispositionRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary);
-            var xx = GetProtoString<UpdateCatchDispositionRequest>(updateCatchDispositionRequest);
+            var updateCatchDispositionTotalRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary);
+            var xx = GetProtoString<UpdateCatchDispositionRequest>(updateCatchDispositionTotalRequest);
 
-            await _cmsyServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: token);
-            await _aggregatorServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: token);
+            await _cmsyServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest, current, cancellationToken: token);
+            await _aggregatorServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest, current, cancellationToken: token);
+            await _fisheriesAuthorityServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest, current, cancellationToken: token);
 
             var getSalesRequest = CreateGetSalesRequest(simulationId, current, endStepDateTime);
 
@@ -285,11 +312,54 @@ namespace SurimiController.Services
             await _aggregatorServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
             await _valueChainServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
 
+            var fishingActivityRequest = CreateGetFishingActivityRequest(simulationId, current, endStepDateTime);
+            var fishingActivityEcopathResponse = await _ecopathServiceClient.GetFishingActivityAsync(fishingActivityRequest, current, cancellationToken: token);
+
+            var updateFishingActivityRequest = CreateUpdateFishingActivityRequest(fishingActivityEcopathResponse);
+            var updateFishingActivityResponse = await _fisheriesAuthorityServiceClient.UpdateFishingActivityAsync(updateFishingActivityRequest, current, cancellationToken: token);
+
+            var fishingActivityPoseidonResponse = await _poseidonServiceClient.GetFishingActivityAsync(fishingActivityRequest, current, cancellationToken: token);
+
+            updateFishingActivityRequest = CreateUpdateFishingActivityRequest(fishingActivityPoseidonResponse);
+            updateFishingActivityResponse = await _fisheriesAuthorityServiceClient.UpdateFishingActivityAsync(updateFishingActivityRequest, current, cancellationToken: token);
+
             await _cmsyServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 
             await _marketServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 
             await _valueChainServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
+        }
+
+        private UpdateFishingActivityRequest CreateUpdateFishingActivityRequest(GetFishingActivityResponse fishingActivityEcopathResponse)
+        {
+            return new UpdateFishingActivityRequest()
+            {
+                SimulationId = fishingActivityEcopathResponse.SimulationId,
+                FishingActivitySummary = fishingActivityEcopathResponse.FishingActivitySummary,
+                StartDateTime = fishingActivityEcopathResponse.StartDateTime,
+                EndDateTime = fishingActivityEcopathResponse.EndDateTime
+            };
+        }
+
+        private GetFishingActivityRequest CreateGetFishingActivityRequest(string simulationId, DateTime current, DateTime endStepDateTime)
+        {
+            return new GetFishingActivityRequest()
+            {
+                SimulationId = simulationId,
+                StartDateTime = current.ToTimestamp(),
+                EndDateTime = endStepDateTime.ToTimestamp()
+            };
+        }
+
+        private UpdateRegulationsRequest CreateUpdateRegulationsRequest(GetRegulationsResponse regulationsResponse)
+        {
+            return new UpdateRegulationsRequest()
+            {
+                SimulationId = regulationsResponse.SimulationId,
+                StartDateTime = regulationsResponse.StartDateTime,
+                EndDateTime = regulationsResponse.EndDateTime,
+                RegulationsSummary = regulationsResponse.RegulationsSummary
+            };
         }
 
         private UpdateEnvironmentVariablesRequest CreateUpdateEnvironmentVariablesRequest(GetEnvironmentVariablesResponse getEnvironmentVariablesResponse)

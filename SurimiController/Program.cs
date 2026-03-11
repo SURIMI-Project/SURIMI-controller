@@ -55,6 +55,7 @@ public class Program
         AddConfiguredGrpcClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("PoseidonSpeciesPriceConsumer", "POSEIDON_URL");
         AddConfiguredGrpcClient<CatchProviderService.CatchProviderServiceClient>("PoseidonCatchProvider", "POSEIDON_URL");
         AddConfiguredGrpcClient<EcologyConsumerService.EcologyConsumerServiceClient>("PoseidonEcologyConsumer", "POSEIDON_URL");
+        AddConfiguredGrpcClient<RegulationsConsumerService.RegulationsConsumerServiceClient>("PoseidonRegulationsConsumer", "POSEIDON_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", "MARKET_URL");
         AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("MarketMarketProvider", "MARKET_URL");
@@ -75,6 +76,10 @@ public class Program
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("EnvironmentWorkflow", "ENVIRONMENT_URL");
         AddConfiguredGrpcClient<EnvironmentProviderService.EnvironmentProviderServiceClient>("EnvironmentEnvironmentProvider", "ENVIRONMENT_URL");
 
+        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("FisheriesAuthorityWorkflow", "FISHERIES_AUTHORITY_URL");
+        AddConfiguredGrpcClient<RegulationsProviderService.RegulationsProviderServiceClient>("FisheriesAuthorityRegulationsProvider", "FISHERIES_AUTHORITY_URL");
+        AddConfiguredGrpcClient<CatchConsumerService.CatchConsumerServiceClient>("FisheriesAuthorityCatchConsumer", "FISHERIES_AUTHORITY_URL");
+
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();
@@ -86,7 +91,7 @@ public class Program
         builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
         builder.Services.AddTransient<IEcopathServiceClient, EcopathServiceClient>();
         builder.Services.AddTransient<IEnvironmentServiceClient, EnvironmentServiceClient>();
-
+        builder.Services.AddTransient<IFisheriesAuthorityServiceClient, FisheriesAuthorityServiceClient>();
 
         builder.Logging.ClearProviders();
         builder.Services.AddLogging(opt =>

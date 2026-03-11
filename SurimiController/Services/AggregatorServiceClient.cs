@@ -73,11 +73,11 @@ namespace SurimiController.Services
             return new UpdateBiomassResponse() { SimulationId = updateBiomassRequest.SimulationId };
         }
 
-        public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, CancellationToken cancellationToken)
+        public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeAggregator)
             {
-                LogStep(updateCatchDispositionRequest.SimulationId, updateCatchDispositionRequest.StartDateTime.ToDateTime(), "UpdateCatchDisposition");
+                LogStep(updateCatchDispositionRequest.SimulationId, current, "UpdateCatchDisposition");
                 return await _aggregatorCatchConsumerClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
             }
             return new UpdateCatchDispositionResponse() { SimulationId = updateCatchDispositionRequest.SimulationId };
