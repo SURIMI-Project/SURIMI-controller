@@ -97,5 +97,21 @@ namespace SurimiController.Services
                 (client, req) => client.UpdateEnvironmentVariablesAsync(req, cancellationToken: cancellationToken));
             return response;
         }
+
+        public async Task<UpdateRegulationsResponse> UpdateRegulationsAsync(UpdateRegulationsRequest updateRegulationsRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            LogStep(updateRegulationsRequest.SimulationId, current, "UpdateRegulations");
+            var response = await _ecopathSimDispatcher.DispatchAsync<RegulationsConsumerService.RegulationsConsumerServiceClient, UpdateRegulationsRequest, UpdateRegulationsResponse>(updateRegulationsRequest, updateRegulationsRequest.SimulationId,
+                (client, req) => client.UpdateRegulationsAsync(req, cancellationToken: cancellationToken));
+            return response;
+        }
+
+        public async Task<GetFishingActivityResponse> GetFishingActivityAsync(GetFishingActivityRequest getFishingActivityRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            LogStep(getFishingActivityRequest.SimulationId, current, "GetFishingActivity");
+            var response = await _ecopathSimDispatcher.DispatchAsync<RegulationsConsumerService.RegulationsConsumerServiceClient, GetFishingActivityRequest, GetFishingActivityResponse>(getFishingActivityRequest, getFishingActivityRequest.SimulationId,
+                (client, req) => client.GetFishingActivityAsync(req, cancellationToken: cancellationToken));
+            return response;
+        }
     }
 }

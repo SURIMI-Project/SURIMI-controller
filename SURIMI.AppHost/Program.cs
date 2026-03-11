@@ -42,6 +42,9 @@ var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
 var environment = builder.AddContainer("environment", "rikkert242/surimienvironment", "latest")
     .WithHttpEndpoint(port: 5839, targetPort: 8080, name: "environment");
 
+var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "rikkert242/surimifisheriesauthority", "latest")
+    .WithHttpEndpoint(port: 5493, targetPort: 8080, name: "fisheriesauthority");
+
 var valueChain = builder.AddContainer("valuechain", "rikkert242/surimivaluechain", "latest")
     .WithHttpEndpoint(port: 7990, targetPort: 8080, name: "valuechain");
 
@@ -55,6 +58,7 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")
     .WithEnvironment("ENVIRONMENT_URL", "http://localhost:5839")
+    .WithEnvironment("FISHERIES_AUTHORITY_URL", "http://localhost:5493")
 
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")

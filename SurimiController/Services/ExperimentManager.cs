@@ -22,7 +22,7 @@ namespace SurimiController.Services
         }
 
 
-        public async Task InitialiseExperiment(InitialiseExperimentRequest request, Grpc.Surimi.Simulation simulation)
+        public async Task InitialiseExperiment(InitialiseExperimentRequest request, Grpc.Surimi.Simulation simulation, CancellationToken cancellationToken)
         {
             if (_experiments.ContainsKey(request.ExperimentId))
             {
@@ -38,7 +38,9 @@ namespace SurimiController.Services
                     request.ExperimentId,
                     request.ScenarioId,
                     request.EndDateTime != null ? request.EndDateTime.ToDateTime() : null,
-                    simulation
+                    simulation,
+                    request.RegulationsDefinitionsSummary,
+                    cancellationToken
                     );
                 _experiments[request.ExperimentId].Add(simulationId);
             }

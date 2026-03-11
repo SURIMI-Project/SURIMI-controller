@@ -30,7 +30,7 @@ namespace SurimiController.Services
 
             var simulation = GetSimulation(surimiConfiguration);
 
-            await _experimentManager.InitialiseExperiment(request, simulation);
+            await _experimentManager.InitialiseExperiment(request, simulation, context.CancellationToken);
 
             return new InitialiseExperimentResponse() { ExperimentId = request.ExperimentId };
         }

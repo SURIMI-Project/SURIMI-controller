@@ -11,6 +11,7 @@ namespace SurimiController.Services
         private readonly SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient _poseidonSpeciesPriceConsumerClient;
         private readonly CatchProviderService.CatchProviderServiceClient _poseidonCatchProviderClient;
         private readonly EcologyConsumerService.EcologyConsumerServiceClient _poseidonEcologyConsumerClient;
+        private readonly RegulationsConsumerService.RegulationsConsumerServiceClient _poseidonRegulationsConsumerClient;
 
         private readonly ILogger<PoseidonServiceClient> _logger;
 
@@ -21,7 +22,7 @@ namespace SurimiController.Services
             _poseidonSpeciesPriceConsumerClient = clientFactory.CreateClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("PoseidonSpeciesPriceConsumer");
             _poseidonEcologyConsumerClient = clientFactory.CreateClient<EcologyConsumerService.EcologyConsumerServiceClient>("PoseidonEcologyConsumer");
             _poseidonCatchProviderClient = clientFactory.CreateClient<CatchProviderService.CatchProviderServiceClient>("PoseidonCatchProvider");
-
+            _poseidonRegulationsConsumerClient = clientFactory.CreateClient<RegulationsConsumerService.RegulationsConsumerServiceClient>("PoseidonRegulationsConsumer");
             _logger = logger;
         }
 
@@ -48,6 +49,12 @@ namespace SurimiController.Services
             return _poseidonCatchProviderClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
+        public Task<GetFishingActivityResponse> GetFishingActivityAsync(GetFishingActivityRequest fishingActivityRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            LogStep(fishingActivityRequest.SimulationId, current, "GetFishingActivity");
+            return _poseidonRegulationsConsumerClient.GetFishingActivityAsync(fishingActivityRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+
         public Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getSalesRequest.SimulationId, current, "GetSalesSummary");
@@ -64,6 +71,12 @@ namespace SurimiController.Services
         {
             LogStep(updateBiomassRequest.SimulationId, current, "UpdateBiomass");
             return _poseidonEcologyConsumerClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken).ResponseAsync;
+        }
+
+        public Task<UpdateRegulationsResponse> UpdateRegulationsAsync(UpdateRegulationsRequest updateRegulationsRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            LogStep(updateRegulationsRequest.SimulationId, current, "UpdateRegulations");
+            return _poseidonRegulationsConsumerClient.UpdateRegulationsAsync(updateRegulationsRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
         public Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)

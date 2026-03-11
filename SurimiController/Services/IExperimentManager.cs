@@ -6,7 +6,7 @@ namespace SurimiController.Services
     {
         Task CancelExperimentAsync(string experimentId, CancellationToken cancellationToken);
         Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken);
-        Task InitialiseExperiment(InitialiseExperimentRequest request, Simulation simulation);
+        Task InitialiseExperiment(InitialiseExperimentRequest request, Simulation simulation, CancellationToken cancellationToken);
         Task RunExperimentAsync(string experimentId, CancellationToken cancellationToken);
     }
 }
