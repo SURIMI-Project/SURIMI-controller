@@ -29,7 +29,7 @@ var aggregator = builder.AddContainer("aggregator", "rikkert242/aggregator", "la
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
 var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
-    .WithHttpEndpoint(port: 7890, targetPort: 8080, name: "ecopath")
+    .WithHttpEndpoint(port: 7890, targetPort: 7890, name: "ecopath")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")
     .WithEnvironment("VAULT_TOP_DIR", "rikkert")
@@ -40,13 +40,13 @@ var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
 var environment = builder.AddContainer("environment", "rikkert242/surimienvironment", "latest")
-    .WithHttpEndpoint(port: 5839, targetPort: 8080, name: "environment");
+    .WithHttpEndpoint(port: 5839, targetPort: 5839, name: "environment");
 
 var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "rikkert242/surimifisheriesauthority", "latest")
-    .WithHttpEndpoint(port: 5493, targetPort: 8080, name: "fisheriesauthority");
+    .WithHttpEndpoint(port: 5493, targetPort: 5493, name: "fisheriesauthority");
 
 var valueChain = builder.AddContainer("valuechain", "rikkert242/surimivaluechain", "latest")
-    .WithHttpEndpoint(port: 7990, targetPort: 8080, name: "valuechain");
+    .WithHttpEndpoint(port: 7990, targetPort: 7990, name: "valuechain");
 
 var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicontroller")
 //    .WithReference(poseidon)                                      // Strange that you can't use this reference here...
@@ -71,7 +71,7 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
 
 builder.AddProject<Projects.SurimiGUI>("surimigui")
     .WithReference(surimicontroller)
-    .WithEnvironment("CONTROLLER_URL", "http://surimicontroller:8080")
+    .WithEnvironment("CONTROLLER_URL", "http://surimicontroller:5092")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESIMV5bohxF07ApBj29lMLK7HwkH-DoB8dxV2JOHpTonKEGh4KHGh2cy5Ca3hHdmRuNTlKT3hBcHhRTU5zUlVqM0E")
     .WithEnvironment("VAULT_TOP_DIR", "rikkert")
