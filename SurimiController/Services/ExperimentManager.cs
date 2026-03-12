@@ -45,7 +45,7 @@ namespace SurimiController.Services
                 _experiments[request.ExperimentId].Add(simulationId);
             }
 
-            _aggregatorClient.RegisterExperiment(new RegisterExperimentRequest()
+            await _aggregatorClient.RegisterExperimentAsync(new RegisterExperimentRequest()
             {
                 ExperimentId = request.ExperimentId,
                 SimulationIds = { _experiments[request.ExperimentId] }
