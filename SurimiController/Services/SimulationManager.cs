@@ -232,7 +232,12 @@ namespace SurimiController.Services
             if (current.Month < _simulations[simulationId].SimulationCurrent.Month || _simulations[simulationId].SimulationCurrent == DateTime.MinValue)
             {
                 _logger.LogInformation("{SimulationId} It's a new year {Year}", simulationId, current.Year);
-                var regulationsResponse = await _fisheriesAuthorityServiceClient.GetRegulationsAsync(new GetRegulationsRequest() { SimulationId = simulationId }, current, cancellationToken: token);
+                var regulationsResponse = await _fisheriesAuthorityServiceClient.GetRegulationsAsync(new GetRegulationsRequest() 
+                { 
+                    SimulationId = simulationId, 
+                    StartDateTime = current.ToTimestamp(), 
+                    EndDateTime = endStepDateTime.ToTimestamp() 
+                }, current, cancellationToken: token);
 
                 var updateRegulationsRequest = CreateUpdateRegulationsRequest(regulationsResponse);
 

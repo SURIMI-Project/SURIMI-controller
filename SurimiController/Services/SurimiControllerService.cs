@@ -58,6 +58,13 @@ namespace SurimiController.Services
             return await _experimentManager.GetAllSimulationStatussesAsync(context.CancellationToken);
         }
 
+        public override async Task<GetSimulationContractResponse> GetSimulationContract(GetSimulationContractRequest request, ServerCallContext context)
+        {
+            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync("western_med_contract");
+            var simulation = GetSimulation(surimiConfiguration);
+            return new GetSimulationContractResponse() { Simulation = simulation };
+        }
+
         /// <summary>
         /// Mapping method from SurimiConfiguration to Grpc.Surimi.Simulation
         /// </summary>
@@ -142,6 +149,7 @@ namespace SurimiController.Services
                                 VesselLengthClass = g.VesselLengthClass ?? string.Empty,
                                 Scale = g.Scale ?? string.Empty,
                                 CountryCode = g.CountryCode ?? string.Empty,
+                                Model = g.Model ?? string.Empty,
                             })
                     },
                     Markets =
