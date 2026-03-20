@@ -106,13 +106,15 @@ namespace SurimiController.Services
                 _simulations[simulationId].Status = "Initialised";
 
                 _logger.LogInformation("Simulation {SimulationId} is created and initialised on {EcologyHost}", simulationId, hostValue);
-            });
 
-            _fisheriesAuthorityServiceClient.CreateRegulationsAsync(new CreateRegulationsRequest()
-            {
-                SimulationId = simulationId,
-                RegulationsSummary = regulationsSummary
-            }, cancellationToken);
+                await _fisheriesAuthorityServiceClient.CreateRegulationsAsync(new CreateRegulationsRequest()
+                {
+                    SimulationId = simulationId,
+                    RegulationsSummary = regulationsSummary
+                }, cancellationToken);
+
+                await RunSimulationAsync(simulationId, cancellationToken);
+            });
 
             // Return promptly, do not await the initialisation calls
             return Task.CompletedTask;
@@ -240,6 +242,7 @@ namespace SurimiController.Services
                 }, current, cancellationToken: token);
 
                 var updateRegulationsRequest = CreateUpdateRegulationsRequest(regulationsResponse);
+//                var xxx = GetProtoString<UpdateRegulationsRequest>(updateRegulationsRequest);
 
                 await _ecopathServiceClient.UpdateRegulationsAsync(updateRegulationsRequest, current, cancellationToken: token);
                 await _poseidonServiceClient.UpdateRegulationsAsync(updateRegulationsRequest, current, cancellationToken: token);
@@ -476,13 +479,26 @@ namespace SurimiController.Services
 
         private static UpdateCatchDispositionRequest CreateUpdateCatchDispositionRequest(GetCatchDispositionResponse catchDisposition)
         {
-            return new UpdateCatchDispositionRequest()
+            // TODO!!!!! REMOVE THIS FILTERING WHEN CMSY CAN HANDLE DISPOSITION GRIDS WITH NULL FLEETSEGMENT OR GEARCODE. This is just a temporary workaround to avoid errors in Aggregator when it encounters such disposition grids, which can be present in EwE responses.
+            var filteredCatchDispositionSummary = new CatchDispositionSummary()
+            {
+                DispositionGrids =
+                {
+                    catchDisposition.CatchDispositionSummary.DispositionGrids
+                        .Where(dg => dg.FleetSegment != null && !string.IsNullOrWhiteSpace(dg.FleetSegment.GearCode))
+                        .ToList()
+                }
+            };
+
+            var result = new UpdateCatchDispositionRequest()
             {
                 SimulationId = catchDisposition.SimulationId,
-                CatchDispositionSummary = catchDisposition.CatchDispositionSummary,
+                CatchDispositionSummary = filteredCatchDispositionSummary,
                 StartDateTime = catchDisposition.StartDateTime,
                 EndDateTime = catchDisposition.EndDateTime
             };
+
+            return result;
         }
 
         private static GetCatchDispositionRequest CreateGetCatchDispositionRequest(string simulationId, DateTime startDateTime, DateTime endDateTime)
