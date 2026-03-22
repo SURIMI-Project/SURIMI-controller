@@ -1,7 +1,6 @@
+using Grpc.Surimi;
 using SurimiGUI.Components;
 using SurimiGUI.Services;
-using Grpc.Surimi;
-using System.Diagnostics;
 
 namespace SurimiGUI;
 

@@ -92,6 +92,7 @@ public class Program
         builder.Services.AddTransient<IEcopathServiceClient, EcopathServiceClient>();
         builder.Services.AddTransient<IEnvironmentServiceClient, EnvironmentServiceClient>();
         builder.Services.AddTransient<IFisheriesAuthorityServiceClient, FisheriesAuthorityServiceClient>();
+        builder.Services.AddSingleton<VersionCheckerService>();
 
         builder.Logging.ClearProviders();
         builder.Services.AddLogging(opt =>

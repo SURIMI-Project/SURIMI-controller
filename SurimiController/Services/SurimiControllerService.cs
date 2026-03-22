@@ -12,18 +12,22 @@ namespace SurimiController.Services
 
         private readonly IExperimentManager _experimentManager;
         private readonly ISurimiConfigurationService _surimiConfigurationService;
+        private readonly VersionCheckerService _versionCheckerService;
 
-        public SurimiControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<SurimiControllerService> logger, ISurimiConfigurationService surimiConfigurationService)
+        public SurimiControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<SurimiControllerService> logger, ISurimiConfigurationService surimiConfigurationService, VersionCheckerService versionCheckerService)
         {
             _logger = logger;
             _experimentManager = experimentManager;
-            this._surimiConfigurationService = surimiConfigurationService;
+            _surimiConfigurationService = surimiConfigurationService;
+            _versionCheckerService = versionCheckerService;
         }
 
         public override async Task<InitialiseExperimentResponse> InitialiseExperiment(InitialiseExperimentRequest request, ServerCallContext context)
         {
             _logger.LogInformation("Simulation {ExperimentId} is initializing", request.ExperimentId);
             System.Diagnostics.Activity.Current?.SetTag("experiment_id", request.ExperimentId);
+
+            _versionCheckerService.WriteVersions();
 
             // TODO: the name of the contract should come from the request
             var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync("western_med_contract");
