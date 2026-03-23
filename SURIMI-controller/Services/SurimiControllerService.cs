@@ -1,10 +1,10 @@
 ﻿using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
-using SURIMI.ConfigurationService;
+using SURIMI_controller.ConfigurationService;
 using SURIMI.Datamodel;
 
-namespace SurimiController.Services
+namespace SURIMI_controller.Services
 {
     public class SurimiControllerService : ControllerService.ControllerServiceBase
     {

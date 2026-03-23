@@ -44,20 +44,20 @@ RUN if [ ! -z "$BSR_TOKEN" ]; then \
     --configfile NuGet.config; \
     fi
 
-COPY ["SurimiGUI/SurimiGUI.csproj", "SurimiGUI/"]
-COPY ["SURIMI.ServiceDefaults/SURIMI.ServiceDefaults.csproj", "SURIMI.ServiceDefaults/"]
-RUN dotnet restore "./SurimiGUI/SurimiGUI.csproj"
+COPY ["SURIMI-gui/SURIMI-gui.csproj", "SURIMI-gui/"]
+RUN dotnet nuget locals all --clear     # Clear local NuGet cache to ensure we get the latest packages, especially important when using tokens for private feeds
+RUN dotnet restore "./SURIMI-gui/SURIMI-gui.csproj"
 COPY . .
-WORKDIR "/src/SurimiGUI"
-RUN dotnet build "./SurimiGUI.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/SURIMI-gui"
+RUN dotnet build "./SURIMI-gui.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./SurimiGUI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./SURIMI-gui.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "SurimiGUI.dll"]
+ENTRYPOINT ["dotnet", "SURIMI-gui.dll"]

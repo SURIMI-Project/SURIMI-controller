@@ -3,10 +3,11 @@ using Eii.BlobStore.Minio;
 using Grpc.Surimi;
 using Minio;
 using Minio.DataModel.Args;
-using SURIMI.ConfigurationService;
-using SurimiController.Services;
+using SURIMI.Common.gRPC;
+using SURIMI_controller.ConfigurationService;
+using SURIMI_controller.Services;
 
-namespace SurimiController;
+namespace SURIMI_controller;
 
 public class Program
 {

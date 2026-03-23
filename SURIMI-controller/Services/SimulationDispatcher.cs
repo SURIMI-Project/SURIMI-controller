@@ -1,46 +1,88 @@
 ﻿using Grpc.Core;
-using SurimiController.Services;
 using System.Collections.Concurrent;
 
-public class SimulationDispatcher
+namespace SURIMI_controller.Services
 {
-    private readonly List<string> podNames = new()
+    public class SimulationDispatcher
     {
-        "surimi-ecopath-0",
-        "surimi-ecopath-1",
-        "surimi-ecopath-2",
-        "surimi-ecopath-3",
-        "surimi-ecopath-4"
-    };
-
-    private readonly ConcurrentDictionary<string, string> simulationToPodMap = new();   // SimulationId is key
-    private readonly ConcurrentDictionary<string, bool> podAvailability;    // Pod is key
-    private readonly ILogger<SimulationDispatcher> _logger;
-
-    public SimulationDispatcher(ILogger<SimulationDispatcher> logger)
-    {
-        podAvailability = new ConcurrentDictionary<string, bool>(
-            podNames.Select(p => new KeyValuePair<string, bool>(p, true))
-        );
-        _logger = logger;
-    }
-
-    public AsyncUnaryCall<TResponse> DispatchAsync<TClient, TRequest, TResponse>(
-        TRequest request,
-        string simulationId,
-        Func<TClient, TRequest, AsyncUnaryCall<TResponse>> grpcMethod)
-        where TClient : ClientBase<TClient>
-    {
-        var address = Environment.GetEnvironmentVariable("ECOPATH_URL");    // for example: http://pod.surimi-ecopath.namespace.svc.cluster.local:8080
-        var ns = Environment.GetEnvironmentVariable("POD_NAMESPACE");       // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
-        string? pod;
-
-        if (!simulationToPodMap.TryGetValue(simulationId, out pod))
+        private readonly List<string> podNames = new()
         {
-            // so this is a new simulation
-            pod = podAvailability.FirstOrDefault(p => p.Value).Key; // Find the first available pod
-            if (pod == null)
-                throw new Exception("No available pods");
+            "surimi-ecopath-0",
+            "surimi-ecopath-1",
+            "surimi-ecopath-2",
+            "surimi-ecopath-3",
+            "surimi-ecopath-4"
+        };
+
+        private readonly ConcurrentDictionary<string, string> simulationToPodMap = new();   // SimulationId is key
+        private readonly ConcurrentDictionary<string, bool> podAvailability;    // Pod is key
+        private readonly ILogger<SimulationDispatcher> _logger;
+
+        public SimulationDispatcher(ILogger<SimulationDispatcher> logger)
+        {
+            podAvailability = new ConcurrentDictionary<string, bool>(
+                podNames.Select(p => new KeyValuePair<string, bool>(p, true))
+            );
+            _logger = logger;
+        }
+
+        public AsyncUnaryCall<TResponse> DispatchAsync<TClient, TRequest, TResponse>(
+            TRequest request,
+            string simulationId,
+            Func<TClient, TRequest, AsyncUnaryCall<TResponse>> grpcMethod)
+            where TClient : ClientBase<TClient>
+        {
+            var address = Environment.GetEnvironmentVariable("ECOPATH_URL");    // for example: http://pod.surimi-ecopath.namespace.svc.cluster.local:8080
+            var ns = Environment.GetEnvironmentVariable("POD_NAMESPACE");       // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
+            string? pod;
+
+            if (!simulationToPodMap.TryGetValue(simulationId, out pod))
+            {
+                // so this is a new simulation
+                pod = podAvailability.FirstOrDefault(p => p.Value).Key; // Find the first available pod
+                if (pod == null)
+                    throw new Exception("No available pods");
+
+                if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
+                {
+                    address = address!.Replace("pod", pod);
+                    address = address!.Replace("namespace", ns);
+                }
+
+                // Check if the dns address can be resolved. If not, don't use this pod yet
+                try
+                {
+                    var uri = new Uri(address);
+                    var host = uri.Host;
+                    var addresses = System.Net.Dns.GetHostAddresses(host);
+                }
+                catch (System.Net.Sockets.SocketException)
+                {
+                    throw new RpcException(
+                        new Status(StatusCode.Unavailable, $"Could not resolve DNS for pod {pod} with address {address}"),
+                        new Metadata
+                        {
+                            { "pod", pod },
+                            { "simulationId", simulationId }
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    throw new RpcException(
+                        new Status(StatusCode.Internal, $"Error resolving DNS for pod {pod}: {ex.Message}"),
+                        new Metadata
+                        {
+                            { "pod", pod },
+                            { "simulationId", simulationId }
+                        }
+                    );
+                }
+
+                _logger.LogInformation("Add Simulation:{SimulationId} with pod:{pod} to simulationToPodMap", simulationId, pod);
+                simulationToPodMap[simulationId] = pod;
+                podAvailability[pod] = false;
+            }
 
             if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
             {
@@ -48,75 +90,35 @@ public class SimulationDispatcher
                 address = address!.Replace("namespace", ns);
             }
 
-            // Check if the dns address can be resolved. If not, don't use this pod yet
+            _logger.LogInformation("Using address {Address} for pod {Pod} and simulationId {SimulationId}", address, pod, simulationId);
             try
             {
-                var uri = new Uri(address);
-                var host = uri.Host;
-                var addresses = System.Net.Dns.GetHostAddresses(host);
-            }
-            catch (System.Net.Sockets.SocketException)
-            {
-                throw new RpcException(
-                    new Status(StatusCode.Unavailable, $"Could not resolve DNS for pod {pod} with address {address}"),
-                    new Metadata
-                    {
-                        { "pod", pod },
-                        { "simulationId", simulationId }
-                    }
-                );
+                var client = DynamicGrpcClientFactory.CreateClient<TClient>(address);
+                var response = grpcMethod(client, request);
+
+                //simulationToPodMap.TryRemove(simulationId, out _);
+                //podAvailability[pod] = true;
+
+                return response;
             }
             catch (Exception ex)
             {
-                throw new RpcException(
-                    new Status(StatusCode.Internal, $"Error resolving DNS for pod {pod}: {ex.Message}"),
-                    new Metadata
-                    {
-                        { "pod", pod },
-                        { "simulationId", simulationId }
-                    }
-                );
+                _logger.LogError(ex, "Error while dispatching request to pod {Pod} for simulationId {SimulationId}", pod, simulationId);
+                throw;
             }
-
-            _logger.LogInformation("Add Simulation:{SimulationId} with pod:{pod} to simulationToPodMap", simulationId, pod);
-            simulationToPodMap[simulationId] = pod;
-            podAvailability[pod] = false;
         }
 
-        if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
+        public void ReleasePodFromSimulation(string simulationId)
         {
-            address = address!.Replace("pod", pod);
-            address = address!.Replace("namespace", ns);
-        }
-
-        _logger.LogInformation("Using address {Address} for pod {Pod} and simulationId {SimulationId}", address, pod, simulationId);
-        try
-        {
-            var client = DynamicGrpcClientFactory.CreateClient<TClient>(address);
-            var response = grpcMethod(client, request);
-
-            //simulationToPodMap.TryRemove(simulationId, out _);
-            //podAvailability[pod] = true;
-
-            return response;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while dispatching request to pod {Pod} for simulationId {SimulationId}", pod, simulationId);
-            throw;
-        }
-    }
-
-    public void ReleasePodFromSimulation(string simulationId)
-    {
-        if (simulationToPodMap.TryRemove(simulationId, out var pod))
-        {
-            podAvailability[pod] = true;
-            _logger.LogInformation("Simulation {SimulationId} Released pod {Pod} from simulationId", simulationId, pod);
-        }
-        else
-        {
-            _logger.LogWarning("Simulation {SimulationId} No pod found for simulationId to release", simulationId);
+            if (simulationToPodMap.TryRemove(simulationId, out var pod))
+            {
+                podAvailability[pod] = true;
+                _logger.LogInformation("Simulation {SimulationId} Released pod {Pod} from simulationId", simulationId, pod);
+            }
+            else
+            {
+                _logger.LogWarning("Simulation {SimulationId} No pod found for simulationId to release", simulationId);
+            }
         }
     }
 }

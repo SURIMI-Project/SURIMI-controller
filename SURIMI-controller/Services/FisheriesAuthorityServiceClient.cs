@@ -3,7 +3,7 @@ using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using SURIMI.Datamodel;
 
-namespace SurimiController.Services
+namespace SURIMI_controller.Services
 {
     public class FisheriesAuthorityServiceClient : IFisheriesAuthorityServiceClient
     {

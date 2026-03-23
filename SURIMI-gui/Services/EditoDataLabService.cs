@@ -1,9 +1,9 @@
-﻿using SurimiGUI.Components;
-using SurimiGUI.Models;
+﻿using SURIMI_gui.Components;
+using SURIMI_gui.Models;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
-namespace SurimiGUI.Services
+namespace SURIMI_gui.Services
 {
     public class EditoDataLabService
     {

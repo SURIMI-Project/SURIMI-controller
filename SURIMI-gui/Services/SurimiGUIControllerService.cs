@@ -5,7 +5,7 @@ using Grpc.Surimi;
 using System.Diagnostics;
 using System.Text;
 
-namespace SurimiGUI.Services
+namespace SURIMI_gui.Services
 {
     public class SurimiGUIControllerService
     {

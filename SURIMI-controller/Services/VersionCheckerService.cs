@@ -1,7 +1,7 @@
 ﻿using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
-namespace SurimiController.Services
+namespace SURIMI_controller.Services
 {
     public class VersionCheckerService
     {

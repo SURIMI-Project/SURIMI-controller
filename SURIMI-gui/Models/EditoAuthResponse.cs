@@ -1,4 +1,4 @@
-namespace SurimiGUI.Models
+namespace SURIMI_gui.Models
 {
     public class EditoAuthResponse
     {

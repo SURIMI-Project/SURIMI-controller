@@ -44,23 +44,23 @@ RUN if [ ! -z "$BSR_TOKEN" ]; then \
     --configfile NuGet.config; \
     fi
 
-COPY ["SurimiController/SurimiController.csproj", "SurimiController/"]
-COPY ["SURIMI.ServiceDefaults/SURIMI.ServiceDefaults.csproj", "SURIMI.ServiceDefaults/"]
-RUN dotnet restore "./SurimiController/SurimiController.csproj"
+COPY ["SURIMI-controller/SURIMI-controller.csproj", "SURIMI-controller/"]
+RUN dotnet nuget locals all --clear     # Clear local NuGet cache to ensure we get the latest packages, especially important when using tokens for private feeds
+RUN dotnet restore "./SURIMI-controller/SURIMI-controller.csproj"
 COPY . .
-WORKDIR "/src/SurimiController"
-RUN dotnet build "./SurimiController.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/SURIMI-controller"
+RUN dotnet build "./SURIMI-controller.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Remove Includes directory after build
-RUN rm -rf /src/SurimiController/Includes
+RUN rm -rf /src/SURIMI-controller/Includes
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./SurimiController.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./SURIMI-controller.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "SurimiController.dll"]
+ENTRYPOINT ["dotnet", "SURIMI-controller.dll"]

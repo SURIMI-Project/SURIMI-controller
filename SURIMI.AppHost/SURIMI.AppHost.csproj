@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SurimiController\SurimiController.csproj" />
-    <ProjectReference Include="..\SurimiGUI\SurimiGUI.csproj" />
+    <ProjectReference Include="..\SURIMI-controller\SURIMI-controller.csproj" />
+    <ProjectReference Include="..\SURIMI-gui\SURIMI-gui.csproj" />
   </ItemGroup>
 
 </Project>

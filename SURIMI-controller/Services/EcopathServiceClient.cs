@@ -1,7 +1,7 @@
 ﻿using Grpc.Core;
 using Grpc.Surimi;
 
-namespace SurimiController.Services
+namespace SURIMI_controller.Services
 {
     public class EcopathServiceClient : IEcopathServiceClient
     {

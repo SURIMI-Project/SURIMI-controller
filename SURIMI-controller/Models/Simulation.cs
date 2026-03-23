@@ -1,4 +1,4 @@
-﻿namespace SurimiController.Models
+﻿namespace SURIMI_controller.Models
 {
     public class Simulation
     {

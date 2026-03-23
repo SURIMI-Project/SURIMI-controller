@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Xml;
 
-namespace SurimiController.Services
+namespace SURIMI_controller.Services
 {
 
     public class SimulationManager : ISimulationManager

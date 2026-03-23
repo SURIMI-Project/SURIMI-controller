@@ -3,11 +3,11 @@ using Grpc.Core;
 using Minio;
 using Minio.DataModel.Args;
 using SURIMI.Datamodel;
-using SurimiController.Services;
+using SURIMI_controller.Services;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace SURIMI.ConfigurationService
+namespace SURIMI_controller.ConfigurationService
 {
     public class SurimiConfigurationService : ISurimiConfigurationService
     {

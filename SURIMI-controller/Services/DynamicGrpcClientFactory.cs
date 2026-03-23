@@ -1,7 +1,7 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
 
-namespace SurimiController.Services
+namespace SURIMI_controller.Services
 {
     public class DynamicGrpcClientFactory
     {

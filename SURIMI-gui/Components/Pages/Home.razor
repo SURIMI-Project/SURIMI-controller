@@ -1,5 +1,5 @@
 ﻿@page "/"
-@using SurimiGUI.Services
+@using SURIMI_gui.Services
 @using System.Diagnostics
 @implements IDisposable
 
@@ -149,14 +149,14 @@ else
 
 @code {
     private bool isInitLoading = false;
-    private SurimiGUI.Models.ExperimentConfig? config { get; set; }
-    private List<SurimiGUI.Models.SimulationStatus>? simulations { get; set; } = new List<SurimiGUI.Models.SimulationStatus>();
+    private SURIMI_gui.Models.ExperimentConfig? config { get; set; }
+    private List<SURIMI_gui.Models.SimulationStatus>? simulations { get; set; } = new List<SURIMI_gui.Models.SimulationStatus>();
     private string result = "";
     CancellationTokenSource cts = new CancellationTokenSource();
     private System.Threading.Timer? _refreshTimer;
 
     // EDITO DataLab properties
-    private List<SurimiGUI.Models.App>? editoApps { get; set; }
+    private List<SURIMI_gui.Models.App>? editoApps { get; set; }
     private bool editoAppsLoading = true;
     private string editoAppsError = string.Empty;
 
@@ -169,7 +169,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        config = new SurimiGUI.Models.ExperimentConfig();
+        config = new SURIMI_gui.Models.ExperimentConfig();
         StartRefreshTimer();
 
         // Load EDITO DataLab services
@@ -211,7 +211,7 @@ else
                 var res = await controllerService.Init(config, cts.Token);
                 if (Guid.TryParse(res, out Guid simres))
                 {
-                    config = new SurimiGUI.Models.ExperimentConfig();    // Reset form
+                    config = new SURIMI_gui.Models.ExperimentConfig();    // Reset form
                     // Fetch updated simulations list after successful init
                     simulations = await controllerService.GetAllSimulationsAsync(cts.Token);
                     result = $"OK";
@@ -233,7 +233,7 @@ else
         }
     }
 
-    private async Task StartSimulationFor(SurimiGUI.Models.SimulationStatus sim)
+    private async Task StartSimulationFor(SURIMI_gui.Models.SimulationStatus sim)
     {
         if (controllerService != null)
         {
@@ -250,7 +250,7 @@ else
         }
     }
 
-    private async Task CancelSimulationFor(SurimiGUI.Models.SimulationStatus sim)
+    private async Task CancelSimulationFor(SURIMI_gui.Models.SimulationStatus sim)
     {
         if (controllerService != null)
         {

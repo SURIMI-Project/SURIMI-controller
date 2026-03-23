@@ -56,7 +56,7 @@ var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "rikkert242/
 var valueChain = builder.AddContainer("valuechain", "rikkert242/surimivaluechain", "latest")
     .WithHttpEndpoint(port: 7990, targetPort: 7990, name: "valuechain");
 
-var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicontroller")
+var surimicontroller = builder.AddProject<Projects.SURIMI_controller>("surimicontroller")
 //    .WithReference(poseidon)                                      // Strange that you can't use this reference here...
 //    .WithReference(ecopath)
     .WithEnvironment("POSEIDON_URL", "http://localhost:50051")      // I don't know why you can't use http://poseidon:50051 in this place... but this also works
@@ -77,7 +77,7 @@ var surimicontroller = builder.AddProject<Projects.SurimiController>("surimicont
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
-builder.AddProject<Projects.SurimiGUI>("surimigui")
+builder.AddProject<Projects.SURIMI_gui>("surimigui")
     .WithReference(surimicontroller)
     .WithEnvironment("CONTROLLER_URL", "http://surimicontroller:5092")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")

@@ -14,13 +14,10 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
     <PackageReference Include="Minio" Version="7.0.0" />
+    <PackageReference Include="SURIMI.Common" Version="1.0.1" />
     <PackageReference Include="SURIMI.Datamodel" Version="3.0.*" />
     <PackageReference Include="VaultSharp" Version="1.17.5.1" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\SURIMI.ServiceDefaults\SURIMI.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>

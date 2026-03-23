@@ -1,6 +1,6 @@
 ﻿using SURIMI.Datamodel;
 
-namespace SURIMI.ConfigurationService
+namespace SURIMI_controller.ConfigurationService
 {
     public interface ISurimiConfigurationService
     {

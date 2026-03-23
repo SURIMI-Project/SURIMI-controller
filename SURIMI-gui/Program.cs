@@ -1,8 +1,8 @@
 using Grpc.Surimi;
-using SurimiGUI.Components;
-using SurimiGUI.Services;
+using SURIMI_gui.Components;
+using SURIMI_gui.Services;
 
-namespace SurimiGUI;
+namespace SURIMI_gui;
 
 public class Program
 {

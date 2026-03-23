@@ -4,20 +4,26 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>a5f5e859-b4f5-46d6-83a4-beec1d065cd7</UserSecretsId>
+    <UserSecretsId>3c2d240a-0ea5-42bb-9d00-7f9f62e7c3bf</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.78.10101.48+32d88b4cd30c" />
+    <PackageReference Include="Eii.BlobStore.Minio" Version="1.0.*" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
-    <PackageReference Include="Grpc.StatusProto" Version="2.71.0" />
+    <PackageReference Include="Minio" Version="7.0.0" />
+    <PackageReference Include="SURIMI.Common" Version="1.0.1" />
+    <PackageReference Include="SURIMI.Datamodel" Version="3.0.*" />
     <PackageReference Include="VaultSharp" Version="1.17.5.1" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SURIMI.ServiceDefaults\SURIMI.ServiceDefaults.csproj" />
+    <None Update="Includes\western_med_contract.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
