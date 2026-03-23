@@ -4,6 +4,7 @@ using Grpc.Surimi;
 using Minio;
 using Minio.DataModel.Args;
 using SURIMI.Common.gRPC;
+using SURIMI.Common.gRPC.Services;
 using SURIMI_controller.ConfigurationService;
 using SURIMI_controller.Services;
 
@@ -48,6 +49,7 @@ public class Program
         builder.Services.AddGrpc(options =>
         {
             options.Interceptors.Add<ExceptionMetadataInterceptor>();
+            options.Interceptors.Add<VersionMetadataInterceptor>();
         });
 
         // Use the helper for all your gRPC clients
@@ -94,6 +96,7 @@ public class Program
         builder.Services.AddTransient<IEnvironmentServiceClient, EnvironmentServiceClient>();
         builder.Services.AddTransient<IFisheriesAuthorityServiceClient, FisheriesAuthorityServiceClient>();
         builder.Services.AddSingleton<VersionCheckerService>();
+        builder.Services.AddSingleton<ProtocolVersionService>();
 
         builder.Logging.ClearProviders();
         builder.Services.AddLogging(opt =>
