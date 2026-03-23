@@ -20,9 +20,9 @@ public class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
 
-        builder.Services.AddGrpcClient<ControllerService.ControllerServiceClient>(o =>
+        builder.Services.AddGrpcClient<ControllerService.ControllerServiceClient>(options =>
         {
-            o.Address = new Uri(Environment.GetEnvironmentVariable("CONTROLLER_URL")!);
+            options.Address = new Uri(Environment.GetEnvironmentVariable("CONTROLLER_URL")!);
         });
 
         var app = builder.Build();
