@@ -79,9 +79,14 @@ namespace SURIMI_controller.Services
                     );
                 }
 
-                _logger.LogInformation("Add Simulation:{SimulationId} with pod:{pod} to simulationToPodMap", simulationId, pod);
-                simulationToPodMap[simulationId] = pod;
-                podAvailability[pod] = false;
+                // Only reserve the pod if a simulationId is provided and is a valid Guid. This allows us to use the dispatcher for non-simulation related calls without consuming pod resources.
+                // for example the GetProtocolVersion call from the client, doesn't need to be dispatched to a specific pod. The versions are all the same.
+                if (Guid.TryParse(simulationId, out var guid))
+                {
+                    _logger.LogInformation("Add Simulation:{SimulationId} with pod:{pod} to simulationToPodMap", simulationId, pod);
+                    simulationToPodMap[simulationId] = pod;
+                    podAvailability[pod] = false;
+                }
             }
 
             if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
@@ -95,9 +100,6 @@ namespace SURIMI_controller.Services
             {
                 var client = DynamicGrpcClientFactory.CreateClient<TClient>(address);
                 var response = grpcMethod(client, request);
-
-                //simulationToPodMap.TryRemove(simulationId, out _);
-                //podAvailability[pod] = true;
 
                 return response;
             }

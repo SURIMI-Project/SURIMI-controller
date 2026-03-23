@@ -27,7 +27,7 @@ namespace SURIMI_controller.Services
             _logger.LogInformation("Simulation {ExperimentId} is initializing", request.ExperimentId);
             System.Diagnostics.Activity.Current?.SetTag("experiment_id", request.ExperimentId);
 
-            _versionCheckerService.WriteVersions();
+            await _versionCheckerService.WriteVersions();
 
             // TODO: the name of the contract should come from the request
             var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync("western_med_contract");
