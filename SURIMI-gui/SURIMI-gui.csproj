@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>a5f5e859-b4f5-46d6-83a4-beec1d065cd7</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.78.10101.48+32d88b4cd30c" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
+    <PackageReference Include="Grpc.StatusProto" Version="2.71.0" />
+    <PackageReference Include="SURIMI.Common" Version="1.0.1" />
+    <PackageReference Include="VaultSharp" Version="1.17.5.1" />
+  </ItemGroup>
+
+</Project>

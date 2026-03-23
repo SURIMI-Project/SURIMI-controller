@@ -2,9 +2,9 @@ using Eii.BlobStore;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using SurimiController.Services;
+using SURIMI_controller.Services;
 
-namespace SURIMI.ConfigurationService.Tests
+namespace SURIMI_controller.ConfigurationService.Tests
 {
     public class SurimiConfigurationServiceTests
     {

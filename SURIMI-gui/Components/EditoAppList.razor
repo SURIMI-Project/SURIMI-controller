@@ -1,0 +1,53 @@
+﻿@using SURIMI_gui.Models
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <strong>EDITO Apps</strong>
+    </div>
+
+    <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+        @if (Loading)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else if (!string.IsNullOrWhiteSpace(Error))
+        {
+            <p class="text-danger">@Error</p>
+        }
+        else if (Apps == null || Apps.Count == 0)
+        {
+            <p><em>No apps found.</em></p>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var app in Apps)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>@app.name</strong>
+                        </div>
+                        <div>
+                            <span class="badge bg-primary me-1">@app.status</span>
+
+                            @if (app.suspended)
+                            {
+                                <span class="badge bg-danger">Suspended</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<Models.App>? Apps { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public string Error { get; set; } = string.Empty;
+}

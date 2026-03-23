@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SurimiController\SurimiController.csproj" />
+    <ProjectReference Include="..\SURIMI-controller\SURIMI-controller.csproj" />
   </ItemGroup>
 
   <ItemGroup>
