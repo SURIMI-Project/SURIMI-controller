@@ -36,7 +36,7 @@ var aggregator = builder.AddContainer("aggregator", "rikkert242/aggregator", "la
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
-var ecopath = builder.AddContainer("ecopath", "rikkert242/ecopath", "latest")
+var ecopath = builder.AddContainer("ecopath", "rikkert242/surimiecopath", "latest")
     .WithHttpEndpoint(port: 7890, targetPort: 7890, name: "ecopath")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESIDQ2Gadjlo16vHLjLp8pqhKrv_QOGnMwU3UJfyJoQGR5Gh4KHGh2cy5FQ3ZYU0g3YllaWVB0MmVhanVXZE5zRGo")
