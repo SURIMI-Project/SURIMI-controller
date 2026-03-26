@@ -29,7 +29,7 @@ namespace SURIMI_controller.Services
             _logger = logger;
         }
 
-        public async Task WriteVersions()
+        public void WriteVersions()
         {
             var versions = new Dictionary<string, string>();
 
@@ -53,7 +53,7 @@ namespace SURIMI_controller.Services
                     new GetProtocolVersionRequest(),
                     "dummy",
                     (client, req) => client.GetProtocolVersionAsync(req));
-                var response = await ecopathGetProtocolVersionResponse;
+                var response = ecopathGetProtocolVersionResponse.GetAwaiter().GetResult();
                 versions["EcopathWorkflow"] = response.ProtocolVersion;
             }
             catch (Exception ex)
@@ -62,9 +62,8 @@ namespace SURIMI_controller.Services
                 versions["EcopathWorkflow"] = "Error";
             }
             versions["Controller"] = _protocolVersionService.LoadVersion();
-            var versionSummary = string.Join(Environment.NewLine, versions.Select(kvp => $"  {kvp.Key}: {kvp.Value}"));
+            var versionSummary = string.Join(Environment.NewLine, versions.Select(kvp => $"  {kvp.Key, -27}: {kvp.Value}"));
             _logger.LogInformation("Protocol versions:{NewLine}{VersionSummary}", Environment.NewLine, versionSummary);
         }
-
     }
 }

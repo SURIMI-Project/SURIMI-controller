@@ -37,7 +37,7 @@ namespace SURIMI_controller.Services
                     simulationId,
                     request.ExperimentId,
                     request.ScenarioId,
-                    request.EndDateTime != null ? request.EndDateTime.ToDateTime() : null,
+                    request.EndDateTime?.ToDateTime(),
                     simulation,
                     request.RegulationsDefinitionsSummary,
                     cancellationToken

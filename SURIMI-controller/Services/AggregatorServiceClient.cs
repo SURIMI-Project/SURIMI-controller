@@ -11,6 +11,7 @@ namespace SURIMI_controller.Services
         private readonly EcologyConsumerService.EcologyConsumerServiceClient _aggregatorEcologyConsumerClient;
         private readonly CatchConsumerService.CatchConsumerServiceClient _aggregatorCatchConsumerClient;
         private readonly MarketProviderService.MarketProviderServiceClient _aggregatorMarketProviderClient;
+        private readonly SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient _aggregatorSpeciesPriceConsumerClient;
 
         private readonly bool _includeAggregator = Environment.GetEnvironmentVariable("EXCLUDE_AGGREGATOR")?.ToLower() != "true";
 
@@ -20,7 +21,7 @@ namespace SURIMI_controller.Services
             _aggregatorEcologyConsumerClient = clientFactory.CreateClient<EcologyConsumerService.EcologyConsumerServiceClient>("AggregatorEcologyConsumer");
             _aggregatorCatchConsumerClient = clientFactory.CreateClient<CatchConsumerService.CatchConsumerServiceClient>("AggregatorCatchConsumer");
             _aggregatorMarketProviderClient = clientFactory.CreateClient<MarketProviderService.MarketProviderServiceClient>("AggregatorMarketProvider"); ;
-
+            _aggregatorSpeciesPriceConsumerClient = clientFactory.CreateClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("AggregatorSpeciesPriceConsumer");
             _logger = logger;
         }
 
@@ -91,6 +92,16 @@ namespace SURIMI_controller.Services
                 return await _aggregatorMarketProviderClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
             }
             return new UpdateSalesResponse() { SimulationId = updateSalesRequest.SimulationId };
+        }
+
+        public async Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            if (_includeAggregator)
+            {
+                LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdateSpeciesPrices");
+                return await _aggregatorSpeciesPriceConsumerClient.UpdateSpeciesPricesAsync(updateSpeciesPricesRequest, cancellationToken: cancellationToken);
+            }
+            return new UpdateSpeciesPricesResponse() { SimulationId = updateSpeciesPricesRequest.SimulationId };
         }
 
         private void LogStep(string simulationId, DateTime current, string step)
