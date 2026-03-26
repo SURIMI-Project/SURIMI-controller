@@ -154,6 +154,7 @@ else
     private string result = "";
     CancellationTokenSource cts = new CancellationTokenSource();
     private System.Threading.Timer? _refreshTimer;
+    private HashSet<string> _autoStartedExperiments = new HashSet<string>();
 
     // EDITO DataLab properties
     private List<SURIMI_gui.Models.App>? editoApps { get; set; }
@@ -170,6 +171,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         config = new SURIMI_gui.Models.ExperimentConfig();
+        config.EndDateTime = new DateTime(2017, 01, 01);    // not all the way to 2050
         StartRefreshTimer();
 
         // Load EDITO DataLab services
@@ -241,6 +243,7 @@ else
             {
                 result = "";
                 result = await controllerService.RunExperimentAsync(sim.ExperimentId, CancellationToken.None);
+                _autoStartedExperiments.Add(sim.ExperimentId);
             }
             catch (Exception ex)
             {
@@ -281,6 +284,16 @@ else
                 await InvokeAsync(() =>
                 {
                     simulations = sims;
+                    
+                    // Auto-start any simulation with "Initialised" status that hasn't been auto-started yet
+                    if (simulations != null)
+                    {
+                        foreach (var sim in simulations.Where(s => s.Status == "Initialised" && !_autoStartedExperiments.Contains(s.ExperimentId)))
+                        {
+                            _ = StartSimulationFor(sim);
+                        }
+                    }
+                    
                     StateHasChanged();
                 });
             }

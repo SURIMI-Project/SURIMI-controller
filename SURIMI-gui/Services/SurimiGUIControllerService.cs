@@ -28,7 +28,7 @@ namespace SURIMI_gui.Services
                 reply = await _controllerClient.InitialiseExperimentAsync(new InitialiseExperimentRequest
                 {
                     ScenarioId = config.ScenarioId ?? "",
-                    EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(config.EndDateTime.Value.ToUniversalTime()) : null,
+                    EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(DateTime.SpecifyKind(config.EndDateTime.Value, DateTimeKind.Utc)) : null,
                     ExperimentId = config.ExperimentId,
                     NumberOfRuns = config.NumberOfRuns
                 },

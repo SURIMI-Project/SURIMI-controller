@@ -56,10 +56,11 @@ namespace SURIMI_controller.Services
             {
                 SimulationId = simulationId,
                 ScenarioId = scenarioId,
+                EndDateTime = endDateTime.HasValue ? Timestamp.FromDateTime(endDateTime.Value) : null,
                 Simulation = simulation
             };
 
-            //var xx = GetProtoString<InitialiseRequest>(initRequest);
+            var xx = GetProtoString<InitialiseRequest>(initRequest);
 
             var initializationTasks = new List<Task<InitialiseResponse>>();
 
@@ -113,7 +114,7 @@ namespace SURIMI_controller.Services
                     RegulationsSummary = regulationsSummary
                 }, cancellationToken);
 
-                await RunSimulationAsync(simulationId, cancellationToken);
+//                await RunSimulationAsync(simulationId, cancellationToken);
             });
 
             // Return promptly, do not await the initialisation calls
@@ -249,13 +250,14 @@ namespace SURIMI_controller.Services
             }
             _simulations[simulationId].SimulationCurrent = current;
 
-            var speciesPriceResponse = await _marketServiceClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId }, current, cancellationToken: token);
+            var speciesPriceResponse = await _marketServiceClient.GetSpeciesPricesAsync(new GetSpeciesPricesRequest() { SimulationId = simulationId, DateTime = current.ToTimestamp() }, current, cancellationToken: token);
 
             var updatePriceRequest = CreateUpdateSpeciesPricesRequest(speciesPriceResponse);
-            //            var xx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
+            var xxx = GetProtoString<UpdateSpeciesPricesRequest>(updatePriceRequest);
 
             await _poseidonServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
             await _ecopathServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
+            await _aggregatorServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
 
             var getEnvironmentVariablesResponse = await _environmentServiceClient.GetEnvironmentVariables(new GetEnvironmentVariablesRequest() { SimulationId = simulationId }, current, cancellationToken: token);
 
@@ -390,7 +392,7 @@ namespace SURIMI_controller.Services
 
             string resultaat = System.Text.Json.JsonSerializer.Serialize(obj, jsonOptions);
 
-            // TODO replace "unit_" with "unit"
+            resultaat = resultaat.Replace("unit_", "unit");
             return resultaat;
         }
 

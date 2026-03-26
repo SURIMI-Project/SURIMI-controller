@@ -71,6 +71,7 @@ public class Program
         AddConfiguredGrpcClient<EcologyConsumerService.EcologyConsumerServiceClient>("AggregatorEcologyConsumer", "AGGREGATOR_URL");
         AddConfiguredGrpcClient<CatchConsumerService.CatchConsumerServiceClient>("AggregatorCatchConsumer", "AGGREGATOR_URL");
         AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("AggregatorMarketProvider", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("AggregatorSpeciesPriceConsumer", "AGGREGATOR_URL");
         AddConfiguredGrpcClient<AggregatorService.AggregatorServiceClient>("Aggregator", "AGGREGATOR_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow", "VALUECHAIN_URL");
@@ -126,6 +127,13 @@ public class Program
         }
         logger.LogInformation("============================= End of Environment Variables =============================");
 
+        // Retrieve version Checker service and log versions of connected services
+        var versionChecker = app.Services.GetRequiredService<VersionCheckerService>();
+        Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5));  // run after a short delay to allow other services (docker instances) to start up
+            versionChecker.WriteVersions();
+        });
         app.Run();
 
 
