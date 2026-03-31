@@ -287,16 +287,18 @@ namespace SURIMI_controller.Services
             var updateCatchDispositionResponse = await _ecopathServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionIntermediateRequest, current, cancellationToken: token);
             // TODO: check start_date_time and end_date_time in the response, to make sure they are correct and consistent with the request and the current simulation step
 
-            var getBiomassResponseTotal = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId }, current, cancellationToken: token);
+            var getBiomassResponseTotal = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId, DateTime = current.ToTimestamp() }, current, cancellationToken: token);
 
             var updateBiomassRequest = CreateUpdateBiomassRequest(getBiomassResponseTotal);
+  //          var xx = GetProtoString<UpdateBiomassRequest>(updateBiomassRequest);
+
             await _cmsyServiceClient.UpdateBiomassAsync(updateBiomassRequest, current, cancellationToken: token);
             await _aggregatorServiceClient.UpdateBiomassAsync(updateBiomassRequest, current, cancellationToken: token);
 
             var ecopathCatchDispositionSummary = await _ecopathServiceClient.GetCatchDispositionAsync(getCatchDispositionRequest, current, cancellationToken: token);
 
             var updateCatchDispositionTotalRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary);
-            var xx = GetProtoString<UpdateCatchDispositionRequest>(updateCatchDispositionTotalRequest);
+ //           xx = GetProtoString<UpdateCatchDispositionRequest>(updateCatchDispositionTotalRequest);
 
             await _cmsyServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest, current, cancellationToken: token);
             await _aggregatorServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionTotalRequest, current, cancellationToken: token);
@@ -310,6 +312,8 @@ namespace SURIMI_controller.Services
             // Update Sales to Market
 
             var ecopathUpdateSalesRequest = CreateUpdateSalesRequest(ecopathGetSalesResponse, current, endStepDateTime);
+ //           xx = GetProtoString<UpdateSalesRequest>(ecopathUpdateSalesRequest);
+
             var marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, token);
             await _aggregatorServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, cancellationToken: token);
             await _valueChainServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, cancellationToken: token);
@@ -317,7 +321,8 @@ namespace SURIMI_controller.Services
             var poseidonGetSalesResponse = await _poseidonServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
 
             var poseidonUpdateSalesRequest = CreateUpdateSalesRequest(poseidonGetSalesResponse, current, endStepDateTime);
-            //            string xx = GetProtoString<UpdateSalesRequest>(poseidonUpdateSalesRequest);
+ //           xx = GetProtoString<UpdateSalesRequest>(poseidonUpdateSalesRequest);
+
             marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, token);
             await _aggregatorServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
             await _valueChainServiceClient.UpdateSalesAsync(poseidonUpdateSalesRequest, current, cancellationToken: token);
