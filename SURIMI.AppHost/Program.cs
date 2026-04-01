@@ -39,7 +39,7 @@ var aggregator = builder.AddContainer("aggregator", "rikkert242/aggregator", "la
 var ecopath = builder.AddContainer("ecopath", "rikkert242/surimiecopath", "latest")
     .WithHttpEndpoint(port: 7890, targetPort: 7890, name: "ecopath")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
-    .WithEnvironment("VAULT_TOKEN", "hvs.CAESIDQ2Gadjlo16vHLjLp8pqhKrv_QOGnMwU3UJfyJoQGR5Gh4KHGh2cy5FQ3ZYU0g3YllaWVB0MmVhanVXZE5zRGo test")
+    .WithEnvironment("VAULT_TOKEN", "hvs.CAESIDQ2Gadjlo16vHLjLp8pqhKrv_QOGnMwU3UJfyJoQGR5Gh4KHGh2cy5FQ3ZYU0g3YllaWVB0MmVhanVXZE5zRGo")
     .WithEnvironment("VAULT_TOP_DIR", "rikkert")
     .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
     .WithEnvironment("VAULT_MOUNT", "secret-kv")
@@ -69,7 +69,7 @@ var surimicontroller = builder.AddProject<Projects.SURIMI_controller>("surimicon
     .WithEnvironment("FISHERIES_AUTHORITY_URL", "http://localhost:5493")
 
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
-    .WithEnvironment("VAULT_TOKEN", "hvs.CAESIDQ2Gadjlo16vHLjLp8pqhKrv_QOGnMwU3UJfyJoQGR5Gh4KHGh2cy5FQ3ZYU0g3YllaWVB0MmVhanVXZE5zRGo test")
+    .WithEnvironment("VAULT_TOKEN", "hvs.CAESIDQ2Gadjlo16vHLjLp8pqhKrv_QOGnMwU3UJfyJoQGR5Gh4KHGh2cy5FQ3ZYU0g3YllaWVB0MmVhanVXZE5zRGo")
     .WithEnvironment("VAULT_TOP_DIR", "rikkert")
     .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
     .WithEnvironment("VAULT_MOUNT", "secret-kv")
