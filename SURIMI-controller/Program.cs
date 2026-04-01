@@ -5,6 +5,7 @@ using Minio;
 using Minio.DataModel.Args;
 using SURIMI.Common.gRPC;
 using SURIMI.Common.gRPC.Services;
+using SURIMI.Common.Services;
 using SURIMI_controller.ConfigurationService;
 using SURIMI_controller.Services;
 
@@ -72,6 +73,7 @@ public class Program
         AddConfiguredGrpcClient<CatchConsumerService.CatchConsumerServiceClient>("AggregatorCatchConsumer", "AGGREGATOR_URL");
         AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("AggregatorMarketProvider", "AGGREGATOR_URL");
         AddConfiguredGrpcClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("AggregatorSpeciesPriceConsumer", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<RegulationsProviderService.RegulationsProviderServiceClient>("AggregatorRegulationsProvider", "AGGREGATOR_URL");
         AddConfiguredGrpcClient<AggregatorService.AggregatorServiceClient>("Aggregator", "AGGREGATOR_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow", "VALUECHAIN_URL");
@@ -97,7 +99,8 @@ public class Program
         builder.Services.AddTransient<IEnvironmentServiceClient, EnvironmentServiceClient>();
         builder.Services.AddTransient<IFisheriesAuthorityServiceClient, FisheriesAuthorityServiceClient>();
         builder.Services.AddSingleton<VersionCheckerService>();
-        builder.Services.AddSingleton<ProtocolVersionService>();
+        builder.Services.AddTransient<ProtocolVersionService>();
+        builder.Services.AddTransient<VaultService>();
 
         builder.Logging.ClearProviders();
         builder.Services.AddLogging(opt =>
@@ -119,7 +122,8 @@ public class Program
         // Retrieve the logger
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-        LoadVaultSecretsInEnvironmentVariables();
+        app.Services.GetRequiredService<VaultService>().LoadVaultSecretsInEnvironmentVariables();
+
         logger.LogInformation("============================= Logging All Environment Variables =============================");
         foreach (System.Collections.DictionaryEntry envVar in Environment.GetEnvironmentVariables())
         {
@@ -168,37 +172,6 @@ public class Program
                 };
             });
             //            .EnableCallContextPropagation();
-        }
-
-        void LoadVaultSecretsInEnvironmentVariables()
-        {
-            var vaultAddr = Environment.GetEnvironmentVariable("VAULT_ADDR");
-            var vaultToken = Environment.GetEnvironmentVariable("VAULT_TOKEN");
-            var vaultTopDir = Environment.GetEnvironmentVariable("VAULT_TOP_DIR");
-            var vaultRelativePath = Environment.GetEnvironmentVariable("VAULT_RELATIVE_PATH");
-            var vaultMount = Environment.GetEnvironmentVariable("VAULT_MOUNT");
-            if (string.IsNullOrEmpty(vaultAddr) || string.IsNullOrEmpty(vaultToken) || string.IsNullOrEmpty(vaultTopDir) || string.IsNullOrEmpty(vaultRelativePath) || string.IsNullOrEmpty(vaultMount))
-            {
-                Console.WriteLine("Vault Addr, Token, Top Dir, Relative Path, or Mount not set in environment variables. Skipping Vault loading.");
-                return;
-            }
-            var vaultClient = new VaultSharp.VaultClient(new VaultSharp.VaultClientSettings(vaultAddr, new VaultSharp.V1.AuthMethods.Token.TokenAuthMethodInfo(vaultToken)));
-            // Assuming secrets are stored under "secret/data/surimi"
-            var secretPath = $"{vaultTopDir}/{vaultRelativePath}";
-
-            try
-            {
-                var secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(secretPath, mountPoint: vaultMount).Result;
-                foreach (var kv in secret.Data.Data)
-                {
-                    Environment.SetEnvironmentVariable(kv.Key, kv.Value.ToString());
-                    Console.WriteLine($"Loaded secret '{kv.Key}' from Vault into environment variables.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading secrets from Vault: {ex.Message}");
-            }
         }
     }
 }

@@ -13,8 +13,7 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
     <PackageReference Include="Grpc.StatusProto" Version="2.71.0" />
-    <PackageReference Include="SURIMI.Common" Version="1.0.1" />
-    <PackageReference Include="VaultSharp" Version="1.17.5.1" />
+    <PackageReference Include="SURIMI.Common" Version="1.0.*" />
   </ItemGroup>
 
 </Project>
