@@ -336,7 +336,8 @@ namespace SURIMI_controller.Services
             var fishingActivityPoseidonResponse = await _poseidonServiceClient.GetFishingActivityAsync(fishingActivityRequest, current, cancellationToken: token);
 
             updateFishingActivityRequest = CreateUpdateFishingActivityRequest(fishingActivityPoseidonResponse);
-            updateFishingActivityResponse = await _fisheriesAuthorityServiceClient.UpdateFishingActivityAsync(updateFishingActivityRequest, current, cancellationToken: token);
+            await _fisheriesAuthorityServiceClient.UpdateFishingActivityAsync(updateFishingActivityRequest, current, cancellationToken: token);
+            await _aggregatorServiceClient.UpdateFishingActivityAsync(updateFishingActivityRequest, current, cancellationToken: token);
 
             await _cmsyServiceClient.SimulateStepAsync(simulationStepRequest, current, cancellationToken: token);
 

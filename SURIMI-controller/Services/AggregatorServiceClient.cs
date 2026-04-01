@@ -12,6 +12,7 @@ namespace SURIMI_controller.Services
         private readonly CatchConsumerService.CatchConsumerServiceClient _aggregatorCatchConsumerClient;
         private readonly MarketProviderService.MarketProviderServiceClient _aggregatorMarketProviderClient;
         private readonly SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient _aggregatorSpeciesPriceConsumerClient;
+        private readonly RegulationsProviderService.RegulationsProviderServiceClient _aggregatorRegulationsProviderClient;
 
         private readonly bool _includeAggregator = Environment.GetEnvironmentVariable("EXCLUDE_AGGREGATOR")?.ToLower() != "true";
 
@@ -22,6 +23,7 @@ namespace SURIMI_controller.Services
             _aggregatorCatchConsumerClient = clientFactory.CreateClient<CatchConsumerService.CatchConsumerServiceClient>("AggregatorCatchConsumer");
             _aggregatorMarketProviderClient = clientFactory.CreateClient<MarketProviderService.MarketProviderServiceClient>("AggregatorMarketProvider"); ;
             _aggregatorSpeciesPriceConsumerClient = clientFactory.CreateClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("AggregatorSpeciesPriceConsumer");
+            _aggregatorRegulationsProviderClient = clientFactory.CreateClient<RegulationsProviderService.RegulationsProviderServiceClient>("AggregatorRegulationsProvider");
             _logger = logger;
         }
 
@@ -82,6 +84,16 @@ namespace SURIMI_controller.Services
                 return await _aggregatorCatchConsumerClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
             }
             return new UpdateCatchDispositionResponse() { SimulationId = updateCatchDispositionRequest.SimulationId };
+        }
+
+        public async Task<UpdateFishingActivityResponse> UpdateFishingActivityAsync(UpdateFishingActivityRequest updateFishingActivityRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            if (_includeAggregator)
+            {
+                LogStep(updateFishingActivityRequest.SimulationId, current, "UpdateFishingActivity");
+                return await _aggregatorRegulationsProviderClient.UpdateFishingActivityAsync(updateFishingActivityRequest, cancellationToken: cancellationToken);
+            }
+            return new UpdateFishingActivityResponse() { SimulationId = updateFishingActivityRequest.SimulationId };
         }
 
         public async Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, DateTime current, CancellationToken cancellationToken)
