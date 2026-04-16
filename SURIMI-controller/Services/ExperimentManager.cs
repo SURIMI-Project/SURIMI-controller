@@ -29,12 +29,20 @@ namespace SURIMI_controller.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {request.ExperimentId} is already initialised"));
             }
 
-            _experiments[request.ExperimentId] = new List<string>();
+            _experiments[request.ExperimentId] = Enumerable.Range(0, request.NumberOfRuns)
+                .Select(_ => Guid.NewGuid().ToString())
+                .ToList();
+
+            await _aggregatorClient.RegisterExperimentAsync(new RegisterExperimentRequest()
+            {
+                ExperimentId = request.ExperimentId,
+                SimulationIds = { _experiments[request.ExperimentId] }
+            });
+
             for (var i = 0; i < request.NumberOfRuns; i++)
             {
-                var simulationId = Guid.NewGuid().ToString();
                 await _simulationManager.InitSimulationAsync(
-                    simulationId,
+                    _experiments[request.ExperimentId][i],
                     request.ExperimentId,
                     request.ScenarioId,
                     request.EndDateTime?.ToDateTime(),
@@ -42,18 +50,15 @@ namespace SURIMI_controller.Services
                     request.RegulationsDefinitionsSummary,
                     cancellationToken
                     );
-                _experiments[request.ExperimentId].Add(simulationId);
             }
-
-            await _aggregatorClient.RegisterExperimentAsync(new RegisterExperimentRequest()
-            {
-                ExperimentId = request.ExperimentId,
-                SimulationIds = { _experiments[request.ExperimentId] }
-            });
         }
 
         public async Task RunExperimentAsync(string experimentId, CancellationToken cancellationToken)
         {
+            if(string.IsNullOrEmpty(experimentId))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, $"Experiment Id is null or empty and cannot run"));
+            }
             if (!_experiments.ContainsKey(experimentId))
             {
                 throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {experimentId} cannot be found and cannot run"));
@@ -63,7 +68,9 @@ namespace SURIMI_controller.Services
             {
                 try
                 {
-                    await _simulationManager.RunSimulationAsync(simulationId, cancellationToken);
+                    await _simulationManager.RunSimulationAsync(
+                        simulationId, 
+                        cancellationToken);
                 }
                 catch (Exception ex)
                 {

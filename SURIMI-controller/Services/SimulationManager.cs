@@ -152,6 +152,7 @@ namespace SURIMI_controller.Services
                         _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
 
                         current = AddStepSize(current, _simulations[simulationId].StepSize);
+
                     }
 
                     // Finalise the simulation
@@ -168,7 +169,7 @@ namespace SURIMI_controller.Services
 
                     _simulations[simulationId].Status = "Finished";
                     _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
-                    _logger.LogInformation("{SimulationId} is finished", simulationId);
+                    _logger.LogInformation("Simulation {SimulationId} is finished", simulationId);
                 }
                 catch (RpcException ex) when (ex.InnerException is OperationCanceledException)
                 {
@@ -185,7 +186,7 @@ namespace SURIMI_controller.Services
                     await _fisheriesAuthorityServiceClient.CancelAsync(cancelRequest, cts.Token);
 
                     _simulations[simulationId].Status = "Canceled";
-                    _logger.LogInformation("{SimulationId} is canceled", simulationId);
+                    _logger.LogInformation("Simulation {SimulationId} is canceled", simulationId);
                 }
                 catch (RpcException ex)
                 {
