@@ -1,8 +1,6 @@
 using Eii.BlobStore;
-using Eii.BlobStore.Minio;
+using Eii.BlobStore.S3;
 using Grpc.Surimi;
-using Minio;
-using Minio.DataModel.Args;
 using SURIMI.Common.gRPC;
 using SURIMI.Common.gRPC.Services;
 using SURIMI.Common.Services;
@@ -20,25 +18,15 @@ public class Program
 
         builder.Services.AddSingleton<IBlobStore>(sp =>
         {
-            // if AWS_ACCESS_KEY_ID is set, use MinIO
+            // if AWS_ACCESS_KEY_ID is set, use S3 compatible storage
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID")))
             {
-                var minio = new MinioClient()
-                    .WithEndpoint(Environment.GetEnvironmentVariable("AWS_S3_ENDPOINT"), 443)
-                    .WithCredentials(Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"), Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"))
-                    .WithSSL(true) // set to true if your endpoint uses HTTPS
-                    .Build();
-
-                // Ensure bucket exists (idempotent)
-                var bucket = Environment.GetEnvironmentVariable("AWS_BUCKET_NAME")!;
-                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                var exists = minio.BucketExistsAsync(new BucketExistsArgs().WithBucket(bucket), cts.Token).GetAwaiter().GetResult();
-                if (!exists)
-                {
-                    minio.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucket), cts.Token).GetAwaiter().GetResult();
-                }
-
-                return new MinioBlobStore(minio, bucket, inputBasePrefix: @"surimi-controller/config", outputBasePrefix: @"surimi-controller", localInputRoot: "Includes", localOutputRoot: "Output");
+                return new S3BlobStore(
+                    Environment.GetEnvironmentVariable("AWS_S3_ENDPOINT"),
+                    Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
+                    Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"),
+                    Environment.GetEnvironmentVariable("AWS_BUCKET_NAME"),
+                    inputBasePrefix: @"surimi-controller/config", outputBasePrefix: @"surimi-controller", localInputRoot: "Includes", localOutputRoot: "Output");
             }
 
             // Default local Filesystem

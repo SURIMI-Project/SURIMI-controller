@@ -1,9 +1,6 @@
 ﻿using Eii.BlobStore;
 using Grpc.Core;
-using Minio;
-using Minio.DataModel.Args;
 using SURIMI.Datamodel;
-using SURIMI_controller.Services;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -22,7 +19,7 @@ namespace SURIMI_controller.ConfigurationService
 
         /// <summary>
         /// This method tries to read the Surimi configuration from a local file.
-        /// If the file does not exist locally, it fetches it from an S3-compatible storage using MinIO client.
+        /// If the file does not exist locally, it fetches it from an S3-compatible storage.
         /// This will be the case when running in a Docker container in Kubernetes.
         /// </summary>
         /// <returns>A SurimiConfiguration object representing the configuration.</returns>
@@ -35,7 +32,7 @@ namespace SURIMI_controller.ConfigurationService
             }
 
             yaml = await _blobStore.ReadAllTextAsync($"{contractName}.yaml", PathType.Input);
-            _logger.LogInformation("Loaded {ContractName}.yaml from local Includes directory.", contractName);
+            _logger.LogInformation("Loaded {ContractName}.yaml", contractName);
             return DeserialiseConfiguration(yaml);
         }
 
