@@ -39,23 +39,32 @@ namespace SURIMI_controller.Services
                 SimulationIds = { _experiments[request.ExperimentId] }
             });
 
-            for (var i = 0; i < request.NumberOfRuns; i++)
+            var initTasks = _experiments[request.ExperimentId].Select(async simulationId =>
             {
-                await _simulationManager.InitSimulationAsync(
-                    _experiments[request.ExperimentId][i],
+                try
+                {
+                    await _simulationManager.InitSimulationAsync(
+                    simulationId,
                     request.ExperimentId,
                     request.ScenarioId,
                     request.EndDateTime?.ToDateTime(),
                     simulation,
                     request.RegulationsDefinitionsSummary,
-                    cancellationToken
-                    );
-            }
+                    cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Exception in initialising Simulation. ID={SimulationId}", simulationId);
+                }
+            }).ToList();
+
+            // This will cause multiple simulations to initialise in parallel
+            await Task.WhenAll(initTasks);
         }
 
         public async Task RunExperimentAsync(string experimentId, CancellationToken cancellationToken)
         {
-            if(string.IsNullOrEmpty(experimentId))
+            if (string.IsNullOrEmpty(experimentId))
             {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, $"Experiment Id is null or empty and cannot run"));
             }
@@ -64,19 +73,20 @@ namespace SURIMI_controller.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {experimentId} cannot be found and cannot run"));
             }
 
-            foreach (var simulationId in _experiments[experimentId])
+            var runTasks = _experiments[experimentId].Select(async simulationId =>
             {
                 try
                 {
-                    await _simulationManager.RunSimulationAsync(
-                        simulationId, 
-                        cancellationToken);
+                    await _simulationManager.RunSimulationAsync(simulationId, cancellationToken);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Exception in running Simulation. ID={SimulationId}", simulationId);
                 }
-            }
+            }).ToList();
+
+            // This will cause multiple simulations to run in parallel
+            await Task.WhenAll(runTasks);
         }
 
         public async Task CancelExperimentAsync(string experimentId, CancellationToken cancellationToken)
@@ -86,7 +96,7 @@ namespace SURIMI_controller.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {experimentId} cannot be found and cannot cancel"));
             }
 
-            foreach (var simulationId in _experiments[experimentId])
+            var cancelTasks = _experiments[experimentId].Select(async simulationId =>
             {
                 try
                 {
@@ -96,7 +106,10 @@ namespace SURIMI_controller.Services
                 {
                     _logger.LogError(ex, "Exception in canceling Simulation. ID={SimulationId}", simulationId);
                 }
-            }
+            }).ToList();
+
+            // This will cause multiple simulations to cancel in parallel
+            await Task.WhenAll(cancelTasks);
         }
 
         public async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken)
