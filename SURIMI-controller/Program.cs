@@ -62,7 +62,7 @@ public class Program
         AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("AggregatorMarketProvider", "AGGREGATOR_URL");
         AddConfiguredGrpcClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("AggregatorSpeciesPriceConsumer", "AGGREGATOR_URL");
         AddConfiguredGrpcClient<RegulationsProviderService.RegulationsProviderServiceClient>("AggregatorRegulationsProvider", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<AggregatorService.AggregatorServiceClient>("Aggregator", "AGGREGATOR_URL");
+        AddConfiguredGrpcClient<ExperimentService.ExperimentServiceClient>("Aggregator", "AGGREGATOR_URL");
 
         AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow", "VALUECHAIN_URL");
         AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("ValueChainMarketProvider", "VALUECHAIN_URL");

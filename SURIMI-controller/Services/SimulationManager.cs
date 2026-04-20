@@ -37,7 +37,7 @@ namespace SURIMI_controller.Services
         }
 
         /// <summary>
-        /// Initialises a new simulation
+        /// Run a new simulation
         /// </summary>
         /// <param name="simulationId">The unique identifier for the simulation</param>
         /// <param name="scenarioId">The identifier for the scenario</param>
@@ -45,11 +45,11 @@ namespace SURIMI_controller.Services
         /// <param name="simulation">The simulation details</param>
         /// <returns></returns>
         /// <exception cref="RpcException"></exception>
-        public Task InitSimulationAsync(string simulationId, string experimentId, string scenarioId, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, Grpc.Surimi.RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken)
+        public Task RunSimulationAsync(string simulationId, string experimentId, string scenarioId, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, Grpc.Surimi.RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken)
         {
             if (_simulations.ContainsKey(simulationId))
             {
-                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} is already initialised"));
+                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} is already running"));
             }
 
             var initRequest = new InitialiseRequest
@@ -89,7 +89,8 @@ namespace SURIMI_controller.Services
             };
 
             // Run the rest of the logic in a background task after all initialisation calls complete
-            _ = Task.Run(async () =>
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var task = Task.Run(async () =>
             {
                 await Task.WhenAll(initializationTasks);
 
@@ -112,36 +113,15 @@ namespace SURIMI_controller.Services
                 {
                     SimulationId = simulationId,
                     RegulationsSummary = regulationsSummary
-                }, cancellationToken);
+                }, cts.Token);
 
-//                await RunSimulationAsync(simulationId, cancellationToken);
-            });
+                var current = _simulations[simulationId].StartDateTime;
+                var end = _simulations[simulationId].EndDateTime;
 
-            // Return promptly, do not await the initialisation calls
-            return Task.CompletedTask;
-        }
+                _simulations[simulationId].Status = "Running";
+                _simulations[simulationId].SimulationStarted = DateTime.UtcNow;
+                _simulations[simulationId].SimulationDuration = TimeSpan.FromMilliseconds(10);    // so you immediately see a duration, instead of nothing
 
-        public Task RunSimulationAsync(string simulationId, CancellationToken externalToken)
-        {
-            if (_simulations.ContainsKey(simulationId) == false)
-            {
-                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} can not be started. It is not found"));
-            }
-
-            if (_simulations[simulationId].Status == "Running")
-            {
-                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} is already running"));
-            }
-
-            var current = _simulations[simulationId].StartDateTime;
-            var end = _simulations[simulationId].EndDateTime;
-
-            _simulations[simulationId].Status = "Running";
-            _simulations[simulationId].SimulationStarted = DateTime.UtcNow;
-            _simulations[simulationId].SimulationDuration = TimeSpan.FromMilliseconds(10);    // so you immediately see a duration, instead of nothing
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
-            var task = Task.Run(async () =>
-            {
                 try
                 {
                     while (current <= end)
@@ -152,7 +132,6 @@ namespace SURIMI_controller.Services
                         _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
 
                         current = AddStepSize(current, _simulations[simulationId].StepSize);
-
                     }
 
                     // Finalise the simulation
@@ -205,7 +184,8 @@ namespace SURIMI_controller.Services
 
             _simulations[simulationId].Task = task;
             _simulations[simulationId].Cts = cts;
-            return task;
+            // Return promptly, do not await the task to prevent the gRPC call from timing out. The simulation will continue to run in the background, and its progress can be tracked through the SimulationManager's state.
+            return Task.CompletedTask;
         }
 
         public Task CancelSimulationAsync(string simulationId)

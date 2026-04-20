@@ -47,24 +47,6 @@ namespace SURIMI_gui.Services
             return reply.ExperimentId;
         }
 
-        public Task<string> RunExperimentAsync(string experimentId, CancellationToken token)
-        {
-            Activity.Current = null; // Ensure no previous activity is set. In a Blazor application, the Activity.Current might be unaltered which causes telemetry to use the same TraceId for all requests, leading to confusion in telemetry data.
-            try
-            {
-                var reply = _controllerClient.RunExperimentAsync(new RunExperimentRequest() { ExperimentId = experimentId }, cancellationToken: token);
-                return Task.FromResult("OK");
-            }
-            catch (RpcException ex)
-            {
-                return Task.FromResult(CreateErrorStringFromGrpcException(ex));
-            }
-            catch (Exception ex)
-            {
-                return Task.FromResult(ex.Message);
-            }
-        }
-
         public async Task<string> CancelExperimentAsync(string experimentId, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set
