@@ -17,13 +17,15 @@ namespace SURIMI_controller.Services
         private readonly ConcurrentDictionary<string, string> simulationToPodMap = new();   // SimulationId is key
         private readonly ConcurrentDictionary<string, bool> podAvailability;    // Pod is key
         private readonly ILogger<SimulationDispatcher> _logger;
+        private readonly ILogger<GrpcErrorDetailLoggingInterceptor> _interceptorLogger;
 
-        public SimulationDispatcher(ILogger<SimulationDispatcher> logger)
+        public SimulationDispatcher(ILogger<SimulationDispatcher> logger, ILogger<GrpcErrorDetailLoggingInterceptor> interceptorLogger)
         {
             podAvailability = new ConcurrentDictionary<string, bool>(
                 podNames.Select(p => new KeyValuePair<string, bool>(p, true))
             );
             _logger = logger;
+            _interceptorLogger = interceptorLogger;
         }
 
         public AsyncUnaryCall<TResponse> DispatchAsync<TClient, TRequest, TResponse>(
@@ -98,7 +100,7 @@ namespace SURIMI_controller.Services
             _logger.LogInformation("Using address {Address} for pod {Pod} and simulationId {SimulationId}", address, pod, simulationId);
             try
             {
-                var client = DynamicGrpcClientFactory.CreateClient<TClient>(address);
+                var client = DynamicGrpcClientFactory.CreateClient<TClient>(address, _interceptorLogger);
                 var response = grpcMethod(client, request);
 
                 return response;

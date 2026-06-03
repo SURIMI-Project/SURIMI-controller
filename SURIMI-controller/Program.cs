@@ -42,49 +42,28 @@ public class Program
         });
 
         // Use the helper for all your gRPC clients
-        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow", "POSEIDON_URL");
-        AddConfiguredGrpcClient<SalesProviderService.SalesProviderServiceClient>("PoseidonSalesProvider", "POSEIDON_URL");
-        AddConfiguredGrpcClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("PoseidonSpeciesPriceConsumer", "POSEIDON_URL");
-        AddConfiguredGrpcClient<CatchProviderService.CatchProviderServiceClient>("PoseidonCatchProvider", "POSEIDON_URL");
-        AddConfiguredGrpcClient<EcologyConsumerService.EcologyConsumerServiceClient>("PoseidonEcologyConsumer", "POSEIDON_URL");
-        AddConfiguredGrpcClient<RegulationsConsumerService.RegulationsConsumerServiceClient>("PoseidonRegulationsConsumer", "POSEIDON_URL");
+        AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("Poseidon", "POSEIDON_URL");
+        AddConfiguredGrpcClient<MarketService.MarketServiceClient>("Market", "MARKET_URL");
+        AddConfiguredGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy", "CMSY_URL");
+        AddConfiguredGrpcClient<ValueChainService.ValueChainServiceClient>("ValueChain", "VALUECHAIN_URL");
+        AddConfiguredGrpcClient<EnvironmentService.EnvironmentServiceClient>("Environment", "ENVIRONMENT_URL");
+        AddConfiguredGrpcClient<FisheriesAuthorityService.FisheriesAuthorityServiceClient>("FisheriesAuthority", "FISHERIES_AUTHORITY_URL");
+        AddConfiguredGrpcClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator", "OUTPUT_CREATOR_URL");
 
-        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow", "MARKET_URL");
-        AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("MarketMarketProvider", "MARKET_URL");
-
-        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow", "CMSY_URL");
-        AddConfiguredGrpcClient<EcologyConsumerService.EcologyConsumerServiceClient>("CmsyEcologyConsumer", "CMSY_URL");
-        AddConfiguredGrpcClient<CatchConsumerService.CatchConsumerServiceClient>("CmsyCatchConsumer", "CMSY_URL");
-
-        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("AggregatorWorkflow", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<EcologyConsumerService.EcologyConsumerServiceClient>("AggregatorEcologyConsumer", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<CatchConsumerService.CatchConsumerServiceClient>("AggregatorCatchConsumer", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("AggregatorMarketProvider", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient>("AggregatorSpeciesPriceConsumer", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<RegulationsProviderService.RegulationsProviderServiceClient>("AggregatorRegulationsProvider", "AGGREGATOR_URL");
-        AddConfiguredGrpcClient<AggregatorService.AggregatorServiceClient>("Aggregator", "AGGREGATOR_URL");
-
-        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow", "VALUECHAIN_URL");
-        AddConfiguredGrpcClient<MarketProviderService.MarketProviderServiceClient>("ValueChainMarketProvider", "VALUECHAIN_URL");
-
-        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("EnvironmentWorkflow", "ENVIRONMENT_URL");
-        AddConfiguredGrpcClient<EnvironmentProviderService.EnvironmentProviderServiceClient>("EnvironmentEnvironmentProvider", "ENVIRONMENT_URL");
-
-        AddConfiguredGrpcClient<WorkflowService.WorkflowServiceClient>("FisheriesAuthorityWorkflow", "FISHERIES_AUTHORITY_URL");
-        AddConfiguredGrpcClient<RegulationsProviderService.RegulationsProviderServiceClient>("FisheriesAuthorityRegulationsProvider", "FISHERIES_AUTHORITY_URL");
-        AddConfiguredGrpcClient<CatchConsumerService.CatchConsumerServiceClient>("FisheriesAuthorityCatchConsumer", "FISHERIES_AUTHORITY_URL");
-
+        builder.Services.AddSingleton<GrpcErrorDetailLoggingInterceptor>();
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();
+        builder.Services.AddSingleton<IAggregatorService, AggregatorService>();
+
         builder.Services.AddTransient<ISurimiConfigurationService, SurimiConfigurationService>();
         builder.Services.AddTransient<ICmsyServiceClient, CmsyServiceClient>();
-        builder.Services.AddTransient<IAggregatorServiceClient, AggregatorServiceClient>();
         builder.Services.AddTransient<IValueChainServiceClient, ValueChainServiceClient>();
         builder.Services.AddTransient<IPoseidonServiceClient, PoseidonServiceClient>();
         builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
         builder.Services.AddTransient<IEcopathServiceClient, EcopathServiceClient>();
         builder.Services.AddTransient<IEnvironmentServiceClient, EnvironmentServiceClient>();
+        builder.Services.AddTransient<IOutputCreatorServiceClient, OutputCreatorServiceClient>();
         builder.Services.AddTransient<IFisheriesAuthorityServiceClient, FisheriesAuthorityServiceClient>();
         builder.Services.AddSingleton<VersionCheckerService>();
         builder.Services.AddTransient<ProtocolVersionService>();
@@ -104,7 +83,7 @@ public class Program
         app.MapDefaultEndpoints();
 
         // Configure the HTTP request pipeline.
-        app.MapGrpcService<SurimiControllerService>();
+        app.MapGrpcService<Services.ControllerService>();
         app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
         // Retrieve the logger
@@ -148,6 +127,9 @@ public class Program
                 {
                     o.Address = new Uri(baseAddress);
                 });
+
+            registration
+                .AddInterceptor<GrpcErrorDetailLoggingInterceptor>();
 
             registration.ConfigureChannel(options =>
             {

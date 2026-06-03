@@ -1,4 +1,5 @@
-﻿using Grpc.Core;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
@@ -7,70 +8,68 @@ namespace SURIMI_controller.Services
     public class ValueChainServiceClient : IValueChainServiceClient
     {
         private readonly ILogger<ValueChainServiceClient> _logger;
-        private readonly WorkflowService.WorkflowServiceClient _valueChainWorkflowClient;
-        private readonly MarketProviderService.MarketProviderServiceClient _valueChainMarketProviderClient;
+        private readonly ValueChainService.ValueChainServiceClient _valueChainClient;
         private readonly bool _includeValueChain = Environment.GetEnvironmentVariable("EXCLUDE_VALUECHAIN")?.ToLower() != "true";
 
         public ValueChainServiceClient(GrpcClientFactory clientFactory, ILogger<ValueChainServiceClient> logger)
         {
-            _valueChainWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow");
-            _valueChainMarketProviderClient = clientFactory.CreateClient<MarketProviderService.MarketProviderServiceClient>("ValueChainMarketProvider");
+            _valueChainClient = clientFactory.CreateClient<ValueChainService.ValueChainServiceClient>("ValueChainExperiment");
 
             _logger = logger;
         }
 
-        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default(CancellationToken))
+        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_includeValueChain)
             {
-                var initialiseResponse = _valueChainWorkflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken);
-                initializationTasks.Add(initialiseResponse.ResponseAsync);
-                return initialiseResponse;
+                var InitialiseExperimentResponse = _valueChainClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
+                initializationTasks.Add(InitialiseExperimentResponse.ResponseAsync);
+                return InitialiseExperimentResponse;
             }
             return null;
         }
 
-        public async Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)
+        public async Task<CancelExperimentResponse> CancelExperimentAsync(CancelExperimentRequest cancelRequest, CancellationToken token)
         {
             if (_includeValueChain)
             {
-                return await _valueChainWorkflowClient.CancelAsync(cancelRequest, cancellationToken: token);
+                return await _valueChainClient.CancelExperimentAsync(cancelRequest, cancellationToken: token);
             }
-            return new CancelResponse() { SimulationId = cancelRequest.SimulationId };
+            return new CancelExperimentResponse() { ExperimentId = cancelRequest.ExperimentId };
         }
 
-        public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
+        public async Task<ExperimentStepResponse> ExperimentStepAsync(ExperimentStepRequest experimentStepRequest, DateTime current, CancellationToken token)
         {
             if (_includeValueChain)
             {
-                return await _valueChainWorkflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken);
+                LogStep(experimentStepRequest.ExperimentId, current, "ExperimentStep");
+                return await _valueChainClient.ExperimentStepAsync(experimentStepRequest, cancellationToken: token);
             }
-            return new FinaliseResponse() { SimulationId = finaliseRequest.SimulationId };
+            return new ExperimentStepResponse() { ExperimentId = experimentStepRequest.ExperimentId };
         }
 
-        public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
+        public async Task<FinaliseExperimentResponse> FinaliseExperimentAsync(FinaliseExperimentRequest finaliseExperimentRequest, CancellationToken cancellationToken = default)
         {
             if (_includeValueChain)
             {
-                LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
-                return await _valueChainWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
+                return await _valueChainClient.FinaliseExperimentAsync(finaliseExperimentRequest, cancellationToken: cancellationToken);
             }
-            return new SimulateStepResponse() { SimulationId = simulationStepRequest.SimulationId };
+            return new FinaliseExperimentResponse() { ExperimentId = finaliseExperimentRequest.ExperimentId };
         }
 
-        public async Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateSalesStatisticsResponse> UpdateSalesStatisticsAsync(UpdateSalesStatisticsRequest updateSalesStatisticsRequest, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeValueChain)
             {
-                LogStep(updateSalesRequest.SimulationId, current, "UpdateSales");
-                var valueChainUpdateSalesResponse = await _valueChainMarketProviderClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
+                LogStep(updateSalesStatisticsRequest.ExperimentId, current, "UpdateSalesStatistics");
+                return await _valueChainClient.UpdateSalesStatisticsAsync(updateSalesStatisticsRequest, cancellationToken: cancellationToken);
             }
-            return new UpdateSalesResponse() { SimulationId = updateSalesRequest.SimulationId };
+            return new UpdateSalesStatisticsResponse() { ExperimentId = updateSalesStatisticsRequest.ExperimentId };
         }
 
-        private void LogStep(string simulationId, DateTime current, string step)
+        private void LogStep(string ExperimentId, DateTime current, string step)
         {
-            _logger.LogInformation("{SimulationId} Processing step ValueChain.{Step}. {DateTime}", simulationId, step, current);
+            _logger.LogInformation("{ExperimentId} Processing step ValueChain.{Step}. {DateTime}", ExperimentId, step, current);
         }
     }
 }

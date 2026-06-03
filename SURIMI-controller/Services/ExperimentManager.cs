@@ -1,92 +1,106 @@
-﻿using Grpc.Core;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
+using SURIMI_controller.Models;
 using System.Collections.Concurrent;
 
 namespace SURIMI_controller.Services
 {
-
     public class ExperimentManager : IExperimentManager
     {
-        private readonly ConcurrentDictionary<string, List<string>> _experiments = new();
+        private readonly ConcurrentDictionary<string, Experiment> _experiments = new();
 
-        ISimulationManager _simulationManager;
+        private readonly ISimulationManager _simulationManager;
         private readonly ILogger<ExperimentManager> _logger;
-        private readonly AggregatorService.AggregatorServiceClient _aggregatorClient;
+        private readonly IAggregatorService _aggregatorService;
+        private readonly ICmsyServiceClient _cmsyServiceClient;
+        private readonly IOutputCreatorServiceClient _outputCreatorClient;
+        private readonly IEnvironmentServiceClient _environmentServiceClient;
 
-        public ExperimentManager(GrpcClientFactory clientFactory, ISimulationManager simulationManager, ILogger<ExperimentManager> logger)
+        public ExperimentManager(GrpcClientFactory clientFactory, ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient)
         {
-            _aggregatorClient = clientFactory.CreateClient<AggregatorService.AggregatorServiceClient>("Aggregator");
             _simulationManager = simulationManager;
+            _cmsyServiceClient = cmsyServiceClient;
+            _aggregatorService = aggregatorService;
             _logger = logger;
+            _outputCreatorClient = outputCreatorClient;
+            _environmentServiceClient = environmentServiceClient;
+
+            _simulationManager.SimulateStep += OnSimulateStep;
+            _simulationManager.SimulationFinalised += OnSimulationFinalised;
+            _simulationManager.SimulationCancelled += OnSimulationCancelled;
+            _simulationManager.BiomassUpdated += OnBiomassUpdated;
+            _simulationManager.CatchDispositionUpdated += OnCatchDispositionUpdated;
+            _simulationManager.SalesUpdated += OnSalesUpdated;
+            _simulationManager.FishingActivityUpdated += OnFishingActivityUpdated;
+            _simulationManager.SpeciesPriceUpdated += OnSpeciesPriceUpdated;
         }
 
-
-        public async Task InitialiseExperiment(InitialiseExperimentRequest request, Grpc.Surimi.Simulation simulation, CancellationToken cancellationToken)
+        public Task SubmitExperiment(SubmitExperimentRequest request, Grpc.Surimi.Simulation simulation, CancellationToken cancellationToken)
         {
             if (_experiments.ContainsKey(request.ExperimentId))
             {
-                throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {request.ExperimentId} is already initialised"));
+                throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {request.ExperimentId} is already submitteded"));
             }
 
-            _experiments[request.ExperimentId] = Enumerable.Range(0, request.NumberOfRuns)
+            // Create a dictionary to hold the aggregated simulation data for each simulation in the experiment
+            var simulationIds = Enumerable.Range(0, request.NumberOfRuns)
                 .Select(_ => Guid.NewGuid().ToString())
                 .ToList();
 
-            await _aggregatorClient.RegisterExperimentAsync(new RegisterExperimentRequest()
-            {
-                ExperimentId = request.ExperimentId,
-                SimulationIds = { _experiments[request.ExperimentId] }
-            });
+            _experiments[request.ExperimentId] = new Experiment { SimulationIds = simulationIds };
 
-            var initTasks = _experiments[request.ExperimentId].Select(async simulationId =>
+            // All summary dictionaries (BiomassSummary, CatchDispositionSummary, FishingActivitySummary, SalesSummary, SpeciesPriceSummary) are lazily initialized per date in OnSummaryUpdated
+
+            // Run the rest of the logic in a background task after all initialisation calls complete
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var task = Task.Run(async () =>
             {
-                try
+                var initRequest = new InitialiseExperimentRequest
                 {
-                    await _simulationManager.InitSimulationAsync(
-                    simulationId,
-                    request.ExperimentId,
-                    request.ScenarioId,
-                    request.EndDateTime?.ToDateTime(),
-                    simulation,
-                    request.RegulationsDefinitionsSummary,
-                    cancellationToken);
-                }
-                catch (Exception ex)
+                    ExperimentId = request.ExperimentId,
+                    ScenarioName = request.ScenarioName,
+                    EndDateTime = request.EndDateTime,
+                    Simulation = simulation,
+                    SimulationIds = { _experiments[request.ExperimentId].SimulationIds },
+                };
+
+                var initializationTasks = new List<Task<InitialiseExperimentResponse>>();
+                var cmsyTask = _cmsyServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
+                var outputCreatorTask = _outputCreatorClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
+                var environmentTask = _environmentServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
+
+                var initTasks = _experiments[request.ExperimentId].SimulationIds.Select(async simulationId =>
                 {
-                    _logger.LogError(ex, "Exception in initialising Simulation. ID={SimulationId}", simulationId);
-                }
-            }).ToList();
+                    try
+                    {
+                        await _simulationManager.RunSimulationAsync(
+                        simulationId,
+                        request.ExperimentId,
+                        request.ScenarioName,
+                        request.EndDateTime?.ToDateTime(),
+                        simulation,
+                        request.RegulationsDefinitionsSummary,
+                        cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Exception in Running Simulation. ID={SimulationId}", simulationId);
+                    }
+                }).ToList();
 
-            // This will cause multiple simulations to initialise in parallel
-            await Task.WhenAll(initTasks);
-        }
+                // Combine both task collections and await all together
+                var allTasks = initTasks.Concat<Task>(initializationTasks);
+                await Task.WhenAll(allTasks);
+                _logger.LogInformation("All simulations and initialisation calls completed for ExperimentId={ExperimentId}", request.ExperimentId);
+            }, cts.Token);
 
-        public async Task RunExperimentAsync(string experimentId, CancellationToken cancellationToken)
-        {
-            if (string.IsNullOrEmpty(experimentId))
-            {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, $"Experiment Id is null or empty and cannot run"));
-            }
-            if (!_experiments.ContainsKey(experimentId))
-            {
-                throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {experimentId} cannot be found and cannot run"));
-            }
+            _experiments[request.ExperimentId].Task = task;
+            _experiments[request.ExperimentId].Cts = cts;
 
-            var runTasks = _experiments[experimentId].Select(async simulationId =>
-            {
-                try
-                {
-                    await _simulationManager.RunSimulationAsync(simulationId, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Exception in running Simulation. ID={SimulationId}", simulationId);
-                }
-            }).ToList();
-
-            // This will cause multiple simulations to run in parallel
-            await Task.WhenAll(runTasks);
+            // Return promptly, do not await the task to prevent the gRPC call from timing out. The simulation will continue to run in the background, and its progress can be tracked through the SimulationManager's state.
+            return Task.CompletedTask;
         }
 
         public async Task CancelExperimentAsync(string experimentId, CancellationToken cancellationToken)
@@ -96,7 +110,7 @@ namespace SURIMI_controller.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {experimentId} cannot be found and cannot cancel"));
             }
 
-            var cancelTasks = _experiments[experimentId].Select(async simulationId =>
+            var cancelTasks = _experiments[experimentId].SimulationIds.Select(async simulationId =>
             {
                 try
                 {
@@ -115,6 +129,206 @@ namespace SURIMI_controller.Services
         public async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken)
         {
             return await _simulationManager.GetAllSimulationStatussesAsync(cancellationToken);
+        }
+
+        private void OnSimulateStep(object? sender, ExperimentEventArgs e) =>
+            OnFlagUpdated(
+                e,
+                eventName: nameof(OnSimulateStep),
+                getDictionary: experiment => experiment.SimulateStepCalled,
+                onAllReceived: (experimentId, current, token) =>
+                {
+                    var request = new ExperimentStepRequest() { ExperimentId = experimentId, CurrentDateTime = current.ToTimestamp() };
+                    _cmsyServiceClient.ExperimentStepAsync(request, current: current, token: token);
+                    _environmentServiceClient.ExperimentStepAsync(request, current: current, token: token);
+                    _outputCreatorClient.ExperimentStepAsync(request, current: current, token: token);
+                });
+
+        private void OnSimulationFinalised(object? sender, ExperimentEventArgs e) =>
+            OnFlagUpdated(
+                e,
+                eventName: nameof(OnSimulationFinalised),
+                getDictionary: experiment => experiment.SimulationFinalisedCalled,
+                onAllReceived: (experimentId, current, token) =>
+                {
+                    var request = new FinaliseExperimentRequest() { ExperimentId = experimentId };
+                    _cmsyServiceClient.FinaliseExperimentAsync(request, token);
+                    _environmentServiceClient.FinaliseExperimentAsync(request, token);
+                    _outputCreatorClient.FinaliseExperimentAsync(request, token);
+                });
+
+        private void OnSimulationCancelled(object? sender, ExperimentEventArgs e) =>
+            OnFlagUpdated(
+                e,
+                eventName: nameof(OnSimulationCancelled),
+                getDictionary: experiment => experiment.SimulationCancelledCalled,
+                onAllReceived: (experimentId, current, token) =>
+                {
+                    var request = new CancelExperimentRequest() { ExperimentId = experimentId };
+                    _cmsyServiceClient.CancelExperimentAsync(request, token);
+                    _environmentServiceClient.CancelExperimentAsync(request, token);
+                    _outputCreatorClient.CancelExperimentAsync(request, token);
+                });
+
+        private void OnBiomassUpdated(object? sender, BiomassEventArgs e) =>
+            OnSummaryUpdated(
+                e,
+                getSummary: e => e.BiomassSummary,
+                getDictionary: experiment => experiment.BiomassSummary,
+                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                {
+                    var statisticsSummary = _aggregatorService.AddAggregateBiomass(dateSummaries.Values.ToList());
+                    var updateBomassStatisticsRequest = new UpdateBiomassStatisticsRequest()
+                    {
+                        ExperimentId = experimentId,
+                        BiomassStatisticsSummary = statisticsSummary,
+                        DateTime = current.ToTimestamp()
+                    };
+                    _cmsyServiceClient.UpdateBiomassStatistics(updateBomassStatisticsRequest, experimentId, current, token);
+                    _outputCreatorClient.UpdateBiomassStatistics(updateBomassStatisticsRequest, experimentId, current, token);
+                });
+
+        private void OnCatchDispositionUpdated(object? sender, CatchDispositionEventArgs e) =>
+            OnSummaryUpdated(
+                e,
+                getSummary: e => e.CatchDispositionSummary,
+                getDictionary: experiment => experiment.CatchDispositionSummary,
+                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                {
+                    var statisticsSummary = _aggregatorService.AddAggregateCatchDisposition(dateSummaries.Values.ToList());
+                    var updateCatchDispositionStatisticsRequest = new UpdateCatchDispositionStatisticsRequest()
+                    {
+                        ExperimentId = experimentId,
+                        CatchDispositionStatisticsSummary = statisticsSummary,
+                        StartDateTime = current.ToTimestamp()
+                    };
+                    _cmsyServiceClient.UpdateCatchDispositionStatistics(updateCatchDispositionStatisticsRequest, experimentId, current, token);
+                    _outputCreatorClient.UpdateCatchDispositionStatistics(updateCatchDispositionStatisticsRequest, experimentId, current, token);
+                });
+
+        private void OnSalesUpdated(object? sender, SalesEventArgs e) =>
+            OnSummaryUpdated(
+                e,
+                getSummary: e => e.SalesSummary,
+                getDictionary: experiment => experiment.SalesSummary,
+                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                {
+                    var statisticsSummary = _aggregatorService.AddAggregateSales(dateSummaries.Values.ToList());
+                    _outputCreatorClient.UpdateSalesStatistics(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
+                });
+
+        private void OnFishingActivityUpdated(object? sender, FishingActivityEventArgs e) =>
+            OnSummaryUpdated(
+                e,
+                getSummary: e => e.FishingActivitySummary,
+                getDictionary: experiment => experiment.FishingActivitySummary,
+                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                {
+                    var statisticsSummary = _aggregatorService.AddAggregateFishingActivity(dateSummaries.Values.ToList());
+                    _outputCreatorClient.UpdateFishingActivityStatistics(new UpdateFishingActivityStatisticsRequest() { ExperimentId = experimentId, FishingActivityStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
+                });
+
+        private void OnSpeciesPriceUpdated(object? sender, SpeciesPriceEventArgs e) =>
+            OnSummaryUpdated(
+                e,
+                getSummary: e => e.SpeciesPriceSummary,
+                getDictionary: experiment => experiment.SpeciesPriceSummary,
+                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                {
+                    var statisticsSummary = _aggregatorService.AddAggregateSpeciesPrice(dateSummaries.Values.ToList());
+                    _outputCreatorClient.UpdateSpeciesPriceStatistics(new UpdateSpeciesPriceStatisticsRequest() { ExperimentId = experimentId, SpeciesPriceStatisticsSummary = statisticsSummary, DateTime = current.ToTimestamp() }, experimentId, current, token);
+                });
+
+        private void OnSummaryUpdated<TEventArgs, TSummary>(
+            TEventArgs e,
+            Func<TEventArgs, TSummary> getSummary,
+            Func<Experiment, Dictionary<DateTime, Dictionary<string, TSummary?>>> getDictionary,
+            Action<Dictionary<string, TSummary?>, string, DateTime, CancellationToken> onAllReceived)
+            where TEventArgs : ExperimentEventArgs
+            where TSummary : class
+        {
+            if (!_experiments.TryGetValue(e.ExperimentId, out Experiment? experiment))
+            {
+                _logger.LogWarning("Received {SummaryName} update for unknown experiment. ExperimentId={ExperimentId}, SimulationId={SimulationId}", typeof(TSummary).Name, e.ExperimentId, e.SimulationId);
+                return;
+            }
+
+            if (!experiment.SimulationIds.Contains(e.SimulationId))
+            {
+                _logger.LogWarning("Received {SummaryName} update for unknown simulation. ExperimentId={ExperimentId}, SimulationId={SimulationId}", typeof(TSummary).Name, e.ExperimentId, e.SimulationId);
+                return;
+            }
+
+            var dateKey = e.Current.Date;
+            var dictionary = getDictionary(experiment);
+
+            // Lazily initialize the date entry with null slots for all simulations
+            if (!dictionary.TryGetValue(dateKey, out var summaryForSpecificDate))
+            {
+                summaryForSpecificDate = experiment.SimulationIds.ToDictionary(id => id, _ => (TSummary?)null);
+                dictionary[dateKey] = summaryForSpecificDate;
+            }
+
+            if (summaryForSpecificDate[e.SimulationId] != null)
+            {
+                _logger.LogWarning("Received duplicate {SummaryName} update. ExperimentId={ExperimentId}, SimulationId={SimulationId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, e.SimulationId, dateKey);
+                return;
+            }
+
+            summaryForSpecificDate[e.SimulationId] = getSummary(e);
+
+            // Check if all simulations have reported in for this date; if so, aggregate, store, and free memory
+            if (summaryForSpecificDate.All(kv => kv.Value != null))
+            {
+                _logger.LogInformation("All simulations received {SummaryName} for date {Date}. ExperimentId={ExperimentId}", typeof(TSummary).Name, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
+                onAllReceived(summaryForSpecificDate, e.ExperimentId, e.Current, e.Token);
+                dictionary.Remove(dateKey);
+            }
+        }
+
+        private void OnFlagUpdated(
+            ExperimentEventArgs e,
+            string eventName,
+            Func<Experiment, Dictionary<DateTime, Dictionary<string, bool?>>> getDictionary,
+            Action<string, DateTime, CancellationToken> onAllReceived)
+        {
+            if (!_experiments.TryGetValue(e.ExperimentId, out Experiment? experiment))
+            {
+                _logger.LogWarning("Received {EventName} for unknown experiment. ExperimentId={ExperimentId}, SimulationId={SimulationId}", eventName, e.ExperimentId, e.SimulationId);
+                return;
+            }
+
+            if (!experiment.SimulationIds.Contains(e.SimulationId))
+            {
+                _logger.LogWarning("Received {EventName} for unknown simulation. ExperimentId={ExperimentId}, SimulationId={SimulationId}", eventName, e.ExperimentId, e.SimulationId);
+                return;
+            }
+
+            var dateKey = e.Current.Date;
+            var dictionary = getDictionary(experiment);
+
+            // Lazily initialize the date entry with null slots for all simulations
+            if (!dictionary.TryGetValue(dateKey, out var flagsForDate))
+            {
+                flagsForDate = experiment.SimulationIds.ToDictionary(id => id, _ => (bool?)null);
+                dictionary[dateKey] = flagsForDate;
+            }
+
+            if (flagsForDate[e.SimulationId] != null)
+            {
+                _logger.LogWarning("Received duplicate {EventName}. ExperimentId={ExperimentId}, SimulationId={SimulationId}, Date={Date}", eventName, e.ExperimentId, e.SimulationId, dateKey.ToString("yyyy-MM-dd"));
+                return;
+            }
+
+            flagsForDate[e.SimulationId] = true;
+
+            // Check if all simulations have reported in for this date; if so, notify downstream and free memory
+            if (flagsForDate.All(kv => kv.Value != null))
+            {
+                _logger.LogInformation("All simulations received {EventName} for date {Date}. ExperimentId={ExperimentId}", eventName, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
+                onAllReceived(e.ExperimentId, e.Current, e.Token);
+                dictionary.Remove(dateKey);
+            }
         }
     }
 }

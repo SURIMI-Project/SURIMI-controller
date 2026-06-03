@@ -6,50 +6,48 @@ namespace SURIMI_controller.Services
 {
     public class MarketServiceClient : IMarketServiceClient
     {
-        private readonly WorkflowService.WorkflowServiceClient _marketWorkflowClient;
-        private readonly MarketProviderService.MarketProviderServiceClient _marketMarketProviderClient;
+        private readonly MarketService.MarketServiceClient _marketClient;
         private readonly ILogger<MarketServiceClient> _logger;
 
         public MarketServiceClient(GrpcClientFactory clientFactory, ILogger<MarketServiceClient> logger)
         {
-            _marketWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow");
-            _marketMarketProviderClient = clientFactory.CreateClient<MarketProviderService.MarketProviderServiceClient>("MarketMarketProvider");
+            _marketClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("Market");
             _logger = logger;
         }
 
-        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
+        public AsyncUnaryCall<InitialiseSimulationResponse>? AddInitialise(List<Task<InitialiseSimulationResponse>> initializationTasks, InitialiseSimulationRequest InitialiseSimulationRequest, CancellationToken cancellationToken = default)
         {
-            var initialiseResponse = _marketWorkflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken);
-            initializationTasks.Add(initialiseResponse.ResponseAsync);
-            return initialiseResponse;
+            var InitialiseSimulationResponse = _marketClient.InitialiseSimulationAsync(InitialiseSimulationRequest, cancellationToken: cancellationToken);
+            initializationTasks.Add(InitialiseSimulationResponse.ResponseAsync);
+            return InitialiseSimulationResponse;
         }
 
-        public async Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)
+        public async Task<CancelSimulationResponse> CancelSimulationAsync(CancelSimulationRequest cancelRequest, CancellationToken token)
         {
-            return await _marketWorkflowClient.CancelAsync(cancelRequest, cancellationToken: token);
+            return await _marketClient.CancelSimulationAsync(cancelRequest, cancellationToken: token);
         }
 
-        public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
+        public async Task<FinaliseSimulationResponse> FinaliseSimulationAsync(FinaliseSimulationRequest finaliseSimulationRequest, CancellationToken cancellationToken = default)
         {
-            return await _marketWorkflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken);
+            return await _marketClient.FinaliseSimulationAsync(finaliseSimulationRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<GetSpeciesPricesResponse> GetSpeciesPricesAsync(GetSpeciesPricesRequest getSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getSpeciesPricesRequest.SimulationId, current, "GetSpeciesPrices");
-            return await _marketMarketProviderClient.GetSpeciesPricesAsync(getSpeciesPricesRequest, cancellationToken: cancellationToken);
+            return await _marketClient.GetSpeciesPricesAsync(getSpeciesPricesRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
-            return await _marketWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
+            return await _marketClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateSalesRequest.SimulationId, current, "UpdateSales");
-            return await _marketMarketProviderClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
+            return await _marketClient.UpdateSalesAsync(updateSalesRequest, cancellationToken: cancellationToken);
         }
 
         private void LogStep(string simulationId, DateTime current, string step)

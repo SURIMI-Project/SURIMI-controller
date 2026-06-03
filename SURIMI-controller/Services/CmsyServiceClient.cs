@@ -1,88 +1,85 @@
-﻿using Grpc.Core;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
+using SURIMI_controller.Models;
 
 namespace SURIMI_controller.Services
 {
     public class CmsyServiceClient : ICmsyServiceClient
     {
         private readonly ILogger<CmsyServiceClient> _logger;
-        private readonly WorkflowService.WorkflowServiceClient _cmsyWorkflowClient;
-        private readonly EcologyConsumerService.EcologyConsumerServiceClient _cmsyEcologyConsumerClient;
-        private readonly CatchConsumerService.CatchConsumerServiceClient _cmsyCatchConsumerClient;
+        private readonly StockAssessmentService.StockAssessmentServiceClient _cmsyClient;
         private readonly bool _includeCmsy = Environment.GetEnvironmentVariable("EXCLUDE_CMSY")?.ToLower() != "true";
 
         public CmsyServiceClient(GrpcClientFactory clientFactory, ILogger<CmsyServiceClient> logger)
         {
-            _cmsyWorkflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow");
-            _cmsyEcologyConsumerClient = clientFactory.CreateClient<EcologyConsumerService.EcologyConsumerServiceClient>("CmsyEcologyConsumer");
-            _cmsyCatchConsumerClient = clientFactory.CreateClient<CatchConsumerService.CatchConsumerServiceClient>("CmsyCatchConsumer");
+            _cmsyClient = clientFactory.CreateClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy");
 
             _logger = logger;
         }
 
-        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default(CancellationToken))
+        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_includeCmsy)
             {
-                var initialiseResponse = _cmsyWorkflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken);
-                initializationTasks.Add(initialiseResponse.ResponseAsync);
-                return initialiseResponse;
+                var InitialiseExperimentResponse = _cmsyClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
+                initializationTasks.Add(InitialiseExperimentResponse.ResponseAsync);
+                return InitialiseExperimentResponse;
             }
             return null;
         }
 
-        public async Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)
+        public async Task<CancelExperimentResponse> CancelExperimentAsync(CancelExperimentRequest cancelRequest, CancellationToken token)
         {
             if (_includeCmsy)
             {
-                return await _cmsyWorkflowClient.CancelAsync(cancelRequest, cancellationToken: token);
+                return await _cmsyClient.CancelExperimentAsync(cancelRequest, cancellationToken: token);
             }
-            return new CancelResponse() { SimulationId = cancelRequest.SimulationId };
+            return new CancelExperimentResponse() { ExperimentId = cancelRequest.ExperimentId };
         }
 
-        public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
+        public async Task<ExperimentStepResponse> ExperimentStepAsync(ExperimentStepRequest experimentStepRequest, DateTime current, CancellationToken token)
         {
             if (_includeCmsy)
             {
-                return await _cmsyWorkflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken);
+                return await _cmsyClient.ExperimentStepAsync(experimentStepRequest, cancellationToken: token);
             }
-            return new FinaliseResponse() { SimulationId = finaliseRequest.SimulationId };
+            return new ExperimentStepResponse() { ExperimentId = experimentStepRequest.ExperimentId };
         }
 
-        public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
+        public async Task<FinaliseExperimentResponse> FinaliseExperimentAsync(FinaliseExperimentRequest finaliseExperimentRequest, CancellationToken cancellationToken = default)
         {
             if (_includeCmsy)
             {
-                LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
-                return await _cmsyWorkflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
+                return await _cmsyClient.FinaliseExperimentAsync(finaliseExperimentRequest, cancellationToken: cancellationToken);
             }
-            return new SimulateStepResponse() { SimulationId = simulationStepRequest.SimulationId };
+            return new FinaliseExperimentResponse() { ExperimentId = finaliseExperimentRequest.ExperimentId };
         }
 
-        public async Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassRequest, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateBiomassStatisticsResponse> UpdateBiomassStatistics(UpdateBiomassStatisticsRequest updateBiomassStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if (_includeCmsy)
+            if(_includeCmsy)
             {
-                LogStep(updateBiomassRequest.SimulationId, current, "UpdateBiomass");
-                return await _cmsyEcologyConsumerClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken);
+                LogStep(experimentId, current, "UpdateBiomassStatistics");
+                return await _cmsyClient.UpdateBiomassStatisticsAsync(updateBiomassStatisticsRequest, cancellationToken: cancellationToken);
             }
-            return new UpdateBiomassResponse() { SimulationId = updateBiomassRequest.SimulationId };
+            return new UpdateBiomassStatisticsResponse() { ExperimentId = experimentId };
         }
 
-        public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateCatchDispositionStatisticsResponse> UpdateCatchDispositionStatistics(UpdateCatchDispositionStatisticsRequest updateCatchDispositionStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if (_includeCmsy)
+            if(_includeCmsy)
             {
-                LogStep(updateCatchDispositionRequest.SimulationId, current, "UpdateCatchDisposition");
-                return await _cmsyCatchConsumerClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
+                LogStep(experimentId, current, "UpdateCatchDispositionStatistics");
+                return await _cmsyClient.UpdateCatchDispositionStatisticsAsync(updateCatchDispositionStatisticsRequest, cancellationToken: cancellationToken);
             }
-            return new UpdateCatchDispositionResponse() { SimulationId = updateCatchDispositionRequest.SimulationId };
+            return new UpdateCatchDispositionStatisticsResponse() { ExperimentId = experimentId };
         }
 
-        private void LogStep(string simulationId, DateTime current, string step)
+        private void LogStep(string experimentId, DateTime current, string step)
         {
-            _logger.LogInformation("{SimulationId} Processing step CMSY.{Step}. {DateTime}", simulationId, step, current);
+            _logger.LogInformation("{ExperimentId} Processing step CMSY.{Step}. {DateTime}", experimentId, step, current);
         }
     }
 }

@@ -2,8 +2,9 @@
 
 namespace SURIMI_controller.Services
 {
-    public interface IValueChainServiceClient : IWorkflowService
+    public interface IValueChainServiceClient : IExperimentService
     {
-        Task<UpdateSalesResponse> UpdateSalesAsync(UpdateSalesRequest updateSalesRequest, DateTime current, CancellationToken cancellationToken);
+        Task<UpdateSalesStatisticsResponse> UpdateSalesStatisticsAsync(UpdateSalesStatisticsRequest updateSalesStatisticsRequest, DateTime current, CancellationToken cancellationToken);
+
     }
 }

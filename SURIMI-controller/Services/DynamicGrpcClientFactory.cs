@@ -1,11 +1,13 @@
 ﻿using Grpc.Core;
+using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Logging;
 
 namespace SURIMI_controller.Services
 {
     public class DynamicGrpcClientFactory
     {
-        public static TClient CreateClient<TClient>(string address)
+        public static TClient CreateClient<TClient>(string address, ILogger<GrpcErrorDetailLoggingInterceptor> logger)
             where TClient : ClientBase<TClient>
         {
             var channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions
@@ -19,7 +21,8 @@ namespace SURIMI_controller.Services
                 }
             });
 
-            return (TClient)Activator.CreateInstance(typeof(TClient), channel)!;
+            var invoker = channel.Intercept(new GrpcErrorDetailLoggingInterceptor(logger));
+            return (TClient)Activator.CreateInstance(typeof(TClient), invoker)!;
         }
     }
 }

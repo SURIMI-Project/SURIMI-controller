@@ -14,33 +14,33 @@ namespace SURIMI_controller.Services
             _ecopathSimDispatcher = ecopathSimDispatcher;
         }
 
-        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
+        public AsyncUnaryCall<InitialiseSimulationResponse>? AddInitialise(List<Task<InitialiseSimulationResponse>> initializationTasks, InitialiseSimulationRequest InitialiseSimulationRequest, CancellationToken cancellationToken = default)
         {
-            var initialiseResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, InitialiseRequest, InitialiseResponse>(initialiseRequest, initialiseRequest.SimulationId,
-                (client, req) => client.InitialiseAsync(req));
-            initializationTasks.Add(initialiseResponse.ResponseAsync);
-            return initialiseResponse;
+            var InitialiseSimulationResponse = _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, InitialiseSimulationRequest, InitialiseSimulationResponse>(InitialiseSimulationRequest, InitialiseSimulationRequest.SimulationId,
+                (client, req) => client.InitialiseSimulationAsync(req));
+            initializationTasks.Add(InitialiseSimulationResponse.ResponseAsync);
+            return InitialiseSimulationResponse;
         }
 
-        public async Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)
+        public async Task<CancelSimulationResponse> CancelSimulationAsync(CancelSimulationRequest cancelRequest, CancellationToken token)
         {
-            var ecopathCancelResponse = await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, CancelRequest, CancelResponse>(cancelRequest, cancelRequest.SimulationId,
-                (client, req) => client.CancelAsync(req));
+            var ecopathCancelSimulationResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, CancelSimulationRequest, CancelSimulationResponse>(cancelRequest, cancelRequest.SimulationId,
+                (client, req) => client.CancelSimulationAsync(req));
 
             _ecopathSimDispatcher.ReleasePodFromSimulation(cancelRequest.SimulationId);
-            return ecopathCancelResponse;
+            return ecopathCancelSimulationResponse;
         }
-        public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
+        public async Task<FinaliseSimulationResponse> FinaliseSimulationAsync(FinaliseSimulationRequest finaliseSimulationRequest, CancellationToken cancellationToken = default)
         {
-            var _finaliseResponse = await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, FinaliseRequest, FinaliseResponse>(finaliseRequest, finaliseRequest.SimulationId,
-                (client, req) => client.FinaliseAsync(req));
+            var _finaliseResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, FinaliseSimulationRequest, FinaliseSimulationResponse>(finaliseSimulationRequest, finaliseSimulationRequest.SimulationId,
+                (client, req) => client.FinaliseSimulationAsync(req));
             return _finaliseResponse;
         }
 
         public async Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getCatchDispositionRequest.SimulationId, current, "GetCatchDisposition");
-            var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<CatchProviderService.CatchProviderServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, getCatchDispositionRequest.SimulationId,
+            var ecopathCatchDispositionSummary = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, getCatchDispositionRequest.SimulationId,
             (client, req) => client.GetCatchDispositionAsync(req, cancellationToken: cancellationToken));
             return ecopathCatchDispositionSummary;
         }
@@ -48,7 +48,7 @@ namespace SURIMI_controller.Services
         public async Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getSalesRequest.SimulationId, current, "GetSales");
-            var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<SalesProviderService.SalesProviderServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, getSalesRequest.SimulationId,
+            var ecopathGetSalesResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, getSalesRequest.SimulationId,
                 (client, req) => client.GetSalesAsync(req, cancellationToken: cancellationToken));
             return ecopathGetSalesResponse;
         }
@@ -56,7 +56,7 @@ namespace SURIMI_controller.Services
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(simulationStepRequest.SimulationId, current, "Ecopath.SimulateStep");
-            var simulateStep = await _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, SimulateStepRequest, SimulateStepResponse>(simulationStepRequest, simulationStepRequest.SimulationId,
+            var simulateStep = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, SimulateStepRequest, SimulateStepResponse>(simulationStepRequest, simulationStepRequest.SimulationId,
                 (client, req) => client.SimulateStepAsync(req, cancellationToken: cancellationToken));
             return simulateStep;
         }
@@ -64,7 +64,7 @@ namespace SURIMI_controller.Services
         public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateCatchDispositionRequest.SimulationId, current, "UpdateCatchDisposition Summary");
-            var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<CatchConsumerService.CatchConsumerServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionRequest, updateCatchDispositionRequest.SimulationId,
+            var catchDispositionResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionRequest, updateCatchDispositionRequest.SimulationId,
               (client, req) => client.UpdateCatchDispositionAsync(req, cancellationToken: cancellationToken));
             return catchDispositionResponse;
         }
@@ -72,7 +72,7 @@ namespace SURIMI_controller.Services
         public async Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdateSpeciesPrices");
-            var ecopathUpdatePricesResponse = await _ecopathSimDispatcher.DispatchAsync<SpeciesPriceConsumerService.SpeciesPriceConsumerServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updateSpeciesPricesRequest, updateSpeciesPricesRequest.SimulationId,
+            var ecopathUpdatePricesResponse = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updateSpeciesPricesRequest, updateSpeciesPricesRequest.SimulationId,
                (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: cancellationToken));
             return ecopathUpdatePricesResponse;
         }
@@ -80,7 +80,7 @@ namespace SURIMI_controller.Services
         public async Task<GetBiomassResponse> GetBiomassAsync(GetBiomassRequest getBiomassRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getBiomassRequest.SimulationId, current, "GetBiomass");
-            var getBiomassResponseIntermediate = await _ecopathSimDispatcher.DispatchAsync<EcologyProviderService.EcologyProviderServiceClient, GetBiomassRequest, GetBiomassResponse>(getBiomassRequest, getBiomassRequest.SimulationId,
+            var getBiomassResponseIntermediate = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(getBiomassRequest, getBiomassRequest.SimulationId,
                 (client, req) => client.GetBiomassAsync(req, cancellationToken: cancellationToken));
             return getBiomassResponseIntermediate;
         }
@@ -93,7 +93,7 @@ namespace SURIMI_controller.Services
         public async Task<UpdateEnvironmentVariablesResponse> UpdateEnvironmentVariablesAsync(UpdateEnvironmentVariablesRequest updateEnvironmentVariablesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateEnvironmentVariablesRequest.SimulationId, current, "UpdateEnvironmentVariables");
-            var response = await _ecopathSimDispatcher.DispatchAsync<EnvironmentConsumerService.EnvironmentConsumerServiceClient, UpdateEnvironmentVariablesRequest, UpdateEnvironmentVariablesResponse>(updateEnvironmentVariablesRequest, updateEnvironmentVariablesRequest.SimulationId,
+            var response = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, UpdateEnvironmentVariablesRequest, UpdateEnvironmentVariablesResponse>(updateEnvironmentVariablesRequest, updateEnvironmentVariablesRequest.SimulationId,
                 (client, req) => client.UpdateEnvironmentVariablesAsync(req, cancellationToken: cancellationToken));
             return response;
         }
@@ -101,7 +101,7 @@ namespace SURIMI_controller.Services
         public async Task<UpdateRegulationsResponse> UpdateRegulationsAsync(UpdateRegulationsRequest updateRegulationsRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateRegulationsRequest.SimulationId, current, "UpdateRegulations");
-            var response = await _ecopathSimDispatcher.DispatchAsync<RegulationsConsumerService.RegulationsConsumerServiceClient, UpdateRegulationsRequest, UpdateRegulationsResponse>(updateRegulationsRequest, updateRegulationsRequest.SimulationId,
+            var response = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, UpdateRegulationsRequest, UpdateRegulationsResponse>(updateRegulationsRequest, updateRegulationsRequest.SimulationId,
                 (client, req) => client.UpdateRegulationsAsync(req, cancellationToken: cancellationToken));
             return response;
         }
@@ -109,7 +109,7 @@ namespace SURIMI_controller.Services
         public async Task<GetFishingActivityResponse> GetFishingActivityAsync(GetFishingActivityRequest getFishingActivityRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getFishingActivityRequest.SimulationId, current, "GetFishingActivity");
-            var response = await _ecopathSimDispatcher.DispatchAsync<RegulationsConsumerService.RegulationsConsumerServiceClient, GetFishingActivityRequest, GetFishingActivityResponse>(getFishingActivityRequest, getFishingActivityRequest.SimulationId,
+            var response = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetFishingActivityRequest, GetFishingActivityResponse>(getFishingActivityRequest, getFishingActivityRequest.SimulationId,
                 (client, req) => client.GetFishingActivityAsync(req, cancellationToken: cancellationToken));
             return response;
         }

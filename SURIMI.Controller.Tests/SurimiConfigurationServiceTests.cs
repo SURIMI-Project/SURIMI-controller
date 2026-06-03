@@ -244,7 +244,7 @@ namespace SURIMI_controller.ConfigurationService.Tests
             };
 
         [Theory, MemberData(nameof(Cases))]
-        public async Task TestSimulationManagerAddStepSize(
+        public void TestSimulationManagerAddStepSize(
             string input,
             DateTime current,
             DateTime expectedDate)

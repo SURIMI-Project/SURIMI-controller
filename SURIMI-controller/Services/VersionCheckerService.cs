@@ -8,22 +8,27 @@ namespace SURIMI_controller.Services
     {
         private readonly ILogger<VersionCheckerService> _logger;
 
-        private readonly Dictionary<string, WorkflowService.WorkflowServiceClient> _workflowClients;
+        private readonly FisheryService.FisheryServiceClient _fisheryServiceClient;
+        private readonly StockAssessmentService.StockAssessmentServiceClient _stockAssessmentServiceClient;
+        private readonly ValueChainService.ValueChainServiceClient _valueChainServiceClient;
+        private readonly MarketService.MarketServiceClient _marketServiceClient;
+        private readonly FisheriesAuthorityService.FisheriesAuthorityServiceClient _fisheriesAuthorityServiceClient;
+        private readonly EnvironmentService.EnvironmentServiceClient _environmentServiceClient;
+        private readonly OutputCreatorService.OutputCreatorServiceClient _outputCreatorServiceClient;
+
         private readonly SimulationDispatcher _ecopathSimDispatcher;
         private readonly ProtocolVersionService _protocolVersionService;
 
         public VersionCheckerService(GrpcClientFactory clientFactory, ILogger<VersionCheckerService> logger, SimulationDispatcher ecopathSimDispatcher, ProtocolVersionService protocolVersionService)
         {
-            _workflowClients = new Dictionary<string, WorkflowService.WorkflowServiceClient>
-            {
-                { "PoseidonWorkflow", clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("PoseidonWorkflow") },
-                { "CmsyWorkflow", clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("CmsyWorkflow") },
-                { "AggregatorWorkflow", clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("AggregatorWorkflow") },
-                { "ValueChainWorkflow", clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("ValueChainWorkflow") },
-                { "MarketWorkflow", clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("MarketWorkflow") },
-                { "EnvironmentWorkflow", clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("EnvironmentWorkflow") },
-                { "FisheriesAuthorityWorkflow", clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("FisheriesAuthorityWorkflow") }
-            };
+            _fisheryServiceClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("Poseidon");
+            _stockAssessmentServiceClient = clientFactory.CreateClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy");
+            _valueChainServiceClient = clientFactory.CreateClient<ValueChainService.ValueChainServiceClient>("ValueChain");
+            _marketServiceClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("Market");
+            _fisheriesAuthorityServiceClient = clientFactory.CreateClient<FisheriesAuthorityService.FisheriesAuthorityServiceClient>("FisheriesAuthority");
+            _environmentServiceClient = clientFactory.CreateClient<EnvironmentService.EnvironmentServiceClient>("Environment");
+            _outputCreatorServiceClient = clientFactory.CreateClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator");
+
             _ecopathSimDispatcher = ecopathSimDispatcher;
             _protocolVersionService = protocolVersionService;
             _logger = logger;
@@ -33,23 +38,17 @@ namespace SURIMI_controller.Services
         {
             var versions = new Dictionary<string, string>();
 
-            foreach (var client in _workflowClients)
-            {
-                try
-                {
-                    var version = client.Value.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
-                    versions[client.Key] = version;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to get version from service {ServiceName}", client.Key);
-                    versions[client.Key] = "Error";
-                }
-            }
+            versions["Poseidon"] = _fisheryServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
+            versions["Cmsy"] = _stockAssessmentServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
+            versions["OutputCreator"] = _outputCreatorServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
+            versions["ValueChain"] = _valueChainServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
+            versions["Market"] = _marketServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
+            versions["FisheriesAuthority"] = _fisheriesAuthorityServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
+            versions["Environment"] = _environmentServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
 
             try
             {
-                var ecopathGetProtocolVersionResponse = _ecopathSimDispatcher.DispatchAsync<WorkflowService.WorkflowServiceClient, GetProtocolVersionRequest, GetProtocolVersionResponse>(
+                var ecopathGetProtocolVersionResponse = _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetProtocolVersionRequest, GetProtocolVersionResponse>(
                     new GetProtocolVersionRequest(),
                     "dummy",
                     (client, req) => client.GetProtocolVersionAsync(req));

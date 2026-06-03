@@ -2,7 +2,7 @@
 
 namespace SURIMI_controller.Services
 {
-    public interface IEcopathServiceClient : IWorkflowService
+    public interface IEcopathServiceClient : ISimulationService
     {
         Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, DateTime current, CancellationToken cancellationToken);
         Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, DateTime current, CancellationToken cancellationToken);

@@ -6,21 +6,21 @@ using SURIMI.Datamodel;
 
 namespace SURIMI_controller.Services
 {
-    public class SurimiControllerService : ControllerService.ControllerServiceBase
+    public class ControllerService : Grpc.Surimi.ControllerService.ControllerServiceBase
     {
-        private readonly ILogger<SurimiControllerService> _logger;
+        private readonly ILogger<ControllerService> _logger;
 
         private readonly IExperimentManager _experimentManager;
         private readonly ISurimiConfigurationService _surimiConfigurationService;
 
-        public SurimiControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<SurimiControllerService> logger, ISurimiConfigurationService surimiConfigurationService)
+        public ControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<ControllerService> logger, ISurimiConfigurationService surimiConfigurationService)
         {
             _logger = logger;
             _experimentManager = experimentManager;
             _surimiConfigurationService = surimiConfigurationService;
         }
 
-        public override async Task<InitialiseExperimentResponse> InitialiseExperiment(InitialiseExperimentRequest request, ServerCallContext context)
+        public override async Task<SubmitExperimentResponse> SubmitExperiment(SubmitExperimentRequest request, ServerCallContext context)
         {
             _logger.LogInformation("Simulation {ExperimentId} is initializing", request.ExperimentId);
             System.Diagnostics.Activity.Current?.SetTag("experiment_id", request.ExperimentId);
@@ -30,27 +30,18 @@ namespace SURIMI_controller.Services
 
             var simulation = GetSimulation(surimiConfiguration);
 
-            await _experimentManager.InitialiseExperiment(request, simulation, context.CancellationToken);
+            await _experimentManager.SubmitExperiment(request, simulation, context.CancellationToken);
 
-            return new InitialiseExperimentResponse() { ExperimentId = request.ExperimentId };
+            return new SubmitExperimentResponse() { ExperimentId = request.ExperimentId };
         }
 
-        public override Task<RunExperimentResponse> RunExperiment(RunExperimentRequest request, ServerCallContext context)
-        {
-            _logger.LogInformation("Running experiment {ExperimentId} ...", request.ExperimentId);
-            System.Diagnostics.Activity.Current?.SetTag("Running experiment {ExperimentId} ...", request.ExperimentId);
-            _experimentManager.RunExperimentAsync(request.ExperimentId, context.CancellationToken);
-
-            return Task.FromResult(new RunExperimentResponse() { ExperimentId = request.ExperimentId });
-        }
-
-        public override async Task<CancelExperimentResponse> CancelExperiment(CancelExperimentRequest request, ServerCallContext context)
+        public override async Task<RemoveExperimentResponse> RemoveExperiment(RemoveExperimentRequest request, ServerCallContext context)
         {
             _logger.LogInformation("Cancel Experiment {ExperimentId}", request.ExperimentId);
             System.Diagnostics.Activity.Current?.SetTag("Experiment_id", request.ExperimentId);
             await _experimentManager.CancelExperimentAsync(request.ExperimentId, context.CancellationToken);
 
-            return new CancelExperimentResponse() { ExperimentId = request.ExperimentId };
+            return new RemoveExperimentResponse() { ExperimentId = request.ExperimentId };
         }
 
         public override async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatuses(GetAllSimulationStatusesRequest get, ServerCallContext context)

@@ -2,7 +2,7 @@
 
 namespace SURIMI_controller.Services
 {
-    public interface IPoseidonServiceClient : IWorkflowService
+    public interface IPoseidonServiceClient : ISimulationService
     {
         Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, DateTime current, CancellationToken cancellationToken);
         Task<GetFishingActivityResponse> GetFishingActivityAsync(GetFishingActivityRequest fishingActivityRequest, DateTime current, CancellationToken cancellationToken);
