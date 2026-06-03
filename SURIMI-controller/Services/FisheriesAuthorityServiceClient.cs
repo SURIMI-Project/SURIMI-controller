@@ -1,70 +1,66 @@
 ﻿using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
-using SURIMI.Datamodel;
 
 namespace SURIMI_controller.Services
 {
     public class FisheriesAuthorityServiceClient : IFisheriesAuthorityServiceClient
     {
-        private readonly WorkflowService.WorkflowServiceClient _workflowClient;
-        private readonly RegulationsProviderService.RegulationsProviderServiceClient _regulationsProviderClient;
-        private readonly CatchConsumerService.CatchConsumerServiceClient _catchConsumerClient;
+        private readonly FisheriesAuthorityService.FisheriesAuthorityServiceClient _fisheriesAuthorityServiceClient;
         private readonly ILogger<FisheriesAuthorityServiceClient> _logger;
 
         public FisheriesAuthorityServiceClient(GrpcClientFactory clientFactory, ILogger<FisheriesAuthorityServiceClient> logger)
         {
-            _workflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("FisheriesAuthorityWorkflow");
-            _regulationsProviderClient = clientFactory.CreateClient<RegulationsProviderService.RegulationsProviderServiceClient>("FisheriesAuthorityRegulationsProvider");
-            _catchConsumerClient = clientFactory.CreateClient<CatchConsumerService.CatchConsumerServiceClient>("FisheriesAuthorityCatchConsumer");
+            _fisheriesAuthorityServiceClient = clientFactory.CreateClient<FisheriesAuthorityService.FisheriesAuthorityServiceClient>("FisheriesAuthority");
             _logger = logger;
         }
 
-        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
+        public AsyncUnaryCall<InitialiseSimulationResponse>? AddInitialise(List<Task<InitialiseSimulationResponse>> initializationTasks, InitialiseSimulationRequest InitialiseSimulationRequest, CancellationToken cancellationToken = default)
         {
-            var initialiseResponse = _workflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken);
-            initializationTasks.Add(initialiseResponse.ResponseAsync);
-            return initialiseResponse;
+            var InitialiseSimulationResponse = _fisheriesAuthorityServiceClient.InitialiseSimulationAsync(InitialiseSimulationRequest, cancellationToken: cancellationToken);
+            initializationTasks.Add(InitialiseSimulationResponse.ResponseAsync);
+            return InitialiseSimulationResponse;
         }
 
-        public async Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)
+        public async Task<CancelSimulationResponse> CancelSimulationAsync(CancelSimulationRequest cancelRequest, CancellationToken token)
         {
-            return await _workflowClient.CancelAsync(cancelRequest, cancellationToken: token);
+            return await _fisheriesAuthorityServiceClient.CancelSimulationAsync(cancelRequest, cancellationToken: token);
         }
 
         public async Task<CreateRegulationsResponse> CreateRegulationsAsync(CreateRegulationsRequest createRegulationsRequest, CancellationToken cancellationToken)
         {
             LogStep(createRegulationsRequest.SimulationId, DateTime.UtcNow, "CreateRegulations");
-            return await _regulationsProviderClient.CreateRegulationsAsync(createRegulationsRequest, cancellationToken: cancellationToken);
+            return await _fisheriesAuthorityServiceClient.CreateRegulationsAsync(createRegulationsRequest, cancellationToken: cancellationToken);
         }
 
-        public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
+        public async Task<FinaliseSimulationResponse> FinaliseSimulationAsync(FinaliseSimulationRequest finaliseSimulationRequest, CancellationToken cancellationToken = default)
         {
-            return await _workflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken);
+            LogStep(finaliseSimulationRequest.SimulationId, DateTime.UtcNow, "FinaliseSimulation");
+            return await _fisheriesAuthorityServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<GetRegulationsResponse> GetRegulationsAsync(GetRegulationsRequest getRegulationsRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getRegulationsRequest.SimulationId, current, "GetRegulations");
-            return await _regulationsProviderClient.GetRegulationsAsync(getRegulationsRequest, cancellationToken: cancellationToken);
+            return await _fisheriesAuthorityServiceClient.GetRegulationsAsync(getRegulationsRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
-            return await _workflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
+            return await _fisheriesAuthorityServiceClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateCatchDispositionRequest.SimulationId, current, "UpdateCatchDisposition");
-            return await _catchConsumerClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
+            return await _fisheriesAuthorityServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<UpdateFishingActivityResponse> UpdateFishingActivityAsync(UpdateFishingActivityRequest updateFishingActivityRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateFishingActivityRequest.SimulationId, current, "UpdateFishingActivity");
-            return await _regulationsProviderClient.UpdateFishingActivityAsync(updateFishingActivityRequest, cancellationToken: cancellationToken);
+            return await _fisheriesAuthorityServiceClient.UpdateFishingActivityAsync(updateFishingActivityRequest, cancellationToken: cancellationToken);
         }
 
         private void LogStep(string simulationId, DateTime current, string step)

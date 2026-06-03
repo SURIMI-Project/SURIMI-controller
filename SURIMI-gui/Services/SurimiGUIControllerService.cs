@@ -22,12 +22,12 @@ namespace SURIMI_gui.Services
         public async Task<string> Init(Models.ExperimentConfig config, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set. In a Blazor application, the Activity.Current might be unaltered which causes telemetry to use the same TraceId for all requests, leading to confusion in telemetry data.
-            InitialiseExperimentResponse reply;
+            SubmitExperimentResponse reply;
             try
             {
-                reply = await _controllerClient.InitialiseExperimentAsync(new InitialiseExperimentRequest
+                reply = await _controllerClient.SubmitExperimentAsync(new SubmitExperimentRequest
                 {
-                    ScenarioId = config.ScenarioId ?? "",
+                    ScenarioName = config.ScenarioName ?? "",
                     EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(DateTime.SpecifyKind(config.EndDateTime.Value, DateTimeKind.Utc)) : null,
                     ExperimentId = config.ExperimentId,
                     NumberOfRuns = config.NumberOfRuns
@@ -47,12 +47,12 @@ namespace SURIMI_gui.Services
             return reply.ExperimentId;
         }
 
-        public async Task<string> CancelExperimentAsync(string experimentId, CancellationToken token)
+        public async Task<string> RemoveExperimentAsync(string experimentId, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set
             try
             {
-                var reply = await _controllerClient.CancelExperimentAsync(new CancelExperimentRequest() { ExperimentId = experimentId }, cancellationToken: token);
+                var reply = await _controllerClient.RemoveExperimentAsync(new RemoveExperimentRequest() { ExperimentId = experimentId }, cancellationToken: token);
             }
             catch (RpcException ex)
             {
@@ -89,7 +89,7 @@ namespace SURIMI_gui.Services
             {
                 SimulationId = sim.SimulationId,
                 ExperimentId = sim.ExperimentId,
-                ScenarioId = sim.ScenarioId,
+                ScenarioName = sim.ScenarioName,
                 StartDateTime = sim.StartDateTime.ToDateTime(),
                 EndDateTime = sim.EndDateTime.ToDateTime(),
                 SimulationStarted = sim.SimulationStarted?.ToDateTime(),

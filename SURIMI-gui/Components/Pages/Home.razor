@@ -29,9 +29,9 @@
         {
             <EditForm Model="config" OnSubmit="HandleInit">
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label">Scenario Id</label>
+                    <label class="col-md-2 col-form-label">Scenario Name</label>
                     <div class="col-md-2">
-                        <input type="text" class="form-control" @bind="config.ScenarioId">
+                        <input type="text" class="form-control" @bind="config.ScenarioName">
                     </div>
                 </div>
                 <div class="form-group row">
@@ -109,7 +109,7 @@ else
                 <tr>
                     <td>@sim.SimulationId.Split('-')[0]</td>
                     <td>@sim.ExperimentId.Split('-')[0]</td>
-                    <td>@sim.ScenarioId</td>
+                    <td>@sim.ScenarioName</td>
                     <td>@sim.StartDateTime.ToLocalTime().ToString("dd-MM-yyyy")</td>
                     <td>@sim.EndDateTime.ToLocalTime().ToString("dd-MM-yyyy")</td>
                     <td>@sim.Status</td>
@@ -233,7 +233,7 @@ else
         if (controllerService != null)
         {
             result = "";
-            result = await controllerService.CancelExperimentAsync(sim.ExperimentId, CancellationToken.None);
+            result = await controllerService.RemoveExperimentAsync(sim.ExperimentId, CancellationToken.None);
             // Optionally refresh simulations list
             simulations = await controllerService.GetAllSimulationsAsync(CancellationToken.None);
 

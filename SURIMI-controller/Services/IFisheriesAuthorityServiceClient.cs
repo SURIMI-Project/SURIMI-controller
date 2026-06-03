@@ -2,7 +2,7 @@
 
 namespace SURIMI_controller.Services
 {
-    public interface IFisheriesAuthorityServiceClient : IWorkflowService
+    public interface IFisheriesAuthorityServiceClient : ISimulationService
     {
         Task<GetRegulationsResponse> GetRegulationsAsync(GetRegulationsRequest getRegulationsRequest, DateTime current, CancellationToken cancellationToken);
         Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken);

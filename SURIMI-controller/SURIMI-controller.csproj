@@ -10,9 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.80.10001.54+70c35458b1f4" />
+    <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.80.10001.71+81d0f7607726" />
     <PackageReference Include="Eii.BlobStore.S3" Version="1.0.*" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
+    <PackageReference Include="Grpc.StatusProto" Version="2.80.0" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
     <PackageReference Include="SURIMI.Common" Version="1.0.*" />
     <PackageReference Include="SURIMI.Datamodel" Version="3.0.*" />

@@ -1,54 +1,62 @@
 ﻿using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
-using SURIMI.Datamodel;
 
 namespace SURIMI_controller.Services
 {
     public class EnvironmentServiceClient : IEnvironmentServiceClient
     {
-        private readonly WorkflowService.WorkflowServiceClient _workflowClient;
-        private readonly EnvironmentProviderService.EnvironmentProviderServiceClient _environmentProviderClient;
+        private readonly EnvironmentService.EnvironmentServiceClient _environmentClient;
         private readonly ILogger<EnvironmentServiceClient> _logger;
+        private readonly Dictionary<(string ExperimentId, DateTime Date), GetEnvironmentVariablesResponse> _cache = new();
 
         public EnvironmentServiceClient(GrpcClientFactory clientFactory, ILogger<EnvironmentServiceClient> logger)
         {
-            _workflowClient = clientFactory.CreateClient<WorkflowService.WorkflowServiceClient>("EnvironmentWorkflow");
-            _environmentProviderClient = clientFactory.CreateClient<EnvironmentProviderService.EnvironmentProviderServiceClient>("EnvironmentEnvironmentProvider");
+            _environmentClient = clientFactory.CreateClient<EnvironmentService.EnvironmentServiceClient>("Environment");
             _logger = logger;
         }
 
-        public AsyncUnaryCall<InitialiseResponse>? AddInitialise(List<Task<InitialiseResponse>> initializationTasks, InitialiseRequest initialiseRequest, CancellationToken cancellationToken = default)
+        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default)
         {
-            var initialiseResponse = _workflowClient.InitialiseAsync(initialiseRequest, cancellationToken: cancellationToken);
-            initializationTasks.Add(initialiseResponse.ResponseAsync);
-            return initialiseResponse;
+            var initialiseExperimentResponse = _environmentClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
+            initializationTasks.Add(initialiseExperimentResponse.ResponseAsync);
+            return initialiseExperimentResponse;
         }
 
-        public async Task<CancelResponse> CancelAsync(CancelRequest cancelRequest, CancellationToken token)
+        public async Task<CancelExperimentResponse> CancelExperimentAsync(CancelExperimentRequest cancelRequest, CancellationToken token)
         {
-            return await _workflowClient.CancelAsync(cancelRequest, cancellationToken: token);
+            return await _environmentClient.CancelExperimentAsync(cancelRequest, cancellationToken: token);
         }
 
-        public async Task<FinaliseResponse> FinaliseAsync(FinaliseRequest finaliseRequest, CancellationToken cancellationToken = default)
+        public async Task<FinaliseExperimentResponse> FinaliseExperimentAsync(FinaliseExperimentRequest finaliseExperimentRequest, CancellationToken cancellationToken = default)
         {
-            return await _workflowClient.FinaliseAsync(finaliseRequest, cancellationToken: cancellationToken);
+            return await _environmentClient.FinaliseExperimentAsync(finaliseExperimentRequest, cancellationToken: cancellationToken);
         }
 
-        public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
+        public async Task<ExperimentStepResponse> ExperimentStepAsync(ExperimentStepRequest experimentStepRequest, DateTime current, CancellationToken token)
         {
-            return await _workflowClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
+            return await _environmentClient.ExperimentStepAsync(experimentStepRequest, cancellationToken: token);
         }
 
-        public async Task<GetEnvironmentVariablesResponse> GetEnvironmentVariables(GetEnvironmentVariablesRequest getEnvironmentVariablesRequest, DateTime current, CancellationToken cancellationToken)
+        public async Task<GetEnvironmentVariablesResponse> GetEnvironmentVariables(GetEnvironmentVariablesRequest getEnvironmentVariablesRequest, DateTime current, CancellationToken token)
         {
-            LogStep(getEnvironmentVariablesRequest.SimulationId, current, "GetEnvironmentVariables");
-            return await _environmentProviderClient.GetEnvironmentVariablesAsync(getEnvironmentVariablesRequest, cancellationToken: cancellationToken);
+            var cacheKey = (getEnvironmentVariablesRequest.ExperimentId, current.Date);
+
+            if (_cache.TryGetValue(cacheKey, out var cached))
+            {
+                _logger.LogInformation("{ExperimentId} Cache hit for Environment.GetEnvironmentVariables. {DateTime}", getEnvironmentVariablesRequest.ExperimentId, current);
+                return cached;
+            }
+
+            LogStep(getEnvironmentVariablesRequest.ExperimentId, current, "GetEnvironmentVariables");
+            var response = await _environmentClient.GetEnvironmentVariablesAsync(getEnvironmentVariablesRequest, cancellationToken: token);
+            _cache[cacheKey] = response;
+            return response;
         }
 
-        private void LogStep(string simulationId, DateTime current, string step)
+        private void LogStep(string experimentId, DateTime current, string step)
         {
-            _logger.LogInformation("{SimulationId} Processing step Environment.{Step}. {DateTime}", simulationId, step, current);
+            _logger.LogInformation("{ExperimentId} Processing step Environment.{Step}. {DateTime}", experimentId, step, current);
         }
     }
 }

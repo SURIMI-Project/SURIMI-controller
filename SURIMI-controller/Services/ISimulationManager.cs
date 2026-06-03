@@ -1,11 +1,21 @@
 ﻿using Grpc.Surimi;
+using SURIMI_controller.Models;
 
 namespace SURIMI_controller.Services
 {
     public interface ISimulationManager
     {
+        event EventHandler<BiomassEventArgs> BiomassUpdated;
+        event EventHandler<CatchDispositionEventArgs> CatchDispositionUpdated;
+        event EventHandler<SalesEventArgs> SalesUpdated;
+        event EventHandler<FishingActivityEventArgs> FishingActivityUpdated;
+        event EventHandler<ExperimentEventArgs> SimulateStep;
+        event EventHandler<ExperimentEventArgs>? SimulationFinalised;
+        event EventHandler<ExperimentEventArgs>? SimulationCancelled;
+        event EventHandler<SpeciesPriceEventArgs>? SpeciesPriceUpdated;
+
         Task CancelSimulationAsync(string simulationId);
-        Task RunSimulationAsync(string simulationId, string experimentId, string scenarioId, DateTime? endDateTime, Simulation simulation, RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken);
+        Task RunSimulationAsync(string simulationId, string experimentId, string scenarioName, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken);
         Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken);
     }
 }

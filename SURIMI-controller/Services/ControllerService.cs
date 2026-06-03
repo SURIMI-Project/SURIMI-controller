@@ -6,14 +6,14 @@ using SURIMI.Datamodel;
 
 namespace SURIMI_controller.Services
 {
-    public class SurimiControllerService : ControllerService.ControllerServiceBase
+    public class ControllerService : Grpc.Surimi.ControllerService.ControllerServiceBase
     {
-        private readonly ILogger<SurimiControllerService> _logger;
+        private readonly ILogger<ControllerService> _logger;
 
         private readonly IExperimentManager _experimentManager;
         private readonly ISurimiConfigurationService _surimiConfigurationService;
 
-        public SurimiControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<SurimiControllerService> logger, ISurimiConfigurationService surimiConfigurationService)
+        public ControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<ControllerService> logger, ISurimiConfigurationService surimiConfigurationService)
         {
             _logger = logger;
             _experimentManager = experimentManager;
@@ -35,13 +35,13 @@ namespace SURIMI_controller.Services
             return new SubmitExperimentResponse() { ExperimentId = request.ExperimentId };
         }
 
-        public override async Task<CancelExperimentResponse> CancelExperiment(CancelExperimentRequest request, ServerCallContext context)
+        public override async Task<RemoveExperimentResponse> RemoveExperiment(RemoveExperimentRequest request, ServerCallContext context)
         {
             _logger.LogInformation("Cancel Experiment {ExperimentId}", request.ExperimentId);
             System.Diagnostics.Activity.Current?.SetTag("Experiment_id", request.ExperimentId);
             await _experimentManager.CancelExperimentAsync(request.ExperimentId, context.CancellationToken);
 
-            return new CancelExperimentResponse() { ExperimentId = request.ExperimentId };
+            return new RemoveExperimentResponse() { ExperimentId = request.ExperimentId };
         }
 
         public override async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatuses(GetAllSimulationStatusesRequest get, ServerCallContext context)

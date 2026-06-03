@@ -98,7 +98,7 @@ namespace SURIMI_gui.Services
 
                 _logger.LogInformation("Successfully retrieved {Count} services from EDITO DataLab", rootobject?.apps.Length ?? 0);
 
-                return rootobject.apps.Where(a => a.id.StartsWith("surimi")).ToList();
+                return rootobject?.apps.Where(a => a.id.StartsWith("surimi")).ToList() ?? new List<Models.App>();
             }
             catch (HttpRequestException ex)
             {
