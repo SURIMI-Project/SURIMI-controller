@@ -6,14 +6,14 @@ using SURIMI_controller.Services;
 
 namespace SURIMI_controller.ConfigurationService.Tests
 {
-    public class SurimiConfigurationServiceTests
+    public class ConfigurationServiceTests
     {
         private readonly string testYaml;
-        private readonly Mock<ILogger<SurimiConfigurationService>> _loggerMock = new();
+        private readonly Mock<ILogger<ConfigurationService>> _loggerMock = new();
         private readonly Mock<IBlobStore> _blobStore = new();
 
 
-        public SurimiConfigurationServiceTests()
+        public ConfigurationServiceTests()
         {
             testYaml =
     """
@@ -225,7 +225,7 @@ namespace SURIMI_controller.ConfigurationService.Tests
         public void ReadYamlShouldReturnOK()
         {
             // Arrange
-            var service = new SurimiConfigurationService(_loggerMock.Object, _blobStore.Object);
+            var service = new ConfigurationService(_loggerMock.Object, _blobStore.Object);
 
             // Act
             var conf = service.DeserialiseConfiguration(testYaml);

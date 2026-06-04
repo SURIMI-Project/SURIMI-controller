@@ -2,7 +2,7 @@
 
 namespace SURIMI_controller.ConfigurationService
 {
-    public interface ISurimiConfigurationService
+    public interface IConfigurationService
     {
         SurimiConfiguration DeserialiseConfiguration(string yaml);
         Task<SurimiConfiguration> ReadConfigurationAsync(string contractName);
