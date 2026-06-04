@@ -8,7 +8,7 @@ namespace SURIMI_controller.Services
     {
         private readonly ILogger<OutputCreatorServiceClient> _logger;
         private readonly OutputCreatorService.OutputCreatorServiceClient _outputCreatorServiceClient;
-        private readonly bool _includeOutputCreator = Environment.GetEnvironmentVariable("EXCLUDE_OUTPUT")?.ToLower() != "true";
+        private readonly bool _includeOutputCreator = Environment.GetEnvironmentVariable("EXCLUDE_OUTPUTCREATOR")?.ToLower() != "true";
 
         public OutputCreatorServiceClient(GrpcClientFactory clientFactory, ILogger<OutputCreatorServiceClient> logger)
         {
