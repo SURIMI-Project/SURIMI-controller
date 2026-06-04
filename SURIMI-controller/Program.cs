@@ -59,7 +59,7 @@ public class Program
         builder.Services.AddTransient<ISurimiConfigurationService, SurimiConfigurationService>();
         builder.Services.AddTransient<ICmsyServiceClient, CmsyServiceClient>();
         builder.Services.AddTransient<IValueChainServiceClient, ValueChainServiceClient>();
-        builder.Services.AddTransient<IPoseidonServiceClient, PoseidonServiceClient>();
+        builder.Services.AddSingleton<IPoseidonServiceClient, PoseidonServiceClient>(); // singleton because it holds state about the current experiment (e.g. which fishery models are currently loaded)
         builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
         builder.Services.AddTransient<IEcopathServiceClient, EcopathServiceClient>();
         builder.Services.AddTransient<IEnvironmentServiceClient, EnvironmentServiceClient>();
