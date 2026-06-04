@@ -1,5 +1,6 @@
 using Eii.BlobStore;
 using Eii.BlobStore.S3;
+using Grpc.Net.Client.Configuration;
 using Grpc.Surimi;
 using SURIMI.Common.gRPC;
 using SURIMI.Common.gRPC.Services;
@@ -136,10 +137,35 @@ public class Program
                 options.Credentials = Grpc.Core.ChannelCredentials.Insecure;
                 options.MaxReceiveMessageSize = 100 * 1024 * 1024; // 100 MB
                 options.MaxSendMessageSize = 100 * 1024 * 1024;    // 100 MB
-                options.HttpHandler = new SocketsHttpHandler
+                // Note: options.HttpHandler must NOT be set here — setting it disables gRPC built-in retry.
+                // The SocketsHttpHandler is configured separately via ConfigurePrimaryHttpMessageHandler below.
+                options.ServiceConfig = new ServiceConfig
                 {
-                    EnableMultipleHttp2Connections = true
+                    MethodConfigs =
+                    {
+                        new MethodConfig
+                        {
+                            Names = { MethodName.Default },
+                            RetryPolicy = new RetryPolicy
+                            {
+                                MaxAttempts = 4,
+                                InitialBackoff = TimeSpan.FromMilliseconds(500),
+                                MaxBackoff = TimeSpan.FromSeconds(5),
+                                BackoffMultiplier = 1.5,
+                                RetryableStatusCodes = { Grpc.Core.StatusCode.Unavailable }
+                            }
+                        }
+                    }
                 };
+            });
+
+            // Configure the HTTP handler separately so gRPC built-in retry remains active.
+            // PooledConnectionLifetime forces periodic DNS re-resolution, preventing stale
+            // entries after pod restarts in Kubernetes.
+            registration.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                EnableMultipleHttp2Connections = true,
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5)
             });
             //            .EnableCallContextPropagation();
         }
