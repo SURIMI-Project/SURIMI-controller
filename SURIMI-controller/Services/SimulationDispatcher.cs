@@ -112,6 +112,32 @@ namespace SURIMI_controller.Services
             }
         }
 
+        public async Task<TResponse> DispatchWithRetryAsync<TClient, TRequest, TResponse>(
+            TRequest request,
+            string simulationId,
+            Func<TClient, TRequest, AsyncUnaryCall<TResponse>> grpcMethod,
+            int maxRetries = 3,
+            int retryDelayMs = 500)
+            where TClient : ClientBase<TClient>
+        {
+            for (var attempt = 0; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    return await DispatchAsync(request, simulationId, grpcMethod);
+                }
+                catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable && attempt < maxRetries)
+                {
+                    _logger.LogWarning("Transient gRPC Unavailable for simulationId {SimulationId} (attempt {Attempt}/{MaxRetries}), retrying in {DelayMs}ms…",
+                        simulationId, attempt + 1, maxRetries, retryDelayMs);
+                    await Task.Delay(retryDelayMs);
+                }
+            }
+
+            // Final attempt – let any exception propagate
+            return await DispatchAsync(request, simulationId, grpcMethod);
+        }
+
         public void ReleasePodFromSimulation(string simulationId)
         {
             if (simulationToPodMap.TryRemove(simulationId, out var pod))

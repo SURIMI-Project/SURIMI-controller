@@ -6,12 +6,12 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace SURIMI_controller.ConfigurationService
 {
-    public class SurimiConfigurationService : ISurimiConfigurationService
+    public class ConfigurationService : IConfigurationService
     {
-        private readonly ILogger<SurimiConfigurationService> _logger;
+        private readonly ILogger<ConfigurationService> _logger;
         private readonly IBlobStore _blobStore;
 
-        public SurimiConfigurationService(ILogger<SurimiConfigurationService> logger, IBlobStore blobStore)
+        public ConfigurationService(ILogger<ConfigurationService> logger, IBlobStore blobStore)
         {
             _logger = logger;
             _blobStore = blobStore;

@@ -5,12 +5,17 @@ namespace SURIMI_controller.Services
 {
     public class AggregatorService : IAggregatorService
     {
+        /// <summary>
+        /// This method takes a list of BiomassSummary objects (which may contain nulls) of the same time period, and aggregates them into a single BiomassStatisticsSummary.
+        /// </summary>
+        /// <param name="biomassSummaries">The list of BiomassSummary objects to aggregate.</param>
+        /// <returns>A BiomassStatisticsSummary containing the aggregated statistics.</returns>
         public BiomassStatisticsSummary AddAggregateBiomass(List<BiomassSummary?> biomassSummaries)
         {
             var result = new BiomassStatisticsSummary();
 
-            var validSummaries = biomassSummaries.Where(s => s != null).Select(s => s!).ToList();
-            if (validSummaries.Count == 0)
+            var validSummaries = biomassSummaries?.Where(s => s != null).Select(s => s!).ToList();
+            if (validSummaries == null || validSummaries.Count == 0)
                 return result;
 
             var allSpeciesCodes = validSummaries
@@ -74,8 +79,8 @@ namespace SURIMI_controller.Services
         {
             var result = new CatchDispositionStatisticsSummary();
 
-            var validSummaries = catchDispositionSummaries.Where(s => s != null).Select(s => s!).ToList();
-            if (validSummaries.Count == 0)
+            var validSummaries = catchDispositionSummaries?.Where(s => s != null).Select(s => s!).ToList();
+            if (validSummaries == null || validSummaries.Count == 0)
                 return result;
 
             var allGridKeys = validSummaries
@@ -108,14 +113,16 @@ namespace SURIMI_controller.Services
 
                 foreach (var (lat, lon) in allCellLocations)
                 {
-                    var values = validSummaries
+                    var cells = validSummaries
                         .Select(s => s.DispositionGrids
                             .Where(matchingGrids)
                             .SelectMany(g => g.DispositionCells)
                             .FirstOrDefault(c => c.Latitude == lat && c.Longitude == lon))
-                        .Select(c => c?.GrossCatch ?? 0.0)
-                        .OrderBy(v => v)
-                        .ToArray();
+                        .ToList();
+
+                    var grossCatch = cells.Select(c => c?.GrossCatch ?? 0.0).OrderBy(v => v).ToArray();
+                    var liveDiscards = cells.Select(c => c?.LiveDiscards ?? 0.0).OrderBy(v => v).ToArray();
+                    var deadDiscards = cells.Select(c => c?.DeadDiscards ?? 0.0).OrderBy(v => v).ToArray();
 
                     gridStats.DispositionCellsStatistics.Add(new DispositionCellStatistics
                     {
@@ -123,9 +130,21 @@ namespace SURIMI_controller.Services
                         Longitude = lon,
                         GrossCatch = new DoubleStatistics
                         {
-                            Mean = Statistics.Mean(values),
-                            P05 = Statistics.Percentile(values, 5),
-                            P95 = Statistics.Percentile(values, 95)
+                            Mean = Statistics.Mean(grossCatch),
+                            P05 = Statistics.Percentile(grossCatch, 5),
+                            P95 = Statistics.Percentile(grossCatch, 95)
+                        },
+                        LiveDiscards = new DoubleStatistics
+                        {
+                            Mean = Statistics.Mean(liveDiscards),
+                            P05 = Statistics.Percentile(liveDiscards, 5),
+                            P95 = Statistics.Percentile(liveDiscards, 95)
+                        },
+                        DeadDiscards = new DoubleStatistics
+                        {
+                            Mean = Statistics.Mean(deadDiscards),
+                            P05 = Statistics.Percentile(deadDiscards, 5),
+                            P95 = Statistics.Percentile(deadDiscards, 95)
                         }
                     });
                 }

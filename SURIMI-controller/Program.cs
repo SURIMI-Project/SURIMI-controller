@@ -56,7 +56,7 @@ public class Program
         builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();
         builder.Services.AddSingleton<IAggregatorService, AggregatorService>();
 
-        builder.Services.AddTransient<ISurimiConfigurationService, SurimiConfigurationService>();
+        builder.Services.AddTransient<IConfigurationService, ConfigurationService.ConfigurationService>();
         builder.Services.AddTransient<ICmsyServiceClient, CmsyServiceClient>();
         builder.Services.AddTransient<IValueChainServiceClient, ValueChainServiceClient>();
         builder.Services.AddSingleton<IPoseidonServiceClient, PoseidonServiceClient>(); // singleton because it holds state about the current experiment (e.g. which fishery models are currently loaded)

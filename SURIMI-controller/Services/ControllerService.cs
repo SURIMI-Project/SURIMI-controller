@@ -11,9 +11,9 @@ namespace SURIMI_controller.Services
         private readonly ILogger<ControllerService> _logger;
 
         private readonly IExperimentManager _experimentManager;
-        private readonly ISurimiConfigurationService _surimiConfigurationService;
+        private readonly IConfigurationService _surimiConfigurationService;
 
-        public ControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<ControllerService> logger, ISurimiConfigurationService surimiConfigurationService)
+        public ControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<ControllerService> logger, IConfigurationService surimiConfigurationService)
         {
             _logger = logger;
             _experimentManager = experimentManager;
