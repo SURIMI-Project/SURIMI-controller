@@ -99,11 +99,12 @@ public class Program
         }
         logger.LogInformation("============================= End of Environment Variables =============================");
 
-        // Retrieve version Checker service and log versions of connected services
-        var versionChecker = app.Services.GetRequiredService<VersionCheckerService>();
         Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(5));  // run after a short delay to allow other services (docker instances) to start up
+            // Retrieve version Checker service and log versions of connected services
+            var versionChecker = app.Services.GetRequiredService<VersionCheckerService>();
+            await Task.Delay(TimeSpan.FromSeconds(10));  // run after a short delay to allow other services (docker instances) to start up
+            logger.LogInformation("Checking versions of connected services...");
             versionChecker.WriteVersions();
         });
         app.Run();
