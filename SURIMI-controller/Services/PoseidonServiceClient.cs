@@ -28,6 +28,7 @@ namespace SURIMI_controller.Services
             {
                 var InitialiseSimulationResponse = _fisheryClient.InitialiseSimulationAsync(InitialiseSimulationRequest, cancellationToken: cancellationToken);
                 initializationTasks.Add(InitialiseSimulationResponse.ResponseAsync);
+                LogStep(InitialiseSimulationRequest.SimulationId, DateTime.UtcNow, "AddInitialise (InitialiseSimulation)");
                 return InitialiseSimulationResponse;
             }
 
@@ -39,6 +40,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(cancelRequest.SimulationId))
                 return Task.FromResult(new CancelSimulationResponse() { SimulationId = cancelRequest.SimulationId });
+            LogStep(cancelRequest.SimulationId, DateTime.UtcNow, "CancelSimulation");
             return _fisheryClient.CancelSimulationAsync(cancelRequest, cancellationToken: token).ResponseAsync;
         }
 
@@ -46,6 +48,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(finaliseSimulationRequest.SimulationId))
                 return Task.FromResult(new FinaliseSimulationResponse() { SimulationId = finaliseSimulationRequest.SimulationId });
+            LogStep(finaliseSimulationRequest.SimulationId, DateTime.UtcNow, "FinaliseSimulation");
             return _fisheryClient.FinaliseSimulationAsync(finaliseSimulationRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 

@@ -7,8 +7,14 @@ using System.Collections.Concurrent;
 
 namespace SURIMI_controller.Services
 {
+    /// <summary>
+    /// Central orchestrator for SURIMI experiments.
+    /// Wires <see cref="ISimulationManager"/> events, fans out downstream gRPC calls,
+    /// and aggregates per-simulation summaries once all runs have reported in for a given date.
+    /// </summary>
     public class ExperimentManager : IExperimentManager
     {
+        /// <summary>Active experiments keyed by <c>ExperimentId</c>.</summary>
         private readonly ConcurrentDictionary<string, Experiment> _experiments = new();
 
         private readonly ISimulationManager _simulationManager;
@@ -18,6 +24,10 @@ namespace SURIMI_controller.Services
         private readonly IOutputCreatorServiceClient _outputCreatorClient;
         private readonly IEnvironmentServiceClient _environmentServiceClient;
 
+        /// <summary>
+        /// Initializes a new <see cref="ExperimentManager"/> and subscribes to all
+        /// <see cref="ISimulationManager"/> events.
+        /// </summary>
         public ExperimentManager(GrpcClientFactory clientFactory, ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient)
         {
             _simulationManager = simulationManager;
@@ -27,6 +37,7 @@ namespace SURIMI_controller.Services
             _outputCreatorClient = outputCreatorClient;
             _environmentServiceClient = environmentServiceClient;
 
+            // Subscribe to all simulation lifecycle and data events
             _simulationManager.SimulateStep += OnSimulateStep;
             _simulationManager.SimulationFinalised += OnSimulationFinalised;
             _simulationManager.SimulationCancelled += OnSimulationCancelled;
@@ -37,6 +48,14 @@ namespace SURIMI_controller.Services
             _simulationManager.SpeciesPriceUpdated += OnSpeciesPriceUpdated;
         }
 
+        /// <summary>
+        /// Registers a new experiment, initialises downstream services, and launches
+        /// all simulation runs in a background task.
+        /// Returns immediately — the experiment continues running in the background.
+        /// </summary>
+        /// <param name="request">Experiment configuration, including number of runs and scenario.</param>
+        /// <param name="simulation">Shared simulation parameters forwarded to every run.</param>
+        /// <param name="cancellationToken">Token used to cancel the background work.</param>
         public Task SubmitExperiment(SubmitExperimentRequest request, Grpc.Surimi.Simulation simulation, CancellationToken cancellationToken)
         {
             if (_experiments.ContainsKey(request.ExperimentId))
@@ -44,7 +63,7 @@ namespace SURIMI_controller.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {request.ExperimentId} is already submitteded"));
             }
 
-            // Create a dictionary to hold the aggregated simulation data for each simulation in the experiment
+            // Generate a unique simulation ID for each requested run
             var simulationIds = Enumerable.Range(0, request.NumberOfRuns)
                 .Select(_ => Guid.NewGuid().ToString())
                 .ToList();
@@ -66,11 +85,13 @@ namespace SURIMI_controller.Services
                     SimulationIds = { _experiments[request.ExperimentId].SimulationIds },
                 };
 
+                // Kick off initialisation on all downstream services in parallel
                 var initializationTasks = new List<Task<InitialiseExperimentResponse>>();
                 var cmsyTask = _cmsyServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
                 var outputCreatorTask = _outputCreatorClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
                 var environmentTask = _environmentServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
 
+                // Start all simulation runs concurrently
                 var initTasks = _experiments[request.ExperimentId].SimulationIds.Select(async simulationId =>
                 {
                     try
@@ -103,6 +124,9 @@ namespace SURIMI_controller.Services
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Cancels all simulation runs belonging to the specified experiment in parallel.
+        /// </summary>
         public async Task CancelExperimentAsync(string experimentId, CancellationToken cancellationToken)
         {
             if (!_experiments.ContainsKey(experimentId))
@@ -126,11 +150,22 @@ namespace SURIMI_controller.Services
             await Task.WhenAll(cancelTasks);
         }
 
+        /// <inheritdoc/>
         public async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken)
         {
             return await _simulationManager.GetAllSimulationStatussesAsync(cancellationToken);
         }
 
+        // -------------------------------------------------------------------------
+        // Flag event handlers — each delegates to OnFlagUpdated; fire-and-forget
+        // downstream calls are intentionally not awaited.
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Raised when a simulation reports that the current time step is ready to advance.
+        /// Fans out <see cref="IExperimentStepRequest"/> to CMSY, Environment, and OutputCreator
+        /// once all runs have checked in for the date.
+        /// </summary>
         private void OnSimulateStep(object? sender, ExperimentEventArgs e) =>
             OnFlagUpdated(
                 e,
@@ -144,6 +179,10 @@ namespace SURIMI_controller.Services
                     _outputCreatorClient.ExperimentStepAsync(request, current: current, token: token);
                 });
 
+        /// <summary>
+        /// Raised when all simulations have completed successfully.
+        /// Fans out <see cref="FinaliseExperimentRequest"/> to CMSY, Environment, and OutputCreator.
+        /// </summary>
         private void OnSimulationFinalised(object? sender, ExperimentEventArgs e) =>
             OnFlagUpdated(
                 e,
@@ -157,6 +196,10 @@ namespace SURIMI_controller.Services
                     _outputCreatorClient.FinaliseExperimentAsync(request, token);
                 });
 
+        /// <summary>
+        /// Raised when all simulations have been cancelled.
+        /// Fans out <see cref="CancelExperimentRequest"/> to CMSY, Environment, and OutputCreator.
+        /// </summary>
         private void OnSimulationCancelled(object? sender, ExperimentEventArgs e) =>
             OnFlagUpdated(
                 e,
@@ -170,6 +213,15 @@ namespace SURIMI_controller.Services
                     _outputCreatorClient.CancelExperimentAsync(request, token);
                 });
 
+        // -------------------------------------------------------------------------
+        // Summary event handlers — each delegates to OnSummaryUpdated; downstream
+        // calls are fire-and-forget and intentionally not awaited.
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Aggregates <see cref="BiomassSummary"/> data across all runs for a date and
+        /// forwards the resulting statistics to CMSY and OutputCreator.
+        /// </summary>
         private void OnBiomassUpdated(object? sender, BiomassEventArgs e) =>
             OnSummaryUpdated(
                 e,
@@ -188,6 +240,10 @@ namespace SURIMI_controller.Services
                     _outputCreatorClient.UpdateBiomassStatistics(updateBomassStatisticsRequest, experimentId, current, token);
                 });
 
+        /// <summary>
+        /// Aggregates <see cref="CatchDispositionSummary"/> data across all runs for a date and
+        /// forwards the resulting statistics to CMSY and OutputCreator.
+        /// </summary>
         private void OnCatchDispositionUpdated(object? sender, CatchDispositionEventArgs e) =>
             OnSummaryUpdated(
                 e,
@@ -206,6 +262,10 @@ namespace SURIMI_controller.Services
                     _outputCreatorClient.UpdateCatchDispositionStatistics(updateCatchDispositionStatisticsRequest, experimentId, current, token);
                 });
 
+        /// <summary>
+        /// Aggregates <see cref="SalesSummary"/> data across all runs for a date and
+        /// forwards the resulting statistics to OutputCreator.
+        /// </summary>
         private void OnSalesUpdated(object? sender, SalesEventArgs e) =>
             OnSummaryUpdated(
                 e,
@@ -217,6 +277,10 @@ namespace SURIMI_controller.Services
                     _outputCreatorClient.UpdateSalesStatistics(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
                 });
 
+        /// <summary>
+        /// Aggregates <see cref="FishingActivitySummary"/> data across all runs for a date and
+        /// forwards the resulting statistics to OutputCreator.
+        /// </summary>
         private void OnFishingActivityUpdated(object? sender, FishingActivityEventArgs e) =>
             OnSummaryUpdated(
                 e,
@@ -228,6 +292,10 @@ namespace SURIMI_controller.Services
                     _outputCreatorClient.UpdateFishingActivityStatistics(new UpdateFishingActivityStatisticsRequest() { ExperimentId = experimentId, FishingActivityStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
                 });
 
+        /// <summary>
+        /// Aggregates <see cref="SpeciesPriceSummary"/> data across all runs for a date and
+        /// forwards the resulting statistics to OutputCreator.
+        /// </summary>
         private void OnSpeciesPriceUpdated(object? sender, SpeciesPriceEventArgs e) =>
             OnSummaryUpdated(
                 e,
@@ -239,6 +307,28 @@ namespace SURIMI_controller.Services
                     _outputCreatorClient.UpdateSpeciesPriceStatistics(new UpdateSpeciesPriceStatisticsRequest() { ExperimentId = experimentId, SpeciesPriceStatisticsSummary = statisticsSummary, DateTime = current.ToTimestamp() }, experimentId, current, token);
                 });
 
+        // -------------------------------------------------------------------------
+        // Aggregation helpers
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Generic handler for Summary simulation events.
+        /// <para>
+        /// Lazily initialises a <c>(date → simulationId → TSummary?)</c> bucket, records the
+        /// incoming summary, and calls <paramref name="onAllReceived"/> once every simulation
+        /// in the experiment has reported in for the current date. The date bucket is then
+        /// removed to free memory.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="TEventArgs">Event args type; must derive from <see cref="ExperimentEventArgs"/>.</typeparam>
+        /// <typeparam name="TSummary">Summary type.</typeparam>
+        /// <param name="e">The incoming event args.</param>
+        /// <param name="getSummary">Extracts the summary from the event args.</param>
+        /// <param name="getDictionary">Returns the per-date tracking dictionary from an <see cref="Experiment"/>.</param>
+        /// <param name="onAllReceived">
+        /// Callback invoked when all simulations have reported; receives the fully-populated
+        /// date bucket, the experiment ID, the current date, and a cancellation token.
+        /// </param>
         private void OnSummaryUpdated<TEventArgs, TSummary>(
             TEventArgs e,
             Func<TEventArgs, TSummary> getSummary,
@@ -269,6 +359,7 @@ namespace SURIMI_controller.Services
                 dictionary[dateKey] = summaryForSpecificDate;
             }
 
+            // Guard against duplicate events from the same simulation on the same date
             if (summaryForSpecificDate[e.SimulationId] != null)
             {
                 _logger.LogWarning("Received duplicate {SummaryName} update. ExperimentId={ExperimentId}, SimulationId={SimulationId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, e.SimulationId, dateKey);
@@ -286,6 +377,22 @@ namespace SURIMI_controller.Services
             }
         }
 
+        /// <summary>
+        /// Generic handler for flag-only simulation events. (cancel, finalise, simulate step)
+        /// <para>
+        /// Lazily initialises a <c>(date → simulationId → bool?)</c> bucket, marks the
+        /// simulation as having fired the event, and calls <paramref name="onAllReceived"/>
+        /// once every simulation has checked in for the current date. The date bucket is then
+        /// removed to free memory.
+        /// </para>
+        /// </summary>
+        /// <param name="e">The incoming event args.</param>
+        /// <param name="eventName">Name of the event, used for structured logging.</param>
+        /// <param name="getDictionary">Returns the per-date flag dictionary from an <see cref="Experiment"/>.</param>
+        /// <param name="onAllReceived">
+        /// Callback invoked when all simulations have reported; receives the experiment ID,
+        /// the current date, and a cancellation token.
+        /// </param>
         private void OnFlagUpdated(
             ExperimentEventArgs e,
             string eventName,
@@ -314,6 +421,7 @@ namespace SURIMI_controller.Services
                 dictionary[dateKey] = flagsForDate;
             }
 
+            // Guard against duplicate events from the same simulation on the same date
             if (flagsForDate[e.SimulationId] != null)
             {
                 _logger.LogWarning("Received duplicate {EventName}. ExperimentId={ExperimentId}, SimulationId={SimulationId}, Date={Date}", eventName, e.ExperimentId, e.SimulationId, dateKey.ToString("yyyy-MM-dd"));
