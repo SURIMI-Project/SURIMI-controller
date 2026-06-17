@@ -1,4 +1,5 @@
-﻿using Grpc.Net.ClientFactory;
+﻿using Grpc.Core;
+using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using SURIMI.Common.gRPC.Services;
 
@@ -34,35 +35,58 @@ namespace SURIMI_controller.Services
             _logger = logger;
         }
 
-        public void WriteVersions()
+        public async Task WriteVersionsAsync(CancellationToken cancellationToken = default)
         {
-            var versions = new Dictionary<string, string>();
-
-            versions["Poseidon"] = _fisheryServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
-            versions["Cmsy"] = _stockAssessmentServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
-            versions["OutputCreator"] = _outputCreatorServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
-            versions["ValueChain"] = _valueChainServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
-            versions["Market"] = _marketServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
-            versions["FisheriesAuthority"] = _fisheriesAuthorityServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
-            versions["Environment"] = _environmentServiceClient.GetProtocolVersion(new GetProtocolVersionRequest()).ProtocolVersion;
-
-            try
+            var tasks = new List<Task<(string Name, string Version)>>
             {
-                var ecopathGetProtocolVersionResponse = _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetProtocolVersionRequest, GetProtocolVersionResponse>(
-                    new GetProtocolVersionRequest(),
-                    "dummy",
-                    (client, req) => client.GetProtocolVersionAsync(req));
-                var response = ecopathGetProtocolVersionResponse.GetAwaiter().GetResult();
-                versions["EcopathWorkflow"] = response.ProtocolVersion;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get version from Ecopath");
-                versions["EcopathWorkflow"] = "Error";
-            }
+                GetVersionWithRetryAsync("Poseidon",          async () => (await _fisheryServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
+                GetVersionWithRetryAsync("Cmsy",              async () => (await _stockAssessmentServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
+                GetVersionWithRetryAsync("OutputCreator",     async () => (await _outputCreatorServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
+                GetVersionWithRetryAsync("ValueChain",        async () => (await _valueChainServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
+                GetVersionWithRetryAsync("Market",            async () => (await _marketServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
+                GetVersionWithRetryAsync("FisheriesAuthority",async () => (await _fisheriesAuthorityServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
+                GetVersionWithRetryAsync("Environment",       async () => (await _environmentServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
+                GetVersionWithRetryAsync("EcopathWorkflow",   async () =>
+                {
+                    var response = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetProtocolVersionRequest, GetProtocolVersionResponse>(
+                        new GetProtocolVersionRequest(),
+                        "dummy",
+                        (client, req) => client.GetProtocolVersionAsync(req, cancellationToken: cancellationToken));
+                    return response.ProtocolVersion;
+                }, cancellationToken),
+            };
+
+            var results = await Task.WhenAll(tasks);
+
+            var versions = results.ToDictionary(r => r.Name, r => r.Version);
             versions["Controller"] = _protocolVersionService.LoadVersion();
-            var versionSummary = string.Join(Environment.NewLine, versions.Select(kvp => $"  {kvp.Key, -27}: {kvp.Value}"));
+
+            var versionSummary = string.Join(Environment.NewLine, versions.Select(kvp => $"  {kvp.Key,-27}: {kvp.Value}"));
             _logger.LogInformation("Protocol versions:{NewLine}{VersionSummary}", Environment.NewLine, versionSummary);
+        }
+
+        private async Task<(string Name, string Version)> GetVersionWithRetryAsync(string serviceName, Func<Task<string>> getVersion, CancellationToken ct)
+        {
+            var initialDelay = TimeSpan.FromSeconds(2);
+            var maxDelay = TimeSpan.FromSeconds(30);
+            var attempt = 0;
+
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                try
+                {
+                    var version = await getVersion();
+                    return (serviceName, version);
+                }
+                catch (Exception ex) when (ex is RpcException or HttpRequestException)
+                {
+                    var delay = TimeSpan.FromSeconds(Math.Min(maxDelay.TotalSeconds, initialDelay.TotalSeconds * Math.Pow(2, attempt)));
+                    _logger.LogWarning("{ServiceName} not yet available ({Message}). Retrying in {Delay}s...", serviceName, ex.Message, (int)delay.TotalSeconds);
+                    await Task.Delay(delay, ct);
+                    attempt++;
+                }
+            }
         }
     }
 }
