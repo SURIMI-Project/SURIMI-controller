@@ -12,7 +12,7 @@ namespace SURIMI_controller;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
@@ -77,6 +77,11 @@ public class Program
             {
                 c.TimestampFormat = "[HH:mm:ss] ";
             });
+            // Polly logs noisy retry attempts at Warning level for transient DNS/connection failures.
+            // These are expected during Kubernetes pod startup and are handled by GetVersionWithRetryAsync,
+            // so suppress Polly output below Error to keep logs clean.
+            opt.AddFilter("Polly", LogLevel.Error);
+            opt.AddFilter("Microsoft.Extensions.Http.Resilience", LogLevel.Error);
         });
 
         var app = builder.Build();
@@ -99,20 +104,18 @@ public class Program
         }
         logger.LogInformation("============================= End of Environment Variables =============================");
 
-        Task.Run(async () =>
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        var versionChecker = app.Services.GetRequiredService<VersionCheckerService>();
+        try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-            var versionChecker = app.Services.GetRequiredService<VersionCheckerService>();
-            try
-            {
-                logger.LogInformation("Checking versions of connected services (retrying until all are available)...");
-                await versionChecker.WriteVersionsAsync(cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                logger.LogWarning("Version check timed out after 10 minutes. Some services may not have become available.");
-            }
-        });
+            logger.LogInformation("Checking versions of connected services (retrying until all are available)...");
+            await versionChecker.WriteVersionsAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("Version check timed out after 10 minutes. Some services may not have become available.");
+        }
+
         app.Run();
 
 
