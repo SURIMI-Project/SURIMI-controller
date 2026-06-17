@@ -101,11 +101,17 @@ public class Program
 
         Task.Run(async () =>
         {
-            // Retrieve version Checker service and log versions of connected services
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             var versionChecker = app.Services.GetRequiredService<VersionCheckerService>();
-            await Task.Delay(TimeSpan.FromSeconds(10));  // run after a short delay to allow other services (docker instances) to start up
-            logger.LogInformation("Checking versions of connected services...");
-            versionChecker.WriteVersions();
+            try
+            {
+                logger.LogInformation("Checking versions of connected services (retrying until all are available)...");
+                await versionChecker.WriteVersionsAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                logger.LogWarning("Version check timed out after 10 minutes. Some services may not have become available.");
+            }
         });
         app.Run();
 
