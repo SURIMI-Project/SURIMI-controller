@@ -54,7 +54,7 @@ namespace SURIMI_controller.Services
             return new FinaliseExperimentResponse() { ExperimentId = finaliseExperimentRequest.ExperimentId };
         }
 
-        public async Task<UpdateBiomassStatisticsResponse> UpdateBiomassStatistics(UpdateBiomassStatisticsRequest updateBiomassStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateBiomassStatisticsResponse> UpdateBiomassStatisticsAsync(UpdateBiomassStatisticsRequest updateBiomassStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeOutputCreator)
             {
@@ -64,7 +64,7 @@ namespace SURIMI_controller.Services
             return new UpdateBiomassStatisticsResponse() { ExperimentId = updateBiomassStatisticsRequest.ExperimentId };
         }
 
-        public async Task<UpdateCatchDispositionStatisticsResponse> UpdateCatchDispositionStatistics(UpdateCatchDispositionStatisticsRequest updateCatchDispositionStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateCatchDispositionStatisticsResponse> UpdateCatchDispositionStatisticsAsync(UpdateCatchDispositionStatisticsRequest updateCatchDispositionStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeOutputCreator)
             {
@@ -74,7 +74,7 @@ namespace SURIMI_controller.Services
             return new UpdateCatchDispositionStatisticsResponse() { ExperimentId = updateCatchDispositionStatisticsRequest.ExperimentId };
         }
 
-        public async Task<UpdateFishingActivityStatisticsResponse> UpdateFishingActivityStatistics(UpdateFishingActivityStatisticsRequest updateFishingActivityStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateFishingActivityStatisticsResponse> UpdateFishingActivityStatisticsAsync(UpdateFishingActivityStatisticsRequest updateFishingActivityStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeOutputCreator)
             {
@@ -84,7 +84,7 @@ namespace SURIMI_controller.Services
             return new UpdateFishingActivityStatisticsResponse() { ExperimentId = updateFishingActivityStatisticsRequest.ExperimentId };
         }
 
-        public async Task<UpdateSalesStatisticsResponse> UpdateSalesStatistics(UpdateSalesStatisticsRequest updateSalesStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateSalesStatisticsResponse> UpdateSalesStatisticsAsync(UpdateSalesStatisticsRequest updateSalesStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeOutputCreator)
             {
@@ -94,7 +94,7 @@ namespace SURIMI_controller.Services
             return new UpdateSalesStatisticsResponse() { ExperimentId = updateSalesStatisticsRequest.ExperimentId };
         }
 
-        public async Task<UpdateSpeciesPriceStatisticsResponse> UpdateSpeciesPriceStatistics(UpdateSpeciesPriceStatisticsRequest updateSpeciesPriceStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateSpeciesPriceStatisticsResponse> UpdateSpeciesPriceStatisticsAsync(UpdateSpeciesPriceStatisticsRequest updateSpeciesPriceStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
             if (_includeOutputCreator)
             {
