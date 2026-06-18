@@ -15,9 +15,6 @@ public class Program
         builder.Services.AddSingleton<SurimiGUIControllerService>();
         builder.Services.AddTransient<VaultService>();
 
-        // Add EDITO DataLab service
-        builder.Services.AddHttpClient<EditoDataLabService>();
-
         // Add services to the container.
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();

@@ -51,7 +51,7 @@ namespace SURIMI_controller.Services
 
         public override async Task<GetSimulationContractResponse> GetSimulationContract(GetSimulationContractRequest request, ServerCallContext context)
         {
-            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(@"western_med");
+            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(@"western-med");
             var simulation = GetSimulation(surimiConfiguration);
             return new GetSimulationContractResponse() { Simulation = simulation };
         }
