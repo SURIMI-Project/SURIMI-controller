@@ -23,16 +23,16 @@ namespace SURIMI_controller.ConfigurationService
         /// This will be the case when running in a Docker container in Kubernetes.
         /// </summary>
         /// <returns>A SurimiConfiguration object representing the configuration.</returns>
-        public async Task<SurimiConfiguration> ReadConfigurationAsync(string contractName)
+        public async Task<SurimiConfiguration> ReadConfigurationAsync(string scenarioName)
         {
             string yaml = "";
-            if (!await _blobStore.ExistsAsync($"{contractName}.yaml", PathType.Input))
+            if (!await _blobStore.ExistsAsync($"{scenarioName}/contract.yaml", PathType.Input))
             {
-                throw new RpcException(new Status(StatusCode.Internal, $"Couldn't find {contractName}.yaml"));
+                throw new RpcException(new Status(StatusCode.Internal, $"Couldn't find {scenarioName}/contract.yaml"));
             }
 
-            yaml = await _blobStore.ReadAllTextAsync($"{contractName}.yaml", PathType.Input);
-            _logger.LogInformation("Loaded {ContractName}.yaml", contractName);
+            yaml = await _blobStore.ReadAllTextAsync($"{scenarioName}/contract.yaml", PathType.Input);
+            _logger.LogInformation("Loaded {ScenarioName}/contract.yaml", scenarioName);
             return DeserialiseConfiguration(yaml);
         }
 

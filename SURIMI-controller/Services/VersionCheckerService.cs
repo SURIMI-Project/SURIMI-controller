@@ -46,7 +46,7 @@ namespace SURIMI_controller.Services
                 GetVersionWithRetryAsync("Market",            async () => (await _marketServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
                 GetVersionWithRetryAsync("FisheriesAuthority",async () => (await _fisheriesAuthorityServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
                 GetVersionWithRetryAsync("Environment",       async () => (await _environmentServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
-                GetVersionWithRetryAsync("EcopathWorkflow",   async () =>
+                GetVersionWithRetryAsync("Ecopath",   async () =>
                 {
                     var response = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetProtocolVersionRequest, GetProtocolVersionResponse>(
                         new GetProtocolVersionRequest(),

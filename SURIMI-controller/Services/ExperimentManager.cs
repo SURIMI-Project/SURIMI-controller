@@ -24,12 +24,13 @@ namespace SURIMI_controller.Services
         private readonly IOutputCreatorServiceClient _outputCreatorClient;
         private readonly IEnvironmentServiceClient _environmentServiceClient;
         private readonly IValueChainServiceClient _valueChainServiceClient;
+        private readonly VersionCheckerService _versionCheckerService;
 
         /// <summary>
         /// Initializes a new <see cref="ExperimentManager"/> and subscribes to all
         /// <see cref="ISimulationManager"/> events.
         /// </summary>
-        public ExperimentManager(GrpcClientFactory clientFactory, ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient, IValueChainServiceClient valueChainServiceClient)
+        public ExperimentManager(GrpcClientFactory clientFactory, ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService)
         {
             _simulationManager = simulationManager;
             _cmsyServiceClient = cmsyServiceClient;
@@ -38,6 +39,7 @@ namespace SURIMI_controller.Services
             _outputCreatorClient = outputCreatorClient;
             _environmentServiceClient = environmentServiceClient;
             _valueChainServiceClient = valueChainServiceClient;
+            _versionCheckerService = versionCheckerService;
 
             // Subscribe to all simulation lifecycle and data events
             _simulationManager.SimulateStep += OnSimulateStep;
@@ -78,6 +80,9 @@ namespace SURIMI_controller.Services
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var task = Task.Run(async () =>
             {
+                _logger.LogInformation("Checking versions of connected services (retrying until all are available)...");
+                await _versionCheckerService.WriteVersionsAsync(cts.Token);
+
                 var initRequest = new InitialiseExperimentRequest
                 {
                     ExperimentId = request.ExperimentId,

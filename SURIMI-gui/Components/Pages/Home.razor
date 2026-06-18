@@ -31,7 +31,12 @@
                 <div class="form-group row">
                     <label class="col-md-2 col-form-label">Scenario Name</label>
                     <div class="col-md-2">
-                        <input type="text" class="form-control" @bind="config.ScenarioName">
+                        <select class="form-select" @bind="config.ScenarioName">
+                            <option value="western-med">western_med</option>
+                            <option value="aegean">aegean</option>
+                            <option value="anchovy-bay">anchovy_bay</option>
+                            <option value=""></option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-group row">
