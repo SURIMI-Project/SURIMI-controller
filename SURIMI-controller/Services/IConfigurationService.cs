@@ -5,6 +5,6 @@ namespace SURIMI_controller.ConfigurationService
     public interface IConfigurationService
     {
         SurimiConfiguration DeserialiseConfiguration(string yaml);
-        Task<SurimiConfiguration> ReadConfigurationAsync(string contractName);
+        Task<SurimiConfiguration> ReadConfigurationAsync(string scenarioName);
     }
 }
