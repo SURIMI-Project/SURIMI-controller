@@ -23,12 +23,13 @@ namespace SURIMI_controller.Services
         private readonly ICmsyServiceClient _cmsyServiceClient;
         private readonly IOutputCreatorServiceClient _outputCreatorClient;
         private readonly IEnvironmentServiceClient _environmentServiceClient;
+        private readonly IValueChainServiceClient _valueChainServiceClient;
 
         /// <summary>
         /// Initializes a new <see cref="ExperimentManager"/> and subscribes to all
         /// <see cref="ISimulationManager"/> events.
         /// </summary>
-        public ExperimentManager(GrpcClientFactory clientFactory, ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient)
+        public ExperimentManager(GrpcClientFactory clientFactory, ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient, IValueChainServiceClient valueChainServiceClient)
         {
             _simulationManager = simulationManager;
             _cmsyServiceClient = cmsyServiceClient;
@@ -36,6 +37,7 @@ namespace SURIMI_controller.Services
             _logger = logger;
             _outputCreatorClient = outputCreatorClient;
             _environmentServiceClient = environmentServiceClient;
+            _valueChainServiceClient = valueChainServiceClient;
 
             // Subscribe to all simulation lifecycle and data events
             _simulationManager.SimulateStep += OnSimulateStep;
@@ -90,6 +92,7 @@ namespace SURIMI_controller.Services
                 var cmsyTask = _cmsyServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
                 var outputCreatorTask = _outputCreatorClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
                 var environmentTask = _environmentServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
+                var valueChainTask = _valueChainServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
 
                 // Start all simulation runs concurrently
                 var initTasks = _experiments[request.ExperimentId].SimulationIds.Select(async simulationId =>
@@ -194,6 +197,7 @@ namespace SURIMI_controller.Services
                     _cmsyServiceClient.FinaliseExperimentAsync(request, token);
                     _environmentServiceClient.FinaliseExperimentAsync(request, token);
                     _outputCreatorClient.FinaliseExperimentAsync(request, token);
+                    _valueChainServiceClient.FinaliseExperimentAsync(request, token);
                 });
 
         /// <summary>
@@ -211,6 +215,7 @@ namespace SURIMI_controller.Services
                     _cmsyServiceClient.CancelExperimentAsync(request, token);
                     _environmentServiceClient.CancelExperimentAsync(request, token);
                     _outputCreatorClient.CancelExperimentAsync(request, token);
+                    _valueChainServiceClient.CancelExperimentAsync(request, token);
                 });
 
         // -------------------------------------------------------------------------
@@ -237,7 +242,7 @@ namespace SURIMI_controller.Services
                         DateTime = current.ToTimestamp()
                     };
                     _cmsyServiceClient.UpdateBiomassStatistics(updateBomassStatisticsRequest, experimentId, current, token);
-                    _outputCreatorClient.UpdateBiomassStatistics(updateBomassStatisticsRequest, experimentId, current, token);
+                    _outputCreatorClient.UpdateBiomassStatisticsAsync(updateBomassStatisticsRequest, experimentId, current, token);
                 });
 
         /// <summary>
@@ -259,7 +264,7 @@ namespace SURIMI_controller.Services
                         StartDateTime = current.ToTimestamp()
                     };
                     _cmsyServiceClient.UpdateCatchDispositionStatistics(updateCatchDispositionStatisticsRequest, experimentId, current, token);
-                    _outputCreatorClient.UpdateCatchDispositionStatistics(updateCatchDispositionStatisticsRequest, experimentId, current, token);
+                    _outputCreatorClient.UpdateCatchDispositionStatisticsAsync(updateCatchDispositionStatisticsRequest, experimentId, current, token);
                 });
 
         /// <summary>
@@ -274,7 +279,8 @@ namespace SURIMI_controller.Services
                 onAllReceived: (dateSummaries, experimentId, current, token) =>
                 {
                     var statisticsSummary = _aggregatorService.AddAggregateSales(dateSummaries.Values.ToList());
-                    _outputCreatorClient.UpdateSalesStatistics(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
+                    _outputCreatorClient.UpdateSalesStatisticsAsync(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
+                    _valueChainServiceClient.UpdateSalesStatisticsAsync(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, current, token);
                 });
 
         /// <summary>
@@ -289,7 +295,7 @@ namespace SURIMI_controller.Services
                 onAllReceived: (dateSummaries, experimentId, current, token) =>
                 {
                     var statisticsSummary = _aggregatorService.AddAggregateFishingActivity(dateSummaries.Values.ToList());
-                    _outputCreatorClient.UpdateFishingActivityStatistics(new UpdateFishingActivityStatisticsRequest() { ExperimentId = experimentId, FishingActivityStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
+                    _outputCreatorClient.UpdateFishingActivityStatisticsAsync(new UpdateFishingActivityStatisticsRequest() { ExperimentId = experimentId, FishingActivityStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
                 });
 
         /// <summary>
@@ -304,7 +310,7 @@ namespace SURIMI_controller.Services
                 onAllReceived: (dateSummaries, experimentId, current, token) =>
                 {
                     var statisticsSummary = _aggregatorService.AddAggregateSpeciesPrice(dateSummaries.Values.ToList());
-                    _outputCreatorClient.UpdateSpeciesPriceStatistics(new UpdateSpeciesPriceStatisticsRequest() { ExperimentId = experimentId, SpeciesPriceStatisticsSummary = statisticsSummary, DateTime = current.ToTimestamp() }, experimentId, current, token);
+                    _outputCreatorClient.UpdateSpeciesPriceStatisticsAsync(new UpdateSpeciesPriceStatisticsRequest() { ExperimentId = experimentId, SpeciesPriceStatisticsSummary = statisticsSummary, DateTime = current.ToTimestamp() }, experimentId, current, token);
                 });
 
         // -------------------------------------------------------------------------

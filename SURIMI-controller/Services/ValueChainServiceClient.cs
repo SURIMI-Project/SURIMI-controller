@@ -1,5 +1,4 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
@@ -13,7 +12,7 @@ namespace SURIMI_controller.Services
 
         public ValueChainServiceClient(GrpcClientFactory clientFactory, ILogger<ValueChainServiceClient> logger)
         {
-            _valueChainClient = clientFactory.CreateClient<ValueChainService.ValueChainServiceClient>("ValueChainExperiment");
+            _valueChainClient = clientFactory.CreateClient<ValueChainService.ValueChainServiceClient>("ValueChain");
 
             _logger = logger;
         }
