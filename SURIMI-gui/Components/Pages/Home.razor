@@ -7,78 +7,70 @@
 
 <div class="row mt-3">
 
-    <!-- LEFT COLUMN: Your existing content -->
-    <div class="col-8">
-        <h1>SURIMI</h1>
+    <h1>SURIMI</h1>
 
-        <p>
-            This is a SURIMI Test webapp
-        </p>
+    <p>
+        This is a SURIMI Test webapp
+    </p>
 
-        <p>
-            <a href="https://www.surimi-project.eu/">SURIMI</a>
-        </p>
+    <p>
+        <a href="https://www.surimi-project.eu/">SURIMI</a>
+    </p>
 
-        <h2>Initialize the simulation</h2>
+    <h2>Initialize the simulation</h2>
 
-        @if (config == null)
-        {
-                    <p><em>Loading...</em></p>
-        }
-        else
-        {
-            <EditForm Model="config" OnSubmit="HandleInit">
-                <div class="form-group row">
-                    <label class="col-md-2 col-form-label">Scenario Name</label>
-                    <div class="col-md-2">
-                        <select class="form-select" @bind="config.ScenarioName">
-                            <option value="western-med">western_med</option>
-                            <option value="aegean">aegean</option>
-                            <option value="anchovy-bay">anchovy_bay</option>
-                            <option value=""></option>
-                        </select>
-                    </div>
+    @if (config == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <EditForm Model="config" OnSubmit="HandleInit">
+            <div class="form-group row">
+                <label class="col-md-2 col-form-label">Scenario Name</label>
+                <div class="col-md-2">
+                    <select class="form-select" @bind="config.ScenarioName">
+                        <option value="western-med">western-med</option>
+                        <option value="aegean">aegean</option>
+                        <option value="anchovy-bay">anchovy-bay</option>
+                        <option value=""></option>
+                    </select>
                 </div>
-                <div class="form-group row">
-                    <label class="col-md-2 col-form-label">Number of runs</label>
-                    <div class="col-md-2">
-                        <input type="number" class="form-control" @bind="config.NumberOfRuns"
-                               title="Select the number of runs for the simulation">
-                    </div>
+            </div>
+            <div class="form-group row">
+                <label class="col-md-2 col-form-label">Number of runs</label>
+                <div class="col-md-2">
+                    <input type="number" class="form-control" @bind="config.NumberOfRuns"
+                           title="Select the number of runs for the simulation">
                 </div>
-                <div class="form-group row">
-                    <label class="col-md-2 col-form-label">End Date (optional)</label>
-                    <div class="col-md-2">
-                        <input type="date" class="form-control" @bind="config.EndDateTime"
-                               title="Optional. Select the end date for the simulation">
-                    </div>
+            </div>
+            <div class="form-group row">
+                <label class="col-md-2 col-form-label">End Date (optional)</label>
+                <div class="col-md-2">
+                    <input type="date" class="form-control" @bind="config.EndDateTime"
+                           title="Optional. Select the end date for the simulation">
                 </div>
+            </div>
 
-                <div class="d-grid gap-2 mb-3">
-                    <div class="d-flex align-items-center">
-                        <button type="submit"
-                                class="btn btn-primary"
-                                style="width: 155px"
-                                disabled="@isInitLoading">
-                            Submit
-                        </button>
-                        @if (isInitLoading)
-                        {
-                            <span class="spinner-border spinner-border-sm text-primary ms-2" role="status" aria-hidden="true"></span>
-                        }
-                    </div>
+            <div class="d-grid gap-2 mb-3">
+                <div class="d-flex align-items-center">
+                    <button type="submit"
+                            class="btn btn-primary"
+                            style="width: 155px"
+                            disabled="@isInitLoading">
+                        Submit
+                    </button>
+                    @if (isInitLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm text-primary ms-2" role="status" aria-hidden="true"></span>
+                    }
                 </div>
-                <div class="col-7">
-                    Response: @result
-                </div>
-            </EditForm>
-        }
-    </div>
-    <div class="col-4">
-            <EditoAppList Apps="@editoApps"
-                          Loading="@editoAppsLoading"
-                          Error="@editoAppsError" />
-    </div>
+            </div>
+            <div class="col-7">
+                Response: @result
+            </div>
+        </EditForm>
+    }
 </div>
 
 <h3 class="mt-4">Simulations</h3>
@@ -122,22 +114,22 @@ else
                         @(sim.SimulationStarted.HasValue
                                         ? sim.SimulationStarted.Value.ToLocalTime().ToString("dd-MM-yyyy HH:mm")
                                         : "")
-                                            </td>
-                                            <td>
+                    </td>
+                    <td>
                         @(sim.SimulationDuration.HasValue
                                         ? sim.SimulationDuration.Value.ToString(@"hh\:mm\:ss")
                                         : "")
-        </td>
-        <td>@sim.SimulationCurrent?.ToLocalTime().ToString("dd-MM-yyyy")</td>
-        <td>@sim.IP</td>
-        <td>
-            <a href="#"
-                class="btn btn-link btn-sm text-danger @(sim.Status != "Running" ? "disabled" : "")"
-                @onclick="() => CancelSimulationFor(sim)">
-                Cancel
-            </a>
-        </td>
-    </tr>
+                    </td>
+                    <td>@sim.SimulationCurrent?.ToLocalTime().ToString("dd-MM-yyyy")</td>
+                    <td>@sim.IP</td>
+                    <td>
+                        <a href="#"
+                           class="btn btn-link btn-sm text-danger @(sim.Status != "Running" ? "disabled" : "")"
+                           @onclick="() => CancelSimulationFor(sim)">
+                            Cancel
+                        </a>
+                    </td>
+                </tr>
             }
         </tbody>
     </table>
@@ -154,48 +146,14 @@ else
     CancellationTokenSource cts = new CancellationTokenSource();
     private System.Threading.Timer? _refreshTimer;
 
-    // EDITO DataLab properties
-    private List<SURIMI_gui.Models.App>? editoApps { get; set; }
-    private bool editoAppsLoading = true;
-    private string editoAppsError = string.Empty;
-
-
     [Inject]
     private SurimiGUIControllerService? controllerService { get; set; }
-
-    [Inject]
-    private EditoDataLabService? editoDataLabService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         config = new SURIMI_gui.Models.ExperimentConfig();
         config.EndDateTime = new DateTime(2017, 01, 01);    // not all the way to 2050
         StartRefreshTimer();
-
-        // Load EDITO DataLab services
-        await LoadEditoDataLabServices();
-    }
-
-    private async Task LoadEditoDataLabServices()
-    {
-        if (editoDataLabService != null)
-        {
-            try
-            {
-                editoAppsLoading = true;
-                editoAppsError = string.Empty;   // <-- CLEAR ERROR HERE
-                editoApps = await editoDataLabService.GetMyLabServicesAsync(cts.Token);
-            }
-            catch (Exception ex)
-            {
-                editoAppsError = ex.Message;
-            }
-            finally
-            {
-                editoAppsLoading = false;
-                StateHasChanged();
-            }
-        }
     }
 
     private async Task HandleInit()
