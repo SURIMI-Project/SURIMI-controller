@@ -104,6 +104,16 @@ namespace SURIMI_controller.Services
             return new UpdateSpeciesPriceStatisticsResponse() { ExperimentId = updateSpeciesPriceStatisticsRequest.ExperimentId };
         }
 
+        public async Task<UpdateStockAssessmentResponse> UpdateStockAssessmentAsync(UpdateStockAssessmentRequest updateStockAssessmentRequest, string experimentId, CancellationToken cancellationToken)
+        {
+            if (_includeOutputCreator)
+            {
+                LogStep(updateStockAssessmentRequest.ExperimentId, DateTime.UtcNow, "UpdateSpeciesPriceStatistics");
+                return await _outputCreatorServiceClient.UpdateStockAssessmentAsync(updateStockAssessmentRequest, cancellationToken: cancellationToken);
+            }
+            return new UpdateStockAssessmentResponse() { ExperimentId = updateStockAssessmentRequest.ExperimentId };
+        }
+
         private void LogStep(string experimentId, DateTime current, string step)
         {
             _logger.LogInformation("{ExperimentId} Processing step OutputCreator.{Step}. {DateTime}", experimentId, step, current);

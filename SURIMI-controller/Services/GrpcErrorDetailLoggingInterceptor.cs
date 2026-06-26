@@ -98,27 +98,43 @@ namespace SURIMI_controller.Services
             var lines = new List<string>();
             foreach (var detail in rpcStatus.Details)
             {
+                // 1. BadRequest
                 if (detail.TryUnpack<BadRequest>(out var badRequest))
                 {
                     foreach (var violation in badRequest.FieldViolations)
                         lines.Add($"  BadRequest.FieldViolation: {violation.Field} — {violation.Description}");
+                    continue;
                 }
-                else if (detail.TryUnpack<ErrorInfo>(out var errorInfo))
+
+                // 2. ErrorInfo
+                if (detail.TryUnpack<ErrorInfo>(out var errorInfo))
                 {
                     lines.Add($"  ErrorInfo: {errorInfo.Reason} ({errorInfo.Domain})");
                     foreach (var kv in errorInfo.Metadata)
                         lines.Add($"    {kv.Key}: {kv.Value}");
+                    continue;
                 }
-                else if (detail.TryUnpack<PreconditionFailure>(out var precondition))
+
+                // 3. PreconditionFailure
+                if (detail.TryUnpack<PreconditionFailure>(out var precondition))
                 {
                     foreach (var violation in precondition.Violations)
                         lines.Add($"  PreconditionFailure: [{violation.Type}] {violation.Subject} — {violation.Description}");
+                    continue;
                 }
-                else
+
+                // 4. Protovalidate violations
+                if (detail.TryUnpack<Buf.Validate.Violations>(out var protoViolations))
                 {
-                    lines.Add($"  Detail: {detail.TypeUrl}");
+                    foreach (var v in protoViolations.Violations_)
+                        lines.Add($"  Validation: {v.Field} — {v.Message}");
+                    continue;
                 }
+
+                // 5. Unknown Any type
+                lines.Add($"  Detail: {detail.TypeUrl}");
             }
+
             return lines;
         }
     }

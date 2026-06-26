@@ -9,5 +9,6 @@ namespace SURIMI_controller.Services
         public Task<UpdateFishingActivityStatisticsResponse> UpdateFishingActivityStatisticsAsync(UpdateFishingActivityStatisticsRequest updateFishingActivityStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken);
         public Task<UpdateSalesStatisticsResponse> UpdateSalesStatisticsAsync(UpdateSalesStatisticsRequest updateSalesStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken);
         public Task<UpdateSpeciesPriceStatisticsResponse> UpdateSpeciesPriceStatisticsAsync(UpdateSpeciesPriceStatisticsRequest updateSpeciesPriceStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken);
+        public Task<UpdateStockAssessmentResponse> UpdateStockAssessmentAsync(UpdateStockAssessmentRequest updateStockAssessmentRequest, string experimentId, CancellationToken cancellationToken);
     }
 }

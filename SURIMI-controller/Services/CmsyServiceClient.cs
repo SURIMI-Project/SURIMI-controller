@@ -57,7 +57,16 @@ namespace SURIMI_controller.Services
             return new FinaliseExperimentResponse() { ExperimentId = finaliseExperimentRequest.ExperimentId };
         }
 
-        public async Task<UpdateBiomassStatisticsResponse> UpdateBiomassStatistics(UpdateBiomassStatisticsRequest updateBiomassStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
+        public async Task<GetStockAssessmentResponse> GetStockAssessmentAsync(GetStockAssessmentRequest getStockAssessmentRequest, CancellationToken cancellationToken = default)
+        {
+            if (_includeCmsy)
+            {
+                return await _cmsyClient.GetStockAssessmentAsync(getStockAssessmentRequest, cancellationToken: cancellationToken);
+            }
+            return new GetStockAssessmentResponse() { ExperimentId = getStockAssessmentRequest.ExperimentId };
+        }
+
+        public async Task<UpdateBiomassStatisticsResponse> UpdateBiomassStatisticsAsync(UpdateBiomassStatisticsRequest updateBiomassStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
             if(_includeCmsy)
             {
@@ -67,7 +76,7 @@ namespace SURIMI_controller.Services
             return new UpdateBiomassStatisticsResponse() { ExperimentId = experimentId };
         }
 
-        public async Task<UpdateCatchDispositionStatisticsResponse> UpdateCatchDispositionStatistics(UpdateCatchDispositionStatisticsRequest updateCatchDispositionStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
+        public async Task<UpdateCatchDispositionStatisticsResponse> UpdateCatchDispositionStatisticsAsync(UpdateCatchDispositionStatisticsRequest updateCatchDispositionStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
             if(_includeCmsy)
             {
