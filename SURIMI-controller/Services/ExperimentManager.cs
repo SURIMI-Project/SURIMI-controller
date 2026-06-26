@@ -179,12 +179,14 @@ namespace SURIMI_controller.Services
                 e,
                 eventName: nameof(OnSimulateStep),
                 getDictionary: experiment => experiment.SimulateStepCalled,
-                onAllReceived: (experimentId, current, token) =>
+                onAllReceived: async (experimentId, current, token) =>
                 {
                     var request = new ExperimentStepRequest() { ExperimentId = experimentId, CurrentDateTime = current.ToTimestamp() };
-                    _cmsyServiceClient.ExperimentStepAsync(request, current: current, token: token);
-                    _environmentServiceClient.ExperimentStepAsync(request, current: current, token: token);
-                    _outputCreatorClient.ExperimentStepAsync(request, current: current, token: token);
+
+                    await Task.WhenAll(
+                        _cmsyServiceClient.ExperimentStepAsync(request, current: current, token: token),
+                        _environmentServiceClient.ExperimentStepAsync(request, current: current, token: token),
+                        _outputCreatorClient.ExperimentStepAsync(request, current: current, token: token));
                 });
 
         /// <summary>
@@ -196,13 +198,19 @@ namespace SURIMI_controller.Services
                 e,
                 eventName: nameof(OnSimulationFinalised),
                 getDictionary: experiment => experiment.SimulationFinalisedCalled,
-                onAllReceived: (experimentId, current, token) =>
+                onAllReceived: async (experimentId, current, token) =>
                 {
+                    // Get stock assessment from CMSY
+                    var stockAssessmentResponse = await _cmsyServiceClient.GetStockAssessmentAsync(new GetStockAssessmentRequest() { ExperimentId = experimentId }, token);
+
+                    // send it to the output-creator
+//                    _outputCreatorClient.UpdateStockAssessmentAsync(new UpdateStockAssessmentRequest() { StockAssessmentSummary = stockAssessmentResponse.StockAssessmentSummary, ExperimentId = experimentId }, experimentId, token);
                     var request = new FinaliseExperimentRequest() { ExperimentId = experimentId };
-                    _cmsyServiceClient.FinaliseExperimentAsync(request, token);
-                    _environmentServiceClient.FinaliseExperimentAsync(request, token);
-                    _outputCreatorClient.FinaliseExperimentAsync(request, token);
-                    _valueChainServiceClient.FinaliseExperimentAsync(request, token);
+                    await Task.WhenAll(
+                        _cmsyServiceClient.FinaliseExperimentAsync(request, token),
+                        _environmentServiceClient.FinaliseExperimentAsync(request, token),
+                        _outputCreatorClient.FinaliseExperimentAsync(request, token),
+                        _valueChainServiceClient.FinaliseExperimentAsync(request, token));
                 });
 
         /// <summary>
@@ -214,13 +222,14 @@ namespace SURIMI_controller.Services
                 e,
                 eventName: nameof(OnSimulationCancelled),
                 getDictionary: experiment => experiment.SimulationCancelledCalled,
-                onAllReceived: (experimentId, current, token) =>
+                onAllReceived: async (experimentId, current, token) =>
                 {
                     var request = new CancelExperimentRequest() { ExperimentId = experimentId };
-                    _cmsyServiceClient.CancelExperimentAsync(request, token);
-                    _environmentServiceClient.CancelExperimentAsync(request, token);
-                    _outputCreatorClient.CancelExperimentAsync(request, token);
-                    _valueChainServiceClient.CancelExperimentAsync(request, token);
+                    await Task.WhenAll(
+                        _cmsyServiceClient.CancelExperimentAsync(request, token),
+                        _environmentServiceClient.CancelExperimentAsync(request, token),
+                        _outputCreatorClient.CancelExperimentAsync(request, token),
+                        _valueChainServiceClient.CancelExperimentAsync(request, token));
                 });
 
         // -------------------------------------------------------------------------
@@ -237,7 +246,7 @@ namespace SURIMI_controller.Services
                 e,
                 getSummary: e => e.BiomassSummary,
                 getDictionary: experiment => experiment.BiomassSummary,
-                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                onAllReceived: async (dateSummaries, experimentId, current, token) =>
                 {
                     var statisticsSummary = _aggregatorService.AddAggregateBiomass(dateSummaries.Values.ToList());
                     var updateBomassStatisticsRequest = new UpdateBiomassStatisticsRequest()
@@ -246,8 +255,9 @@ namespace SURIMI_controller.Services
                         BiomassStatisticsSummary = statisticsSummary,
                         DateTime = current.ToTimestamp()
                     };
-                    _cmsyServiceClient.UpdateBiomassStatistics(updateBomassStatisticsRequest, experimentId, current, token);
-                    _outputCreatorClient.UpdateBiomassStatisticsAsync(updateBomassStatisticsRequest, experimentId, current, token);
+                    await Task.WhenAll(
+                    _cmsyServiceClient.UpdateBiomassStatisticsAsync(updateBomassStatisticsRequest, experimentId, current, token),
+                    _outputCreatorClient.UpdateBiomassStatisticsAsync(updateBomassStatisticsRequest, experimentId, current, token));
                 });
 
         /// <summary>
@@ -259,7 +269,7 @@ namespace SURIMI_controller.Services
                 e,
                 getSummary: e => e.CatchDispositionSummary,
                 getDictionary: experiment => experiment.CatchDispositionSummary,
-                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                onAllReceived: async (dateSummaries, experimentId, current, token) =>
                 {
                     var statisticsSummary = _aggregatorService.AddAggregateCatchDisposition(dateSummaries.Values.ToList());
                     var updateCatchDispositionStatisticsRequest = new UpdateCatchDispositionStatisticsRequest()
@@ -268,8 +278,9 @@ namespace SURIMI_controller.Services
                         CatchDispositionStatisticsSummary = statisticsSummary,
                         StartDateTime = current.ToTimestamp()
                     };
-                    _cmsyServiceClient.UpdateCatchDispositionStatistics(updateCatchDispositionStatisticsRequest, experimentId, current, token);
-                    _outputCreatorClient.UpdateCatchDispositionStatisticsAsync(updateCatchDispositionStatisticsRequest, experimentId, current, token);
+                    await Task.WhenAll(
+                        _cmsyServiceClient.UpdateCatchDispositionStatisticsAsync(updateCatchDispositionStatisticsRequest, experimentId, current, token),
+                        _outputCreatorClient.UpdateCatchDispositionStatisticsAsync(updateCatchDispositionStatisticsRequest, experimentId, current, token));
                 });
 
         /// <summary>
@@ -281,11 +292,12 @@ namespace SURIMI_controller.Services
                 e,
                 getSummary: e => e.SalesSummary,
                 getDictionary: experiment => experiment.SalesSummary,
-                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                onAllReceived: async (dateSummaries, experimentId, current, token) =>
                 {
                     var statisticsSummary = _aggregatorService.AddAggregateSales(dateSummaries.Values.ToList());
-                    _outputCreatorClient.UpdateSalesStatisticsAsync(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
-                    _valueChainServiceClient.UpdateSalesStatisticsAsync(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, current, token);
+                    await Task.WhenAll(
+                        _outputCreatorClient.UpdateSalesStatisticsAsync(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token),
+                        _valueChainServiceClient.UpdateSalesStatisticsAsync(new UpdateSalesStatisticsRequest() { ExperimentId = experimentId, SalesStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, current, token));
                 });
 
         /// <summary>
@@ -297,10 +309,10 @@ namespace SURIMI_controller.Services
                 e,
                 getSummary: e => e.FishingActivitySummary,
                 getDictionary: experiment => experiment.FishingActivitySummary,
-                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                onAllReceived: async (dateSummaries, experimentId, current, token) =>
                 {
                     var statisticsSummary = _aggregatorService.AddAggregateFishingActivity(dateSummaries.Values.ToList());
-                    _outputCreatorClient.UpdateFishingActivityStatisticsAsync(new UpdateFishingActivityStatisticsRequest() { ExperimentId = experimentId, FishingActivityStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
+                    await _outputCreatorClient.UpdateFishingActivityStatisticsAsync(new UpdateFishingActivityStatisticsRequest() { ExperimentId = experimentId, FishingActivityStatisticsSummary = statisticsSummary, StartDateTime = current.ToTimestamp() }, experimentId, current, token);
                 });
 
         /// <summary>
@@ -312,10 +324,10 @@ namespace SURIMI_controller.Services
                 e,
                 getSummary: e => e.SpeciesPriceSummary,
                 getDictionary: experiment => experiment.SpeciesPriceSummary,
-                onAllReceived: (dateSummaries, experimentId, current, token) =>
+                onAllReceived: async (dateSummaries, experimentId, current, token) =>
                 {
                     var statisticsSummary = _aggregatorService.AddAggregateSpeciesPrice(dateSummaries.Values.ToList());
-                    _outputCreatorClient.UpdateSpeciesPriceStatisticsAsync(new UpdateSpeciesPriceStatisticsRequest() { ExperimentId = experimentId, SpeciesPriceStatisticsSummary = statisticsSummary, DateTime = current.ToTimestamp() }, experimentId, current, token);
+                    await _outputCreatorClient.UpdateSpeciesPriceStatisticsAsync(new UpdateSpeciesPriceStatisticsRequest() { ExperimentId = experimentId, SpeciesPriceStatisticsSummary = statisticsSummary, DateTime = current.ToTimestamp() }, experimentId, current, token);
                 });
 
         // -------------------------------------------------------------------------
@@ -408,7 +420,7 @@ namespace SURIMI_controller.Services
             ExperimentEventArgs e,
             string eventName,
             Func<Experiment, Dictionary<DateTime, Dictionary<string, bool?>>> getDictionary,
-            Action<string, DateTime, CancellationToken> onAllReceived)
+            Func<string, DateTime, CancellationToken, Task> onAllReceived)
         {
             if (!_experiments.TryGetValue(e.ExperimentId, out Experiment? experiment))
             {
@@ -445,7 +457,7 @@ namespace SURIMI_controller.Services
             if (flagsForDate.All(kv => kv.Value != null))
             {
                 _logger.LogInformation("All simulations received {EventName} for date {Date}. ExperimentId={ExperimentId}", eventName, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
-                onAllReceived(e.ExperimentId, e.Current, e.Token);
+                _ = onAllReceived(e.ExperimentId, e.Current, e.Token);
                 dictionary.Remove(dateKey);
             }
         }
