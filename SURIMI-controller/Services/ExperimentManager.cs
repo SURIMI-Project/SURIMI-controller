@@ -353,12 +353,12 @@ namespace SURIMI_controller.Services
         /// date bucket, the experiment ID, the current date, and a cancellation token.
         /// </param>
         private void OnSummaryUpdated<TEventArgs, TSummary>(
-            TEventArgs e,
-            Func<TEventArgs, TSummary> getSummary,
-            Func<Experiment, Dictionary<DateTime, Dictionary<string, TSummary?>>> getDictionary,
-            Action<Dictionary<string, TSummary?>, string, DateTime, CancellationToken> onAllReceived)
-            where TEventArgs : ExperimentEventArgs
-            where TSummary : class
+                TEventArgs e,
+                Func<TEventArgs, TSummary> getSummary,
+                Func<Experiment, Dictionary<DateTime, Dictionary<string, TSummary?>>> getDictionary,
+                Func<Dictionary<string, TSummary?>, string, DateTime, CancellationToken, Task> onAllReceived)
+                where TEventArgs : ExperimentEventArgs
+                where TSummary : class
         {
             if (!_experiments.TryGetValue(e.ExperimentId, out Experiment? experiment))
             {
@@ -395,7 +395,10 @@ namespace SURIMI_controller.Services
             if (summaryForSpecificDate.All(kv => kv.Value != null))
             {
                 _logger.LogInformation("All simulations received {SummaryName} for date {Date}. ExperimentId={ExperimentId}", typeof(TSummary).Name, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
-                onAllReceived(summaryForSpecificDate, e.ExperimentId, e.Current, e.Token);
+                _ = onAllReceived(summaryForSpecificDate, e.ExperimentId, e.Current, e.Token)
+                    .ContinueWith(
+                        t => _logger.LogError(t.Exception, "{SummaryName} aggregation failed for ExperimentId={ExperimentId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, dateKey),
+                        TaskContinuationOptions.OnlyOnFaulted);
                 dictionary.Remove(dateKey);
             }
         }
@@ -457,7 +460,10 @@ namespace SURIMI_controller.Services
             if (flagsForDate.All(kv => kv.Value != null))
             {
                 _logger.LogInformation("All simulations received {EventName} for date {Date}. ExperimentId={ExperimentId}", eventName, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
-                _ = onAllReceived(e.ExperimentId, e.Current, e.Token);
+                _ = onAllReceived(e.ExperimentId, e.Current, e.Token)
+                    .ContinueWith(
+                        t => _logger.LogError(t.Exception, "{EventName} fan-out failed for ExperimentId={ExperimentId}, Date={Date}", eventName, e.ExperimentId, dateKey),
+                        TaskContinuationOptions.OnlyOnFaulted);
                 dictionary.Remove(dateKey);
             }
         }
