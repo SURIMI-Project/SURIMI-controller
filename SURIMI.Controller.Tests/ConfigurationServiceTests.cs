@@ -228,7 +228,7 @@ namespace SURIMI_controller.ConfigurationService.Tests
             var service = new ConfigurationService(_loggerMock.Object, _blobStore.Object);
 
             // Act
-            var conf = service.DeserialiseConfiguration(testYaml);
+            var conf = service.DeserialiseContract(testYaml);
 
             // Assert
             conf.Should().NotBeNull();
