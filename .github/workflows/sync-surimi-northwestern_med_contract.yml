@@ -48,7 +48,7 @@ jobs:
           dest_dir="Includes"
           mkdir -p "$dest_dir"
 
-          files=( "western_med_contract.yaml" )
+          files=( "northwestern_med_contract.yaml" )
 
           changed=0
           for f in "${files[@]}"; do
@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: sync from SURIMI-western_med (western_med_contract.yaml)"
+          git commit -m "chore: sync from SURIMI-western_med (northwestern_med_contract.yaml)"
 
       - name: Create or update pull request
         if: steps.sync.outputs.changed == '1'
@@ -94,7 +94,7 @@ jobs:
             Automated sync from **Official-EwE/SURIMI-western_med** → **SURIMI-controller**.
 
             **Files updated**
-            - [x] `Includes/western_med_contract.yaml`
+            - [x] `Includes/northwestern_med_contract.yaml`
 
             Source path: `SURIMI-western_med/SURIMI-contracts`
 

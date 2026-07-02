@@ -291,7 +291,7 @@ namespace SURIMI_controller.Services
 
             var allPriceKeys = validSummaries
                 .SelectMany(s => s.SpeciesPrices)
-                .DistinctBy(p => (p.Species?.SpeciesCode, p.GearCode, p.MarketCode, p.Currency))
+                .DistinctBy(p => (p.Species?.SpeciesCode, p.CategoryCode, p.MarketCode, p.Currency))
                 .ToList();
 
             foreach (var priceKey in allPriceKeys)
@@ -299,7 +299,7 @@ namespace SURIMI_controller.Services
                 var values = validSummaries
                     .Select(s => s.SpeciesPrices
                         .FirstOrDefault(p => p.Species?.SpeciesCode == priceKey.Species?.SpeciesCode
-                            && p.GearCode == priceKey.GearCode
+                            && p.CategoryCode == priceKey.CategoryCode
                             && p.MarketCode == priceKey.MarketCode
                             && p.Currency == priceKey.Currency))
                     .Select(p => p?.Price ?? 0.0)
@@ -309,7 +309,7 @@ namespace SURIMI_controller.Services
                 result.SpeciesPricesStatistics.Add(new SpeciesPriceStatistics
                 {
                     Species = priceKey.Species,
-                    GearCode = priceKey.GearCode,
+                    CategoryCode = priceKey.CategoryCode,
                     MarketCode = priceKey.MarketCode,
                     Currency = priceKey.Currency,
                     Price = new DoubleStatistics

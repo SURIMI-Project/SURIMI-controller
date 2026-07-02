@@ -22,8 +22,8 @@ namespace SURIMI_controller.ConfigurationService
         /// If the file does not exist locally, it fetches it from an S3-compatible storage.
         /// This will be the case when running in a Docker container in Kubernetes.
         /// </summary>
-        /// <returns>A SurimiConfiguration object representing the configuration.</returns>
-        public async Task<SurimiConfiguration> ReadConfigurationAsync(string scenarioName)
+        /// <returns>A SurimiContract object representing the configuration.</returns>
+        public async Task<SurimiContract> ReadConfigurationAsync(string scenarioName)
         {
             string yaml = "";
             if (!await _blobStore.ExistsAsync($"{scenarioName}/contract.yaml", PathType.Input))
@@ -33,10 +33,10 @@ namespace SURIMI_controller.ConfigurationService
 
             yaml = await _blobStore.ReadAllTextAsync($"{scenarioName}/contract.yaml", PathType.Input);
             _logger.LogInformation("Loaded {ScenarioName}/contract.yaml", scenarioName);
-            return DeserialiseConfiguration(yaml);
+            return DeserialiseContract(yaml);
         }
 
-        public SurimiConfiguration DeserialiseConfiguration(string yaml)
+        public SurimiContract DeserialiseContract(string yaml)
         {
             // Implementation for reading YAML configuration
             var input = new StringReader(yaml);
@@ -45,7 +45,7 @@ namespace SURIMI_controller.ConfigurationService
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .Build();
 
-            return deserializer.Deserialize<SurimiConfiguration>(input);
+            return deserializer.Deserialize<SurimiContract>(input);
         }
     }
 }
