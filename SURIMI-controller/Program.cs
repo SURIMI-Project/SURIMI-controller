@@ -27,7 +27,7 @@ public class Program
                     Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
                     Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"),
                     Environment.GetEnvironmentVariable("AWS_BUCKET_NAME"),
-                    inputBasePrefix: @"surimi-controller", outputBasePrefix: @"surimi-controller", localInputRoot: "Includes", localOutputRoot: "Output");
+                    inputBasePrefix: @"controller", outputBasePrefix: @"controller", localInputRoot: "Includes", localOutputRoot: "Output");
             }
 
             // Default local Filesystem

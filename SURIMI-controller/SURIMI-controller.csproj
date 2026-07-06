@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Includes\western-med\contract.yaml">
+    <None Update="Includes\northwestern_med\northwestern_med_contract.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
