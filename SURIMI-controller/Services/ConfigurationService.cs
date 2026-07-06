@@ -26,13 +26,13 @@ namespace SURIMI_controller.ConfigurationService
         public async Task<SurimiContract> ReadConfigurationAsync(string scenarioName)
         {
             string yaml = "";
-            if (!await _blobStore.ExistsAsync($"{scenarioName}/contract.yaml", PathType.Input))
+            if (!await _blobStore.ExistsAsync($"{scenarioName}/{scenarioName}_contract.yaml", PathType.Input))
             {
-                throw new RpcException(new Status(StatusCode.Internal, $"Couldn't find {scenarioName}/contract.yaml"));
+                throw new RpcException(new Status(StatusCode.Internal, $"Couldn't find {scenarioName}/{scenarioName}_contract.yaml"));
             }
 
-            yaml = await _blobStore.ReadAllTextAsync($"{scenarioName}/contract.yaml", PathType.Input);
-            _logger.LogInformation("Loaded {ScenarioName}/contract.yaml", scenarioName);
+            yaml = await _blobStore.ReadAllTextAsync($"{scenarioName}/{scenarioName}_contract.yaml", PathType.Input);
+            _logger.LogInformation("Loaded {ScenarioName}/{ScenarioName}_contract.yaml", scenarioName, scenarioName);
             return DeserialiseContract(yaml);
         }
 
