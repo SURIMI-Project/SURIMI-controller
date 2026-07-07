@@ -1,0 +1,51 @@
+simulation:
+  case_study_name: Agean Sea
+  start_date_time: 2013-01-01T00:00:00
+  maximum_end_date_time: 2050-01-01T00:00:00
+  time_step: P1M
+  geography:
+    raster_cell_origin: Centroid
+    crs:
+      name: WGS 84
+      authority: EPSG
+      code: '4326'
+    xres: 0.0041667
+    yres: 0.0041667
+    ncol: 1560
+    nrow: 1704
+    xmin: 22.5
+    xmax: 29.0
+    ymin: 34.0
+    ymax: 41.1
+standards:
+  date_and_time: ISO 8601
+  species_code: FAO 3-alpha
+  gear_code: ISSCFG
+  life_stage: dwc:lifeStage
+  market_code: UN/LOCODE
+  currency: ISO 4217
+  country_code: ISO 3166-1 alpha-3
+  measurements:
+    system: SI
+    units:
+    - quantity: mass
+      unit: kg
+items:
+  markets:
+  - market_code: GR
+  price_categories:
+  - category_code: Fresh - Whole
+  currencies:
+  - currency_code: EUR
+  species:
+  - species_code: ANE
+    life_stage: juvenile
+  - species_code: ANE
+    life_stage: adult
+  fleet_segments:
+  - gear_code: OTB
+    country_code: GRC
+    model: EwE
+  - gear_code: PS
+    country_code: GRC
+    model: EwE
