@@ -165,6 +165,14 @@ namespace SURIMI_controller.Services
                             {
                                 Code = m.CurrencyCode ?? string.Empty
                             })
+                    },
+                    PriceCategories =
+                    {
+                        (surimiContract.Items?.Price_Categories ?? Enumerable.Empty<SURIMI.Datamodel.PriceCategory>())
+                            .Select(m => new Grpc.Surimi.PriceCategory()
+                            {
+                                CategoryCode = m.CategoryCode ?? string.Empty
+                            })
                     }
                 }
             };
