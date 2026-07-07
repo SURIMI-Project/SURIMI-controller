@@ -45,17 +45,19 @@ jobs:
           set -euo pipefail
 
           src_dir="source/SURIMI-contracts"
+          base_dir="SURIMI-controller/Includes"
           changed=0
 
           for src in "$src_dir"/*; do
             [[ -f "$src" ]] || continue
             filename=$(basename "$src")
 
-            # Derive destination directory from filename:
+            # Derive destination subdirectory from filename:
             # e.g. "northwestern_med_contract.yaml" -> "northwestern_med"
-            dest_dir="${filename%_contract.yaml}"
-            dest_dir="${dest_dir%_contract.yml}"
+            sub_dir="${filename%_contract.yaml}"
+            sub_dir="${sub_dir%_contract.yml}"
 
+            dest_dir="${base_dir}/${sub_dir}"
             dest="${dest_dir}/${filename}"
             mkdir -p "$dest_dir"
 
