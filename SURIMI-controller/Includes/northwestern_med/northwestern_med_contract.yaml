@@ -1,5 +1,5 @@
 simulation:
-  case_study_name: Northwestern Med
+  case_study_name: Northwestern Mediterranean Sea
   start_date_time: 2013-01-01T00:00:00
   maximum_end_date_time: 2050-01-01T00:00:00
   time_step: P1M
@@ -70,6 +70,8 @@ items:
   - market_code: ESVLG
   - market_code: ESVZR
   - market_code: FR
+  price_categories:
+  - category_code: Fresh - Whole
   currencies:
   - currency_code: EUR
   species:
