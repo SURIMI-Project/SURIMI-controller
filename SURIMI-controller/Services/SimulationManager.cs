@@ -1,6 +1,5 @@
 ﻿using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using SURIMI_controller.Models;
 using System.Collections.Concurrent;
@@ -31,7 +30,7 @@ namespace SURIMI_controller.Services
         public event EventHandler<ExperimentEventArgs>? SimulationFinalised;
         public event EventHandler<ExperimentEventArgs>? SimulationCancelled;
 
-        public SimulationManager(GrpcClientFactory clientFactory, ILogger<SimulationManager> logger, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient, IFisheriesAuthorityServiceClient fisheriesAuthorityServiceClient, IEnvironmentServiceClient environmentServiceClient)
+        public SimulationManager(ILogger<SimulationManager> logger, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient, IFisheriesAuthorityServiceClient fisheriesAuthorityServiceClient, IEnvironmentServiceClient environmentServiceClient)
         {
             _logger = logger;
             _marketServiceClient = marketServiceClient;
@@ -70,9 +69,9 @@ namespace SURIMI_controller.Services
             var simulationInitialisationTasks = new List<Task<InitialiseSimulationResponse>>();
 
             var ecopathInitialiseSimulationResponse = _ecopathServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
-            var poseidonTask = _poseidonServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
-            var marketTask = _marketServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
-            var fisheriesAuthorityTask = _fisheriesAuthorityServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
+            _ = _poseidonServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
+            _ = _marketServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
+            _ = _fisheriesAuthorityServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
             _simulations[simulationId] = new Models.Simulation
             {
                 ScenarioName = scenarioName,
@@ -90,10 +89,6 @@ namespace SURIMI_controller.Services
             };
 
             await Task.WhenAll(simulationInitialisationTasks);
-
-            // Run the rest of the logic in a background task after all initialisation calls complete
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
             _logger.LogInformation("{NrOfTasks} initialisation calls completed for simulation {SimulationId}", simulationInitialisationTasks.Count, simulationId);
 
             string hostValue = string.Empty;
@@ -131,8 +126,8 @@ namespace SURIMI_controller.Services
             }
             var simulation = _simulations[simulationId];
 
-            // Run the rest of the logic in a background task after all initialisation calls complete
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            simulation.Cts = cts;
 
             await _fisheriesAuthorityServiceClient.CreateRegulationsAsync(new CreateRegulationsRequest()
             {
@@ -161,10 +156,11 @@ namespace SURIMI_controller.Services
                 // Finalise the simulation
                 var finaliseSimulationRequest = CreateFinaliseSimulationRequest(simulationId);
 
-                await _ecopathServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
-                await _poseidonServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
-                await _marketServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
-                await _fisheriesAuthorityServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
+                await Task.WhenAll(
+                    _ecopathServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token),
+                    _poseidonServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token),
+                    _marketServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token),
+                    _fisheriesAuthorityServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token));
 
                 simulation.Status = "Finished";
                 simulation.SimulationDuration = DateTime.UtcNow - simulation.SimulationStarted;
@@ -176,10 +172,11 @@ namespace SURIMI_controller.Services
                 // cancel the simulation
                 var cancelRequest = CreateCancelRequest(simulationId);
 
-                await _poseidonServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
-                await _ecopathServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
-                await _marketServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
-                await _fisheriesAuthorityServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
+                await Task.WhenAll(
+                    _poseidonServiceClient.CancelSimulationAsync(cancelRequest, cts.Token),
+                    _ecopathServiceClient.CancelSimulationAsync(cancelRequest, cts.Token),
+                    _marketServiceClient.CancelSimulationAsync(cancelRequest, cts.Token),
+                    _fisheriesAuthorityServiceClient.CancelSimulationAsync(cancelRequest, cts.Token));
 
                 simulation.Status = "Canceled";
                 _logger.LogInformation("Simulation {SimulationId} is canceled", simulationId);

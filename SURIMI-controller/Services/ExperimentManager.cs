@@ -1,6 +1,5 @@
 ﻿using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using SURIMI_controller.Models;
 using System.Collections.Concurrent;
@@ -30,7 +29,7 @@ namespace SURIMI_controller.Services
         /// Initializes a new <see cref="ExperimentManager"/> and subscribes to all
         /// <see cref="ISimulationManager"/> events.
         /// </summary>
-        public ExperimentManager(GrpcClientFactory clientFactory, ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService)
+        public ExperimentManager(ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService)
         {
             _simulationManager = simulationManager;
             _cmsyServiceClient = cmsyServiceClient;
@@ -78,88 +77,7 @@ namespace SURIMI_controller.Services
 
             // Run the rest of the logic in a background task after all initialisation calls complete
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var task = Task.Run(async () =>
-            {
-                _logger.LogInformation("Checking versions of connected services (retrying until all are available)...");
-                await _versionCheckerService.WriteVersionsAsync(cts.Token);
-
-                var initRequest = new InitialiseExperimentRequest
-                {
-                    ExperimentId = request.ExperimentId,
-                    ScenarioName = request.ScenarioName,
-                    EndDateTime = request.EndDateTime,
-                    Simulation = simulation,
-                    SimulationIds = { experiment.SimulationIds },
-                };
-
-                // Kick off initialisation on all downstream services in parallel
-                var experimentInitialisationTasks = new List<Task<InitialiseExperimentResponse>>();
-                _ = _cmsyServiceClient.AddInitialise(experimentInitialisationTasks, initRequest, cancellationToken);
-                _ = _outputCreatorClient.AddInitialise(experimentInitialisationTasks, initRequest, cancellationToken);
-                _ = _environmentServiceClient.AddInitialise(experimentInitialisationTasks, initRequest, cancellationToken);
-                _ = _valueChainServiceClient.AddInitialise(experimentInitialisationTasks, initRequest, cancellationToken);
-
-                // Start all simulation initialisations concurrently
-                var initTasks = experiment.SimulationIds.Select(async simulationId =>
-                {
-                    try
-                    {
-                        await _simulationManager.InitSimulationAsync(
-                        simulationId,
-                        request.ExperimentId,
-                        request.ScenarioName,
-                        request.EndDateTime?.ToDateTime(),
-                        simulation,
-                        cancellationToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Exception in Running Simulation. ID={SimulationId}. Message={Message}", simulationId, ex.Message);
-                        throw;
-                    }
-                }).ToList();
-
-                try
-                {
-                    // Wait for ALL initialisation (both downstream services and simulation inits) before running
-                    await Task.WhenAll(experimentInitialisationTasks.Concat<Task>(initTasks));
-                    _logger.LogInformation("{NrOfTasks} initialisation calls completed for ExperimentId={ExperimentId}", experimentInitialisationTasks.Count, request.ExperimentId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Exception in initialising simulations for ExperimentId={ExperimentId}. Message={Message}", request.ExperimentId, ex.Message);
-                    throw;
-                }
-
-                try
-                { 
-                    // Now it is safe to start running
-                    var runTasks = experiment.SimulationIds.Select(async simulationId =>
-                    {
-                        try
-                        {
-                            await _simulationManager.RunSimulationAsync(
-                            simulationId,
-                            request.ScenarioName,
-                            request.RegulationsDefinitionsSummary,
-                            cancellationToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Exception in Running Simulation. ID={SimulationId}", simulationId);
-                            throw;
-                        }
-                    }).ToList();
-
-                    await Task.WhenAll(runTasks);
-                    _logger.LogInformation("{NrOfTasks} run simulations calls completed for ExperimentId={ExperimentId}", runTasks.Count, request.ExperimentId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Exception in running simulations for ExperimentId={ExperimentId}. Message={Message}", request.ExperimentId, ex.Message);
-                    throw;
-                }
-            }, cts.Token);
+            var task = Task.Run(() => RunExperimentAsync(request, simulation, experiment, cts.Token), cts.Token);
 
             experiment.Task = task;
             experiment.Cts = cts;
@@ -174,8 +92,91 @@ namespace SURIMI_controller.Services
             Experiment experiment,
             CancellationToken cancellationToken)
         {
+            _logger.LogInformation("Checking versions of connected services (retrying until all are available)...");
+            await _versionCheckerService.WriteVersionsAsync(cancellationToken);
 
+            var initRequest = new InitialiseExperimentRequest
+            {
+                ExperimentId = request.ExperimentId,
+                ScenarioName = request.ScenarioName,
+                EndDateTime = request.EndDateTime,
+                Simulation = simulation,
+                SimulationIds = { experiment.SimulationIds },
+            };
+
+            // Kick off initialisation on all experiments in parallel
+            var experimentInitTasks = new List<Task<InitialiseExperimentResponse>>();
+            _ = _cmsyServiceClient.AddInitialise(experimentInitTasks, initRequest, cancellationToken);
+            _ = _outputCreatorClient.AddInitialise(experimentInitTasks, initRequest, cancellationToken);
+            _ = _environmentServiceClient.AddInitialise(experimentInitTasks, initRequest, cancellationToken);
+            _ = _valueChainServiceClient.AddInitialise(experimentInitTasks, initRequest, cancellationToken);
+
+            // Initialise the simulations in parallel, each wrapped in a try/catch that logs and rethrows on failure
+            var initTasks = CreateSimulationTasks(
+                experiment.SimulationIds,
+                id => _simulationManager.InitSimulationAsync(
+                    id,
+                    request.ExperimentId,
+                    request.ScenarioName,
+                    request.EndDateTime?.ToDateTime(),
+                    simulation,
+                    cancellationToken),
+                "Init");
+
+            try
+            {
+                // Wait for ALL initialisation (both experiment services and simulation inits) before running
+                await Task.WhenAll(experimentInitTasks.Concat<Task>(initTasks));
+                _logger.LogInformation("{NrOfTasks} initialisation calls completed for ExperimentId={ExperimentId}", experimentInitTasks.Count, request.ExperimentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception in initialising simulations for ExperimentId={ExperimentId}. Message={Message}", request.ExperimentId, ex.Message);
+                throw;
+            }
+
+            // Kick off the simulation runs in parallel, each wrapped in a try/catch that logs and rethrows on failure
+            var runTasks = CreateSimulationTasks(
+                experiment.SimulationIds,
+                id => _simulationManager.RunSimulationAsync(
+                    id,
+                    request.ScenarioName,
+                    request.RegulationsDefinitionsSummary,
+                    cancellationToken),
+                "Run");
+
+            try
+            {
+                await Task.WhenAll(runTasks);
+                _logger.LogInformation("{NrOfTasks} run simulations calls completed for ExperimentId={ExperimentId}", runTasks.Count, request.ExperimentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception in running simulations for ExperimentId={ExperimentId}. Message={Message}", request.ExperimentId, ex.Message);
+                throw;
+            }
         }
+
+        /// <summary>
+        /// Creates a list of per-simulation tasks, each wrapping <paramref name="work"/> in a
+        /// try/catch that logs and rethrows on failure.
+        /// </summary>
+        /// <param name="simulationIds">The simulation IDs to fan out over.</param>
+        /// <param name="work">Async delegate to invoke for each simulation ID.</param>
+        /// <param name="phase">Phase label used in the error log message (e.g. "Init", "Run").</param>
+        private List<Task> CreateSimulationTasks(
+            IReadOnlyList<string> simulationIds,
+            Func<string, Task> work,
+            string phase) =>
+            simulationIds.Select(async simulationId =>
+            {
+                try { await work(simulationId); }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Exception in {Phase} simulation. ID={SimulationId}", phase, simulationId);
+                    throw;
+                }
+            }).ToList<Task>();
 
 
 
