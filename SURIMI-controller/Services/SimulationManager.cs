@@ -42,7 +42,7 @@ namespace SURIMI_controller.Services
         }
 
         /// <summary>
-        /// Run a new simulation
+        /// Initialise a new simulation
         /// </summary>
         /// <param name="simulationId">The unique identifier for the simulation</param>
         /// <param name="scenarioName">The identifier for the scenario</param>
@@ -50,7 +50,7 @@ namespace SURIMI_controller.Services
         /// <param name="simulation">The simulation details</param>
         /// <returns></returns>
         /// <exception cref="RpcException"></exception>
-        public Task RunSimulationAsync(string simulationId, string experimentId, string scenarioName, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, Grpc.Surimi.RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken)
+        public async Task InitSimulationAsync(string simulationId, string experimentId, string scenarioName, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, CancellationToken cancellationToken)
         {
             if (_simulations.ContainsKey(simulationId))
             {
@@ -67,12 +67,12 @@ namespace SURIMI_controller.Services
 
             var xx = GetProtoString<InitialiseSimulationRequest>(initRequest);
 
-            var initializationTasks = new List<Task<InitialiseSimulationResponse>>();
+            var simulationInitialisationTasks = new List<Task<InitialiseSimulationResponse>>();
 
-            var ecopathInitialiseSimulationResponse = _ecopathServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
-            _poseidonServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
-            _marketServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
-            _fisheriesAuthorityServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
+            var ecopathInitialiseSimulationResponse = _ecopathServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
+            var poseidonTask = _poseidonServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
+            var marketTask = _marketServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
+            var fisheriesAuthorityTask = _fisheriesAuthorityServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
             _simulations[simulationId] = new Models.Simulation
             {
                 ScenarioName = scenarioName,
@@ -84,102 +84,120 @@ namespace SURIMI_controller.Services
                     ? (endDateTime.Value > simulation.MaximumEndDateTime.ToDateTime() ? simulation.MaximumEndDateTime.ToDateTime() : endDateTime.Value)
                     : simulation.MaximumEndDateTime.ToDateTime(),
                 Status = "Initializing",
+                SimulationStarted = DateTime.UtcNow,
                 EcologyHost = string.Empty,
                 Order = _simulations.Count + 1
             };
 
+            await Task.WhenAll(simulationInitialisationTasks);
+
             // Run the rest of the logic in a background task after all initialisation calls complete
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var task = Task.Run(async () =>
+
+            _logger.LogInformation("{NrOfTasks} initialisation calls completed for simulation {SimulationId}", simulationInitialisationTasks.Count, simulationId);
+
+            string hostValue = string.Empty;
+            if (ecopathInitialiseSimulationResponse != null)
             {
-                await Task.WhenAll(initializationTasks);
+                // Await the response headers
+                var headers = await ecopathInitialiseSimulationResponse.ResponseHeadersAsync;
 
-                string hostValue = string.Empty;
-                if (ecopathInitialiseSimulationResponse != null)
-                {
-                    // Await the response headers
-                    var headers = await ecopathInitialiseSimulationResponse.ResponseHeadersAsync;
+                // Find the header by key (case-insensitive)
+                hostValue = headers.GetValue("host") ?? string.Empty; // returns string.Empty if not found
+            }
 
-                    // Find the header by key (case-insensitive)
-                    hostValue = headers.GetValue("host") ?? string.Empty; // returns string.Empty if not found
-                }
+            _simulations[simulationId].EcologyHost = hostValue ?? string.Empty;
+            _simulations[simulationId].Status = "Initialised";
 
-                _simulations[simulationId].EcologyHost = hostValue ?? string.Empty;
-                _simulations[simulationId].Status = "Initialised";
+            _logger.LogInformation("Simulation {SimulationId} is created and initialised on {EcologyHost}", simulationId, hostValue);
 
-                _logger.LogInformation("Simulation {SimulationId} is created and initialised on {EcologyHost}", simulationId, hostValue);
+            // Return promptly, do not await the task to prevent the gRPC call from timing out. The simulation will continue to run in the background, and its progress can be tracked through the SimulationManager's state.
+        }
 
-                await _fisheriesAuthorityServiceClient.CreateRegulationsAsync(new CreateRegulationsRequest()
-                {
-                    SimulationId = simulationId,
-                    RegulationsSummary = regulationsSummary
-                }, cts.Token);
+        /// <summary>
+        /// Run a simulation
+        /// </summary>
+        /// <param name="simulationId">The unique identifier for the simulation</param>
+        /// <param name="scenarioName">The identifier for the scenario</param>
+        /// <param name="endDateTime">An optional end date and time for the simulation. </param>
+        /// <param name="simulation">The simulation details</param>
+        /// <returns></returns>
+        /// <exception cref="RpcException"></exception>
+        public async Task RunSimulationAsync(string simulationId, string scenarioName, Grpc.Surimi.RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken)
+        {
+            if (!_simulations.ContainsKey(simulationId))
+            {
+                throw new RpcException(new Status(StatusCode.Internal, $"Simulation with Id {simulationId} is not found"));
+            }
+            var simulation = _simulations[simulationId];
 
-                var current = _simulations[simulationId].StartDateTime;
-                var end = _simulations[simulationId].EndDateTime;
+            // Run the rest of the logic in a background task after all initialisation calls complete
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                _simulations[simulationId].Status = "Running";
-                _simulations[simulationId].SimulationStarted = DateTime.UtcNow;
-                _simulations[simulationId].SimulationDuration = TimeSpan.FromMilliseconds(10);    // so you immediately see a duration, instead of nothing
-
-                try
-                {
-                    while (current <= end)
-                    {
-                        cts.Token.ThrowIfCancellationRequested();
-
-                        await ProcessSimulationStep(simulationId, current, AddStepSize(current, _simulations[simulationId].StepSize), cts.Token);
-                        _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
-
-                        current = AddStepSize(current, _simulations[simulationId].StepSize);
-                    }
-
-                    // Finalise the simulation
-                    var finaliseSimulationRequest = CreateFinaliseSimulationRequest(simulationId);
-
-                    await _ecopathServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
-                    await _poseidonServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
-                    await _marketServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
-                    await _fisheriesAuthorityServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
-
-                    _simulations[simulationId].Status = "Finished";
-                    _simulations[simulationId].SimulationDuration = DateTime.UtcNow - _simulations[simulationId].SimulationStarted;
-                    _logger.LogInformation("Simulation {SimulationId} is finished", simulationId);
-                    SimulationFinalised?.Invoke(this, new ExperimentEventArgs(experimentId, simulationId, end, cts.Token));
-                }
-                catch (RpcException ex) when (ex.InnerException is OperationCanceledException)
-                {
-                    // cancel the simulation
-                    var cancelRequest = CreateCancelRequest(simulationId);
-
-                    await _poseidonServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
-                    await _ecopathServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
-                    await _marketServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
-                    await _fisheriesAuthorityServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
-
-                    _simulations[simulationId].Status = "Canceled";
-                    _logger.LogInformation("Simulation {SimulationId} is canceled", simulationId);
-                    SimulationCancelled?.Invoke(this, new ExperimentEventArgs(experimentId, simulationId, DateTime.UtcNow, cts.Token));
-                }
-                catch (RpcException ex)
-                {
-                    _simulations[simulationId].Status = "Error";
-                    _logger.LogError(ex, "{SimulationId} encountered RpcException. StatusCode: {StatusCode}, Method: {Method}",
-                           simulationId, ex.StatusCode, ex.Status.Detail);
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _simulations[simulationId].Status = "Error";
-                    _logger.LogError(ex, "{SimulationId} encountered an Exception", simulationId);
-                    throw;
-                }
+            await _fisheriesAuthorityServiceClient.CreateRegulationsAsync(new CreateRegulationsRequest()
+            {
+                SimulationId = simulationId,
+                RegulationsSummary = regulationsSummary
             }, cts.Token);
 
-            _simulations[simulationId].Task = task;
-            _simulations[simulationId].Cts = cts;
-            // Return promptly, do not await the task to prevent the gRPC call from timing out. The simulation will continue to run in the background, and its progress can be tracked through the SimulationManager's state.
-            return Task.CompletedTask;
+            var current = simulation.StartDateTime;
+            var end = simulation.EndDateTime;
+
+            simulation.Status = "Running";
+            simulation.SimulationDuration = TimeSpan.FromMilliseconds(10);    // so you immediately see a duration, instead of nothing
+
+            try
+            {
+                while (current <= end)
+                {
+                    cts.Token.ThrowIfCancellationRequested();
+
+                    await ProcessSimulationStep(simulationId, current, AddStepSize(current, simulation.StepSize), cts.Token);
+                    simulation.SimulationDuration = DateTime.UtcNow - simulation.SimulationStarted;
+
+                    current = AddStepSize(current, simulation.StepSize);
+                }
+
+                // Finalise the simulation
+                var finaliseSimulationRequest = CreateFinaliseSimulationRequest(simulationId);
+
+                await _ecopathServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
+                await _poseidonServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
+                await _marketServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
+                await _fisheriesAuthorityServiceClient.FinaliseSimulationAsync(finaliseSimulationRequest, cts.Token);
+
+                simulation.Status = "Finished";
+                simulation.SimulationDuration = DateTime.UtcNow - simulation.SimulationStarted;
+                _logger.LogInformation("Simulation {SimulationId} is finished", simulationId);
+                SimulationFinalised?.Invoke(this, new ExperimentEventArgs(simulation.ExperimentId, simulationId, end, cts.Token));
+            }
+            catch (RpcException ex) when (ex.InnerException is OperationCanceledException)
+            {
+                // cancel the simulation
+                var cancelRequest = CreateCancelRequest(simulationId);
+
+                await _poseidonServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
+                await _ecopathServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
+                await _marketServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
+                await _fisheriesAuthorityServiceClient.CancelSimulationAsync(cancelRequest, cts.Token);
+
+                simulation.Status = "Canceled";
+                _logger.LogInformation("Simulation {SimulationId} is canceled", simulationId);
+                SimulationCancelled?.Invoke(this, new ExperimentEventArgs(simulation.ExperimentId, simulationId, DateTime.UtcNow, cts.Token));
+            }
+            catch (RpcException ex)
+            {
+                simulation.Status = "Error";
+                _logger.LogError(ex, "{SimulationId} encountered RpcException. StatusCode: {StatusCode}, Method: {Method}",
+                        simulationId, ex.StatusCode, ex.Status.Detail);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                simulation.Status = "Error";
+                _logger.LogError(ex, "{SimulationId} encountered an Exception", simulationId);
+                throw;
+            }
         }
 
         public Task CancelSimulationAsync(string simulationId)

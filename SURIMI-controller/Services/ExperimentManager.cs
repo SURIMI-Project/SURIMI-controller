@@ -72,7 +72,7 @@ namespace SURIMI_controller.Services
                 .Select(_ => Guid.NewGuid().ToString())
                 .ToList();
 
-            _experiments[request.ExperimentId] = new Experiment { SimulationIds = simulationIds };
+            var experiment = _experiments[request.ExperimentId] = new Experiment { SimulationIds = simulationIds };
 
             // All summary dictionaries (BiomassSummary, CatchDispositionSummary, FishingActivitySummary, SalesSummary, SpeciesPriceSummary) are lazily initialized per date in OnSummaryUpdated
 
@@ -89,48 +89,95 @@ namespace SURIMI_controller.Services
                     ScenarioName = request.ScenarioName,
                     EndDateTime = request.EndDateTime,
                     Simulation = simulation,
-                    SimulationIds = { _experiments[request.ExperimentId].SimulationIds },
+                    SimulationIds = { experiment.SimulationIds },
                 };
 
                 // Kick off initialisation on all downstream services in parallel
-                var initializationTasks = new List<Task<InitialiseExperimentResponse>>();
-                var cmsyTask = _cmsyServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
-                var outputCreatorTask = _outputCreatorClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
-                var environmentTask = _environmentServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
-                var valueChainTask = _valueChainServiceClient.AddInitialise(initializationTasks, initRequest, cancellationToken);
+                var experimentInitialisationTasks = new List<Task<InitialiseExperimentResponse>>();
+                _ = _cmsyServiceClient.AddInitialise(experimentInitialisationTasks, initRequest, cancellationToken);
+                _ = _outputCreatorClient.AddInitialise(experimentInitialisationTasks, initRequest, cancellationToken);
+                _ = _environmentServiceClient.AddInitialise(experimentInitialisationTasks, initRequest, cancellationToken);
+                _ = _valueChainServiceClient.AddInitialise(experimentInitialisationTasks, initRequest, cancellationToken);
 
-                // Start all simulation runs concurrently
-                var initTasks = _experiments[request.ExperimentId].SimulationIds.Select(async simulationId =>
+                // Start all simulation initialisations concurrently
+                var initTasks = experiment.SimulationIds.Select(async simulationId =>
                 {
                     try
                     {
-                        await _simulationManager.RunSimulationAsync(
+                        await _simulationManager.InitSimulationAsync(
                         simulationId,
                         request.ExperimentId,
                         request.ScenarioName,
                         request.EndDateTime?.ToDateTime(),
                         simulation,
-                        request.RegulationsDefinitionsSummary,
                         cancellationToken);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Exception in Running Simulation. ID={SimulationId}", simulationId);
+                        _logger.LogError(ex, "Exception in Running Simulation. ID={SimulationId}. Message={Message}", simulationId, ex.Message);
+                        throw;
                     }
                 }).ToList();
 
-                // Combine both task collections and await all together
-                var allTasks = initTasks.Concat<Task>(initializationTasks);
-                await Task.WhenAll(allTasks);
-                _logger.LogInformation("All simulations and initialisation calls completed for ExperimentId={ExperimentId}", request.ExperimentId);
+                try
+                {
+                    // Wait for ALL initialisation (both downstream services and simulation inits) before running
+                    await Task.WhenAll(experimentInitialisationTasks.Concat<Task>(initTasks));
+                    _logger.LogInformation("{NrOfTasks} initialisation calls completed for ExperimentId={ExperimentId}", experimentInitialisationTasks.Count, request.ExperimentId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Exception in initialising simulations for ExperimentId={ExperimentId}. Message={Message}", request.ExperimentId, ex.Message);
+                    throw;
+                }
+
+                try
+                { 
+                    // Now it is safe to start running
+                    var runTasks = experiment.SimulationIds.Select(async simulationId =>
+                    {
+                        try
+                        {
+                            await _simulationManager.RunSimulationAsync(
+                            simulationId,
+                            request.ScenarioName,
+                            request.RegulationsDefinitionsSummary,
+                            cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Exception in Running Simulation. ID={SimulationId}", simulationId);
+                            throw;
+                        }
+                    }).ToList();
+
+                    await Task.WhenAll(runTasks);
+                    _logger.LogInformation("{NrOfTasks} run simulations calls completed for ExperimentId={ExperimentId}", runTasks.Count, request.ExperimentId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Exception in running simulations for ExperimentId={ExperimentId}. Message={Message}", request.ExperimentId, ex.Message);
+                    throw;
+                }
             }, cts.Token);
 
-            _experiments[request.ExperimentId].Task = task;
-            _experiments[request.ExperimentId].Cts = cts;
+            experiment.Task = task;
+            experiment.Cts = cts;
 
             // Return promptly, do not await the task to prevent the gRPC call from timing out. The simulation will continue to run in the background, and its progress can be tracked through the SimulationManager's state.
             return Task.CompletedTask;
         }
+
+        private async Task RunExperimentAsync(
+            SubmitExperimentRequest request,
+            Grpc.Surimi.Simulation simulation,
+            Experiment experiment,
+            CancellationToken cancellationToken)
+        {
+
+        }
+
+
 
         /// <summary>
         /// Cancels all simulation runs belonging to the specified experiment in parallel.
