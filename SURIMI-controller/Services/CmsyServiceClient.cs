@@ -19,13 +19,16 @@ namespace SURIMI_controller.Services
             _logger = logger;
         }
 
-        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default(CancellationToken))
+        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default)
         {
             if (_includeCmsy)
             {
-                var InitialiseExperimentResponse = _cmsyClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
-                initializationTasks.Add(InitialiseExperimentResponse.ResponseAsync);
-                return InitialiseExperimentResponse;
+                var callOptions = new CallOptions(
+                    deadline: DateTime.UtcNow.AddMinutes(10),   // adjust to expected CMSY init time
+                    cancellationToken: cancellationToken);
+                var response = _cmsyClient.InitialiseExperimentAsync(initialiseExperimentRequest, callOptions);
+                initializationTasks.Add(response.ResponseAsync);
+                return response;
             }
             return null;
         }

@@ -15,7 +15,8 @@ namespace SURIMI_controller.Services
         event EventHandler<SpeciesPriceEventArgs>? SpeciesPriceUpdated;
 
         Task CancelSimulationAsync(string simulationId);
-        Task RunSimulationAsync(string simulationId, string experimentId, string scenarioName, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken);
+        Task InitSimulationAsync(string simulationId, string experimentId, string scenarioName, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, CancellationToken cancellationToken);
+        Task RunSimulationAsync(string simulationId, string scenarioName, RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken);
         Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken);
     }
 }

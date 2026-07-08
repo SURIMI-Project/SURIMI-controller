@@ -1,5 +1,4 @@
 ﻿using Grpc.Core;
-using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using SURIMI.Common.gRPC.Services;
 using SURIMI.Datamodel;
@@ -14,7 +13,7 @@ namespace SURIMI_controller.Services
         private readonly IConfigurationService _surimiConfigurationService;
         private readonly string _version;
 
-        public ControllerService(GrpcClientFactory clientFactory, IExperimentManager experimentManager, ILogger<ControllerService> logger, IConfigurationService surimiConfigurationService, ProtocolVersionService protocolVersionService)
+        public ControllerService(IExperimentManager experimentManager, ILogger<ControllerService> logger, IConfigurationService surimiConfigurationService, ProtocolVersionService protocolVersionService)
         {
             _logger = logger;
             _experimentManager = experimentManager;

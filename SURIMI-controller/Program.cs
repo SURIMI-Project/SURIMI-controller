@@ -113,43 +113,24 @@ public class Program
             }
 
             var registration = name != null
-                ? builder.Services.AddGrpcClient<TClient>(name, o =>
-                {
-                    o.Address = new Uri(baseAddress);
-                })
-                : builder.Services.AddGrpcClient<TClient>(o =>
-                {
-                    o.Address = new Uri(baseAddress);
-                });
+                ? builder.Services.AddGrpcClient<TClient>(name, o => { o.Address = new Uri(baseAddress); })
+                : builder.Services.AddGrpcClient<TClient>(o => { o.Address = new Uri(baseAddress); });
+
 
             registration
-                .AddInterceptor<GrpcErrorDetailLoggingInterceptor>();
+                .AddInterceptor<GrpcErrorDetailLoggingInterceptor>()
+                // Remove the Aspire standard resilience pipeline (AttemptTimeout, Polly retry, circuit breaker).
+                // gRPC clients use their own retry via ServiceConfig and are long-lived by design.
+                .RemoveAllResilienceHandlers();
 
             registration.ConfigureChannel(options =>
             {
                 options.Credentials = Grpc.Core.ChannelCredentials.Insecure;
                 options.MaxReceiveMessageSize = 100 * 1024 * 1024; // 100 MB
                 options.MaxSendMessageSize = 100 * 1024 * 1024;    // 100 MB
-                // Note: options.HttpHandler must NOT be set here — setting it disables gRPC built-in retry.
-                // The SocketsHttpHandler is configured separately via ConfigurePrimaryHttpMessageHandler below.
-                options.ServiceConfig = new ServiceConfig
-                {
-                    MethodConfigs =
-                    {
-                        new MethodConfig
-                        {
-                            Names = { MethodName.Default },
-                            RetryPolicy = new RetryPolicy
-                            {
-                                MaxAttempts = 4,
-                                InitialBackoff = TimeSpan.FromMilliseconds(500),
-                                MaxBackoff = TimeSpan.FromSeconds(5),
-                                BackoffMultiplier = 1.5,
-                                RetryableStatusCodes = { Grpc.Core.StatusCode.Unavailable }
-                            }
-                        }
-                    }
-                };
+                // No ServiceConfig retry — all gRPC calls here are stateful and non-idempotent.
+                // Retrying InitialiseExperiment, ExperimentStep, etc. would corrupt downstream state.
+                // If a call fails, it should surface as an error, not be silently retried.
             });
 
             // Configure the HTTP handler separately so gRPC built-in retry remains active.
@@ -158,7 +139,10 @@ public class Program
             registration.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
                 EnableMultipleHttp2Connections = true,
-                PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+                KeepAlivePingDelay = TimeSpan.FromMinutes(6),       // > Python gRPC server's 5-min minimum
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(20),    // time to wait for pong before failing
+                KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests // ping during active requests too
             });
             //            .EnableCallContextPropagation();
         }
