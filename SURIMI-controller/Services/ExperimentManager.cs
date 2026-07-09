@@ -423,31 +423,41 @@ namespace SURIMI_controller.Services
             var dateKey = e.Current.Date;
             var dictionary = getDictionary(experiment);
 
-            // Lazily initialize the date entry with null slots for all simulations
-            if (!dictionary.TryGetValue(dateKey, out var summaryForSpecificDate))
+            Dictionary<string, TSummary?>? completedBucket = null;
+            lock (experiment.Lock)
             {
-                summaryForSpecificDate = experiment.SimulationIds.ToDictionary(id => id, _ => (TSummary?)null);
-                dictionary[dateKey] = summaryForSpecificDate;
+                // Lazily initialize the date entry with null slots for all simulations
+                if (!dictionary.TryGetValue(dateKey, out var summaryForSpecificDate))
+                {
+                    summaryForSpecificDate = experiment.SimulationIds.ToDictionary(id => id, _ => (TSummary?)null);
+                    dictionary[dateKey] = summaryForSpecificDate;
+                }
+
+                // Guard against duplicate events from the same simulation on the same date
+                if (summaryForSpecificDate[e.SimulationId] != null)
+                {
+                    _logger.LogWarning("Received duplicate {SummaryName} update. ExperimentId={ExperimentId}, SimulationId={SimulationId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, e.SimulationId, dateKey);
+                    return;
+                }
+
+                summaryForSpecificDate[e.SimulationId] = getSummary(e);
+
+                // Check if all simulations have reported in for this date; if so, capture the bucket and free memory
+                if (summaryForSpecificDate.All(kv => kv.Value != null))
+                {
+                    _logger.LogInformation("All simulations received {SummaryName} for date {Date}. ExperimentId={ExperimentId}", typeof(TSummary).Name, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
+                    completedBucket = summaryForSpecificDate;
+                    dictionary.Remove(dateKey);
+                }
             }
 
-            // Guard against duplicate events from the same simulation on the same date
-            if (summaryForSpecificDate[e.SimulationId] != null)
+            // Fire the downstream call outside the lock to avoid holding it across async work
+            if (completedBucket != null)
             {
-                _logger.LogWarning("Received duplicate {SummaryName} update. ExperimentId={ExperimentId}, SimulationId={SimulationId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, e.SimulationId, dateKey);
-                return;
-            }
-
-            summaryForSpecificDate[e.SimulationId] = getSummary(e);
-
-            // Check if all simulations have reported in for this date; if so, aggregate, store, and free memory
-            if (summaryForSpecificDate.All(kv => kv.Value != null))
-            {
-                _logger.LogInformation("All simulations received {SummaryName} for date {Date}. ExperimentId={ExperimentId}", typeof(TSummary).Name, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
-                _ = onAllReceived(summaryForSpecificDate, e.ExperimentId, e.Current, e.Token)
+                _ = onAllReceived(completedBucket, e.ExperimentId, e.Current, e.Token)
                     .ContinueWith(
                         t => _logger.LogError(t.Exception, "{SummaryName} aggregation failed for ExperimentId={ExperimentId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, dateKey),
                         TaskContinuationOptions.OnlyOnFaulted);
-                dictionary.Remove(dateKey);
             }
         }
 
@@ -488,31 +498,41 @@ namespace SURIMI_controller.Services
             var dateKey = e.Current.Date;
             var dictionary = getDictionary(experiment);
 
-            // Lazily initialize the date entry with null slots for all simulations
-            if (!dictionary.TryGetValue(dateKey, out var flagsForDate))
+            bool shouldFire = false;
+            lock (experiment.Lock)
             {
-                flagsForDate = experiment.SimulationIds.ToDictionary(id => id, _ => (bool?)null);
-                dictionary[dateKey] = flagsForDate;
+                // Lazily initialize the date entry with null slots for all simulations
+                if (!dictionary.TryGetValue(dateKey, out var flagsForDate))
+                {
+                    flagsForDate = experiment.SimulationIds.ToDictionary(id => id, _ => (bool?)null);
+                    dictionary[dateKey] = flagsForDate;
+                }
+
+                // Guard against duplicate events from the same simulation on the same date
+                if (flagsForDate[e.SimulationId] != null)
+                {
+                    _logger.LogWarning("Received duplicate {EventName}. ExperimentId={ExperimentId}, SimulationId={SimulationId}, Date={Date}", eventName, e.ExperimentId, e.SimulationId, dateKey.ToString("yyyy-MM-dd"));
+                    return;
+                }
+
+                flagsForDate[e.SimulationId] = true;
+
+                // Check if all simulations have reported in for this date; if so, notify downstream and free memory
+                if (flagsForDate.All(kv => kv.Value != null))
+                {
+                    _logger.LogInformation("All simulations received {EventName} for date {Date}. ExperimentId={ExperimentId}", eventName, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
+                    shouldFire = true;
+                    dictionary.Remove(dateKey);
+                }
             }
 
-            // Guard against duplicate events from the same simulation on the same date
-            if (flagsForDate[e.SimulationId] != null)
+            // Fire the downstream call outside the lock to avoid holding it across async work
+            if (shouldFire)
             {
-                _logger.LogWarning("Received duplicate {EventName}. ExperimentId={ExperimentId}, SimulationId={SimulationId}, Date={Date}", eventName, e.ExperimentId, e.SimulationId, dateKey.ToString("yyyy-MM-dd"));
-                return;
-            }
-
-            flagsForDate[e.SimulationId] = true;
-
-            // Check if all simulations have reported in for this date; if so, notify downstream and free memory
-            if (flagsForDate.All(kv => kv.Value != null))
-            {
-                _logger.LogInformation("All simulations received {EventName} for date {Date}. ExperimentId={ExperimentId}", eventName, dateKey.ToString("yyyy-MM-dd"), e.ExperimentId);
                 _ = onAllReceived(e.ExperimentId, e.Current, e.Token)
                     .ContinueWith(
                         t => _logger.LogError(t.Exception, "{EventName} fan-out failed for ExperimentId={ExperimentId}, Date={Date}", eventName, e.ExperimentId, dateKey),
                         TaskContinuationOptions.OnlyOnFaulted);
-                dictionary.Remove(dateKey);
             }
         }
     }
