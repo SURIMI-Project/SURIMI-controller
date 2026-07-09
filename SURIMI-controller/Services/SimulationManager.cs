@@ -169,18 +169,18 @@ namespace SURIMI_controller.Services
             }
             catch (RpcException ex) when (ex.InnerException is OperationCanceledException)
             {
-                // cancel the simulation
+                // cancel the simulation — use CancellationToken.None because cts is already cancelled at this point
                 var cancelRequest = CreateCancelRequest(simulationId);
 
                 await Task.WhenAll(
-                    _poseidonServiceClient.CancelSimulationAsync(cancelRequest, cts.Token),
-                    _ecopathServiceClient.CancelSimulationAsync(cancelRequest, cts.Token),
-                    _marketServiceClient.CancelSimulationAsync(cancelRequest, cts.Token),
-                    _fisheriesAuthorityServiceClient.CancelSimulationAsync(cancelRequest, cts.Token));
+                    _poseidonServiceClient.CancelSimulationAsync(cancelRequest, CancellationToken.None),
+                    _ecopathServiceClient.CancelSimulationAsync(cancelRequest, CancellationToken.None),
+                    _marketServiceClient.CancelSimulationAsync(cancelRequest, CancellationToken.None),
+                    _fisheriesAuthorityServiceClient.CancelSimulationAsync(cancelRequest, CancellationToken.None));
 
                 simulation.Status = "Canceled";
                 _logger.LogInformation("Simulation {SimulationId} is canceled", simulationId);
-                SimulationCancelled?.Invoke(this, new ExperimentEventArgs(simulation.ExperimentId, simulationId, DateTime.UtcNow, cts.Token));
+                SimulationCancelled?.Invoke(this, new ExperimentEventArgs(simulation.ExperimentId, simulationId, DateTime.UtcNow, CancellationToken.None));
             }
             catch (RpcException ex)
             {

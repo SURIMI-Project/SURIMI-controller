@@ -61,6 +61,16 @@ namespace SURIMI_controller.Services
             var parts = methodName.Split('/', StringSplitOptions.RemoveEmptyEntries);
             var clientName = parts.Length >= 1 ? parts[0] : methodName;
 
+            // Cancelled is an intentional signal (e.g. experiment cancelled by the user) — not an error
+            if (ex.StatusCode == StatusCode.Cancelled)
+            {
+                logger.LogInformation(
+                    "gRPC call {Method} on {Client} was cancelled.",
+                    methodName,
+                    clientName);
+                return;
+            }
+
             var rpcStatus = ex.GetRpcStatus();
             if (rpcStatus != null)
             {
