@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-SURIMI-controller is a .NET 8 / C# 12 Aspire-hosted solution that orchestrates multi-simulation fisheries experiments. It acts as an intermediary between downstream scientific services (CMSY, Environment, OutputCreator, Poseidon, Ecopath, FisheriesAuthority, Market, ValueChain) and the experiment lifecycle.
+SURIMI-controller is a .NET 10 / C# 14 Aspire-hosted solution that orchestrates multi-simulation fisheries experiments. It acts as an intermediary between downstream scientific services (CMSY, Environment, OutputCreator, Poseidon, Ecopath, FisheriesAuthority, Market, ValueChain) and the experiment lifecycle.
 
 ### Projects
 
@@ -53,13 +53,15 @@ Follow this pattern:
 
 ## Coding Conventions
 
-- **C# 12 / .NET 8** — use collection expressions (`[]`), expression-bodied members, primary constructors where idiomatic.
+- **C# 14 / .NET 10** — use collection expressions (`[]`), expression-bodied members, primary constructors where idiomatic.
 - **Event handlers** are expression-bodied one-liners delegating to `OnSummaryUpdated` or `OnFlagUpdated`. Avoid duplicating the tracking/aggregation logic inline.
 - **Aggregation helpers** in `AggregatorService` use `AggregateGrids` for spatial (latitude/longitude) grid data. Fleet-segment and species-keyed data use a direct `DistinctBy`/`Select` loop with `MathNet.Numerics.Statistics`.
 - **DI** is constructor-injected. Do not use service locator or static state.
 - **gRPC clients** are registered via `GrpcClientFactory` with named clients (e.g. `"Environment"`, `"Cmsy"`).
 - **No `await` in fire-and-forget** downstream calls from event handlers — downstream calls are intentionally not awaited.
 - **Logging** uses structured `ILogger<T>` with named placeholders (`{ExperimentId}`, `{SimulationId}`, `{Date}`).
+- **Cancellation tokens in cleanup paths** — when a `CancellationTokenSource` has already been cancelled (e.g. inside a `catch` block triggered by cancellation), pass `CancellationToken.None` to any subsequent gRPC calls or event invocations. Never reuse the already-cancelled token for cleanup work, or those calls will fail immediately with `StatusCode.Cancelled` before reaching the wire.
+- **`GrpcErrorDetailLoggingInterceptor`** — `StatusCode.Cancelled` is an intentional signal, not an error. Log it at `LogInformation` and return early; reserve `LogError` for unexpected failure statuses. This prevents misleading `fail:` log entries during a normal experiment cancel flow.
 
 ---
 

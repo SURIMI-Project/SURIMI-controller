@@ -252,6 +252,7 @@ namespace SURIMI_controller.Services
                     var stockAssessmentResponse = await _cmsyServiceClient.GetStockAssessmentAsync(new GetStockAssessmentRequest() { ExperimentId = experimentId }, token);
 
                     // send it to the output-creator
+                    // TODO: Enable this!
 //                    _outputCreatorClient.UpdateStockAssessmentAsync(new UpdateStockAssessmentRequest() { StockAssessmentSummary = stockAssessmentResponse.StockAssessmentSummary, ExperimentId = experimentId }, experimentId, token);
                     var request = new FinaliseExperimentRequest() { ExperimentId = experimentId };
                     await Task.WhenAll(
@@ -451,12 +452,23 @@ namespace SURIMI_controller.Services
                 }
             }
 
-            // Fire the downstream call outside the lock to avoid holding it across async work
-            if (completedBucket != null)
+            // Fire the downstream call outside the lock to avoid holding it across async work.
+            // Skip if the token is already cancelled — partial stats during a cancel should be dropped.
+            // The ContinueWith also demotes Cancelled faults to Info to handle the race where the token
+            // is cancelled after the guard but before (or during) the async gRPC call.
+            if (completedBucket != null && !e.Token.IsCancellationRequested)
             {
                 _ = onAllReceived(completedBucket, e.ExperimentId, e.Current, e.Token)
                     .ContinueWith(
-                        t => _logger.LogError(t.Exception, "{SummaryName} aggregation failed for ExperimentId={ExperimentId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, dateKey),
+                        t =>
+                        {
+                            var isCancelled = t.Exception?.Flatten().InnerExceptions.All(ex =>
+                                ex is RpcException { StatusCode: StatusCode.Cancelled } or OperationCanceledException) ?? false;
+                            if (isCancelled)
+                                _logger.LogInformation("{SummaryName} aggregation fan-out was cancelled for ExperimentId={ExperimentId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, dateKey);
+                            else
+                                _logger.LogError(t.Exception, "{SummaryName} aggregation failed for ExperimentId={ExperimentId}, Date={Date}", typeof(TSummary).Name, e.ExperimentId, dateKey);
+                        },
                         TaskContinuationOptions.OnlyOnFaulted);
             }
         }
@@ -526,12 +538,24 @@ namespace SURIMI_controller.Services
                 }
             }
 
-            // Fire the downstream call outside the lock to avoid holding it across async work
-            if (shouldFire)
+            // Fire the downstream call outside the lock to avoid holding it across async work.
+            // Skip if the token is already cancelled — e.g. a SimulateStep event that raced with cancellation.
+            // OnSimulationCancelled always carries CancellationToken.None so it is never suppressed here.
+            // The ContinueWith also demotes Cancelled faults to Info to handle the race where the token
+            // is cancelled after the guard but before (or during) the async gRPC call.
+            if (shouldFire && !e.Token.IsCancellationRequested)
             {
                 _ = onAllReceived(e.ExperimentId, e.Current, e.Token)
                     .ContinueWith(
-                        t => _logger.LogError(t.Exception, "{EventName} fan-out failed for ExperimentId={ExperimentId}, Date={Date}", eventName, e.ExperimentId, dateKey),
+                        t =>
+                        {
+                            var isCancelled = t.Exception?.Flatten().InnerExceptions.All(ex =>
+                                ex is RpcException { StatusCode: StatusCode.Cancelled } or OperationCanceledException) ?? false;
+                            if (isCancelled)
+                                _logger.LogInformation("{EventName} fan-out was cancelled for ExperimentId={ExperimentId}, Date={Date}", eventName, e.ExperimentId, dateKey);
+                            else
+                                _logger.LogError(t.Exception, "{EventName} fan-out failed for ExperimentId={ExperimentId}, Date={Date}", eventName, e.ExperimentId, dateKey);
+                        },
                         TaskContinuationOptions.OnlyOnFaulted);
             }
         }

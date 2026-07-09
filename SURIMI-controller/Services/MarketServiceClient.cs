@@ -35,11 +35,7 @@ namespace SURIMI_controller.Services
         public async Task<GetSpeciesPricesResponse> GetSpeciesPricesAsync(GetSpeciesPricesRequest getSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(getSpeciesPricesRequest.SimulationId, current, "GetSpeciesPrices");
-            var response = await _marketClient.GetSpeciesPricesAsync(getSpeciesPricesRequest, cancellationToken: cancellationToken);
-            // TODO: Remove this once the Market service is updated to return the correct category code
-            foreach (var speciesPrice in response.SpeciesPriceSummary.SpeciesPrices)
-                speciesPrice.CategoryCode = "Fresh - Whole";
-            return response;
+            return await _marketClient.GetSpeciesPricesAsync(getSpeciesPricesRequest, cancellationToken: cancellationToken);
         }
 
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
