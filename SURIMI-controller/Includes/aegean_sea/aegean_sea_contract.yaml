@@ -1,0 +1,334 @@
+simulation:
+  case_study_name: Agean Sea
+  start_date_time: 2013-01-01T00:00:00
+  maximum_end_date_time: 2050-01-01T00:00:00
+  time_step: P1M
+  geography:
+    raster_cell_origin: Centroid
+    crs:
+      name: WGS 84
+      authority: EPSG
+      code: '4326'
+    xres: 0.0041667
+    yres: 0.0041667
+    ncol: 1560
+    nrow: 1704
+    xmin: 22.5
+    xmax: 29.0
+    ymin: 34.0
+    ymax: 41.1
+standards:
+  date_and_time: ISO 8601
+  species_code: FAO 3-alpha
+  gear_code: ISSCFG
+  life_stage: dwc:lifeStage
+  market_code: UN/LOCODE
+  currency: ISO 4217
+  country_code: ISO 3166-1 alpha-3
+  measurements:
+    system: SI
+    units:
+    - quantity: mass
+      unit: kg
+items:
+  markets:
+  - market_code: EU
+  price_categories:
+  - category_code: DRB
+  - category_code: FPO
+  - category_code: GNC
+  - category_code: GNS
+  - category_code: GTN
+  - category_code: GTR
+  - category_code: LA
+  - category_code: LHM
+  - category_code: LHP
+  - category_code: LLD
+  - category_code: LLS
+  - category_code: LTL
+  - category_code: NK
+  - category_code: OTB
+  - category_code: PS
+  - category_code: PTM
+  - category_code: SB
+  currencies:
+  - currency_code: EUR
+  species:
+  - species_code: ABS
+  - species_code: AHN
+  - species_code: ALB
+  - species_code: ALV
+  - species_code: AMB
+  - species_code: AND
+  - species_code: ANE
+  - species_code: ANK
+  - species_code: ANN
+  - species_code: ARA
+  - species_code: ARS
+  - species_code: ARY
+  - species_code: AVX
+  - species_code: BAR
+  - species_code: BAS
+  - species_code: BBS
+  - species_code: BFT
+  - species_code: BLJ
+  - species_code: BLL
+  - species_code: BLT
+  - species_code: BLU
+  - species_code: BOG
+  - species_code: BON
+  - species_code: BOP
+  - species_code: BPI
+  - species_code: BRB
+  - species_code: BRF
+  - species_code: BSH
+  - species_code: BSS
+  - species_code: BVV
+  - species_code: CBM
+  - species_code: CBR
+  - species_code: CEO
+  - species_code: CEP
+  - species_code: CET
+  - species_code: CIL
+  - species_code: CLX
+  - species_code: CMK
+  - species_code: CMR
+  - species_code: COB
+  - species_code: COE
+  - species_code: COU
+  - species_code: CRA
+  - species_code: CRB
+  - species_code: CRU
+  - species_code: CTB
+  - species_code: CTC
+  - species_code: CTL
+  - species_code: CTZ
+  - species_code: CUS
+  - species_code: CUX
+  - species_code: CVW
+  - species_code: CWZ
+  - species_code: DEC
+  - species_code: DEL
+  - species_code: DEM
+  - species_code: DEP
+  - species_code: DEX
+  - species_code: DGS
+  - species_code: DGZ
+  - species_code: DJB
+  - species_code: DOL
+  - species_code: DPS
+  - species_code: DXL
+  - species_code: DYL
+  - species_code: EDT
+  - species_code: EEA
+  - species_code: EFJ
+  - species_code: EHI
+  - species_code: EHZ
+  - species_code: ELE
+  - species_code: EOI
+  - species_code: EPK
+  - species_code: EQI
+  - species_code: EZS
+  - species_code: FIO
+  - species_code: FLE
+  - species_code: FNT
+  - species_code: FOR
+  - species_code: FOX
+  - species_code: FRZ
+  - species_code: GAG
+  - species_code: GAR
+  - species_code: GAS
+  - species_code: GFB
+  - species_code: GGU
+  - species_code: GOB
+  - species_code: GPD
+  - species_code: GPW
+  - species_code: GPX
+  - species_code: GRM
+  - species_code: GUG
+  - species_code: GUM
+  - species_code: GUN
+  - species_code: GUP
+  - species_code: GUR
+  - species_code: GUU
+  - species_code: GUX
+  - species_code: HFT
+  - species_code: HKE
+  - species_code: HKN
+  - species_code: HKP
+  - species_code: HMM
+  - species_code: HMY
+  - species_code: HOM
+  - species_code: IGU
+  - species_code: IOD
+  - species_code: JAA
+  - species_code: JAI
+  - species_code: JAR
+  - species_code: JAX
+  - species_code: JAY
+  - species_code: JDP
+  - species_code: JOD
+  - species_code: JRS
+  - species_code: KOY
+  - species_code: KSY
+  - species_code: KTG
+  - species_code: LBE
+  - species_code: LDB
+  - species_code: LDV
+  - species_code: LEE
+  - species_code: LEP
+  - species_code: LEZ
+  - species_code: LKT
+  - species_code: LKW
+  - species_code: LNZ
+  - species_code: LTA
+  - species_code: LXQ
+  - species_code: MAC
+  - species_code: MAZ
+  - species_code: MGA
+  - species_code: MGC
+  - species_code: MGR
+  - species_code: MLR
+  - species_code: MMH
+  - species_code: MNZ
+  - species_code: MON
+  - species_code: MPO
+  - species_code: MSF
+  - species_code: MSM
+  - species_code: MSP
+  - species_code: MTS
+  - species_code: MUF
+  - species_code: MUL
+  - species_code: MUR
+  - species_code: MUT
+  - species_code: MUX
+  - species_code: MYL
+  - species_code: MZZ
+  - species_code: NEP
+  - species_code: NUW
+  - species_code: OAL
+  - species_code: OCC
+  - species_code: OCM
+  - species_code: OIL
+  - species_code: OMZ
+  - species_code: OQM
+  - species_code: OTH
+  - species_code: OUB
+  - species_code: OUM
+  - species_code: PAC
+  - species_code: PAL
+  - species_code: PAT
+  - species_code: PIC
+  - species_code: PIL
+  - species_code: POD
+  - species_code: POP
+  - species_code: PRR
+  - species_code: PVJ
+  - species_code: QUB
+  - species_code: RAJ
+  - species_code: RGX
+  - species_code: RJA
+  - species_code: RJC
+  - species_code: RJH
+  - species_code: RJI
+  - species_code: RJM
+  - species_code: RJN
+  - species_code: RJO
+  - species_code: RJU
+  - species_code: ROA
+  - species_code: RPG
+  - species_code: RRH
+  - species_code: RSE
+  - species_code: RUB
+  - species_code: SAA
+  - species_code: SAO
+  - species_code: SBA
+  - species_code: SBG
+  - species_code: SBR
+  - species_code: SBS
+  - species_code: SCF
+  - species_code: SCK
+  - species_code: SCL
+  - species_code: SCR
+  - species_code: SCS
+  - species_code: SCY
+  - species_code: SDR
+  - species_code: SDV
+  - species_code: SFS
+  - species_code: SHO
+  - species_code: SHR
+  - species_code: SKA
+  - species_code: SKJ
+  - species_code: SLM
+  - species_code: SLO
+  - species_code: SMD
+  - species_code: SNQ
+  - species_code: SOL
+  - species_code: SOO
+  - species_code: SPC
+  - species_code: SPI
+  - species_code: SPR
+  - species_code: SQA
+  - species_code: SQE
+  - species_code: SQF
+  - species_code: SQM
+  - species_code: SQR
+  - species_code: SRG
+  - species_code: SRI
+  - species_code: SRK
+  - species_code: SSB
+  - species_code: STI
+  - species_code: SVE
+  - species_code: SWA
+  - species_code: SWO
+  - species_code: SYC
+  - species_code: SYT
+  - species_code: TDQ
+  - species_code: TGS
+  - species_code: TOE
+  - species_code: TOP
+  - species_code: TRE
+  - species_code: TRG
+  - species_code: TRZ
+  - species_code: TSD
+  - species_code: TTO
+  - species_code: TTR
+  - species_code: TUR
+  - species_code: TZA
+  - species_code: TZR
+  - species_code: UGU
+  - species_code: UHQ
+  - species_code: ULF
+  - species_code: UPH
+  - species_code: URM
+  - species_code: USI
+  - species_code: USX
+  - species_code: UUC
+  - species_code: VEV
+  - species_code: VMA
+  - species_code: WBX
+  - species_code: WEG
+  - species_code: WEX
+  - species_code: WHB
+  - species_code: WHG
+  - species_code: WRA
+  - species_code: WRF
+  - species_code: WRM
+  - species_code: WRV
+  - species_code: WRX
+  - species_code: XKX
+  - species_code: XYN
+  - species_code: YFC
+  - species_code: YFM
+  - species_code: YFX
+  - species_code: YLL
+  - species_code: YRC
+  - species_code: YRS
+  - species_code: YVT
+  fleet_segments:
+  - gear_code: OTB
+    country_code: GRC
+    model: EwE
+  - gear_code: PS
+    country_code: GRC
+    model: EwE
