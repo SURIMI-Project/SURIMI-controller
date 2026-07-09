@@ -5,6 +5,11 @@ namespace SURIMI_controller.Models
     public class Experiment
     {
         /// <summary>
+        /// Synchronizes concurrent access to all per-date tracking dictionaries on this experiment.
+        /// </summary>
+        public Lock Lock { get; } = new();
+
+        /// <summary>
         /// The simulation IDs registered for this experiment.
         /// </summary>
         public IReadOnlyList<string> SimulationIds { get; set; } = [];
