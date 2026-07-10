@@ -250,10 +250,11 @@ namespace SURIMI_controller.Services
                 {
                     // Get stock assessment from CMSY
                     var stockAssessmentResponse = await _cmsyServiceClient.GetStockAssessmentAsync(new GetStockAssessmentRequest() { ExperimentId = experimentId }, token);
+                    var xxx = GetProtoString<GetStockAssessmentResponse>(stockAssessmentResponse);
 
                     // send it to the output-creator
                     // TODO: Enable this!
-//                    _outputCreatorClient.UpdateStockAssessmentAsync(new UpdateStockAssessmentRequest() { StockAssessmentSummary = stockAssessmentResponse.StockAssessmentSummary, ExperimentId = experimentId }, experimentId, token);
+                    await _outputCreatorClient.UpdateStockAssessmentAsync(new UpdateStockAssessmentRequest() { StockAssessmentSummary = stockAssessmentResponse.StockAssessmentSummary, ExperimentId = experimentId }, experimentId, token);
                     var request = new FinaliseExperimentRequest() { ExperimentId = experimentId };
                     await Task.WhenAll(
                         _cmsyServiceClient.FinaliseExperimentAsync(request, token),
@@ -558,6 +559,20 @@ namespace SURIMI_controller.Services
                         },
                         TaskContinuationOptions.OnlyOnFaulted);
             }
+        }
+        private string GetProtoString<T>(object obj)
+        {
+            System.Text.Json.JsonSerializerOptions jsonOptions = new()
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
+            };
+
+            string resultaat = System.Text.Json.JsonSerializer.Serialize(obj, jsonOptions);
+
+            resultaat = resultaat.Replace("unit_", "unit");
+            return resultaat;
         }
     }
 }
