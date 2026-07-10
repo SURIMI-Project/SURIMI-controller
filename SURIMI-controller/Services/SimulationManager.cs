@@ -82,7 +82,7 @@ namespace SURIMI_controller.Services
                 EndDateTime = endDateTime.HasValue
                     ? (endDateTime.Value > simulation.MaximumEndDateTime.ToDateTime() ? simulation.MaximumEndDateTime.ToDateTime() : endDateTime.Value)
                     : simulation.MaximumEndDateTime.ToDateTime(),
-                Status = "Initializing",
+                Status = "Initialising",    
                 SimulationStarted = DateTime.UtcNow,
                 SimulationDuration = TimeSpan.FromMilliseconds(10),    // so you immediately see a duration, instead of nothing
                 EcologyHost = string.Empty,

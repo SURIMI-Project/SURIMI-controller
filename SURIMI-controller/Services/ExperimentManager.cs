@@ -26,7 +26,7 @@ namespace SURIMI_controller.Services
         private readonly VersionCheckerService _versionCheckerService;
 
         /// <summary>
-        /// Initializes a new <see cref="ExperimentManager"/> and subscribes to all
+        /// Initialises a new <see cref="ExperimentManager"/> and subscribes to all
         /// <see cref="ISimulationManager"/> events.
         /// </summary>
         public ExperimentManager(ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService)
@@ -73,7 +73,7 @@ namespace SURIMI_controller.Services
 
             var experiment = _experiments[request.ExperimentId] = new Experiment { SimulationIds = simulationIds };
 
-            // All summary dictionaries (BiomassSummary, CatchDispositionSummary, FishingActivitySummary, SalesSummary, SpeciesPriceSummary) are lazily initialized per date in OnSummaryUpdated
+            // All summary dictionaries (BiomassSummary, CatchDispositionSummary, FishingActivitySummary, SalesSummary, SpeciesPriceSummary) are lazily initialised per date in OnSummaryUpdated
 
             // Run the rest of the logic in a background task after all initialisation calls complete
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -428,7 +428,7 @@ namespace SURIMI_controller.Services
             Dictionary<string, TSummary?>? completedBucket = null;
             lock (experiment.Lock)
             {
-                // Lazily initialize the date entry with null slots for all simulations
+                // Lazily initialise the date entry with null slots for all simulations
                 if (!dictionary.TryGetValue(dateKey, out var summaryForSpecificDate))
                 {
                     summaryForSpecificDate = experiment.SimulationIds.ToDictionary(id => id, _ => (TSummary?)null);
@@ -514,7 +514,7 @@ namespace SURIMI_controller.Services
             bool shouldFire = false;
             lock (experiment.Lock)
             {
-                // Lazily initialize the date entry with null slots for all simulations
+                // Lazily initialise the date entry with null slots for all simulations
                 if (!dictionary.TryGetValue(dateKey, out var flagsForDate))
                 {
                     flagsForDate = experiment.SimulationIds.ToDictionary(id => id, _ => (bool?)null);

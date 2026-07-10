@@ -1,23 +1,18 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
 namespace SURIMI_controller.Services
 {
-    public class PoseidonServiceClient : IPoseidonServiceClient
+    public class PoseidonServiceClient(GrpcClientFactory clientFactory, ILogger<PoseidonServiceClient> logger)
+        : GrpcServiceClientBase<PoseidonServiceClient>(logger), IPoseidonServiceClient
     {
-        private readonly FisheryService.FisheryServiceClient _fisheryClient;
-        private readonly ILogger<PoseidonServiceClient> _logger;
+        private readonly FisheryService.FisheryServiceClient _fisheryClient =
+            clientFactory.CreateClient<FisheryService.FisheryServiceClient>("Poseidon");
         private readonly ConcurrentDictionary<string, bool> _usePoseidon = new();
 
-        public PoseidonServiceClient(GrpcClientFactory clientFactory, ILogger<PoseidonServiceClient> logger)
-        {
-            _fisheryClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("Poseidon");
-            _logger = logger;
-        }
-
-        public AsyncUnaryCall<InitialiseSimulationResponse>? AddInitialise(List<Task<InitialiseSimulationResponse>> initializationTasks, InitialiseSimulationRequest InitialiseSimulationRequest, CancellationToken cancellationToken = default)
+        public AsyncUnaryCall<InitialiseSimulationResponse>? AddInitialise(List<Task<InitialiseSimulationResponse>> initialisationTasks, InitialiseSimulationRequest InitialiseSimulationRequest, CancellationToken cancellationToken = default)
         {
             var hasPoseidon = InitialiseSimulationRequest.Simulation?.Items?.FleetSegments
                 .Any(fs => fs.Model == "POSEIDON") ?? false;
@@ -27,12 +22,12 @@ namespace SURIMI_controller.Services
             if (hasPoseidon)
             {
                 var InitialiseSimulationResponse = _fisheryClient.InitialiseSimulationAsync(InitialiseSimulationRequest, cancellationToken: cancellationToken);
-                initializationTasks.Add(InitialiseSimulationResponse.ResponseAsync);
-                LogStep(InitialiseSimulationRequest.SimulationId, DateTime.UtcNow, "AddInitialise (InitialiseSimulation)");
+                initialisationTasks.Add(InitialiseSimulationResponse.ResponseAsync);
+                LogStep(InitialiseSimulationRequest.SimulationId, DateTime.UtcNow);
                 return InitialiseSimulationResponse;
             }
 
-            _logger.LogInformation("{SimulationId} has no POSEIDON fleet segments, skipping Poseidon initialisation", InitialiseSimulationRequest.SimulationId);
+            Logger.LogInformation("{SimulationId} has no POSEIDON fleet segments, skipping Poseidon initialisation", InitialiseSimulationRequest.SimulationId);
             return null;
         }
 
@@ -40,7 +35,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(cancelRequest.SimulationId))
                 return Task.FromResult(new CancelSimulationResponse() { SimulationId = cancelRequest.SimulationId });
-            LogStep(cancelRequest.SimulationId, DateTime.UtcNow, "CancelSimulation");
+            LogStep(cancelRequest.SimulationId, DateTime.UtcNow);
             return _fisheryClient.CancelSimulationAsync(cancelRequest, cancellationToken: token).ResponseAsync;
         }
 
@@ -48,7 +43,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(finaliseSimulationRequest.SimulationId))
                 return Task.FromResult(new FinaliseSimulationResponse() { SimulationId = finaliseSimulationRequest.SimulationId });
-            LogStep(finaliseSimulationRequest.SimulationId, DateTime.UtcNow, "FinaliseSimulation");
+            LogStep(finaliseSimulationRequest.SimulationId, DateTime.UtcNow);
             return _fisheryClient.FinaliseSimulationAsync(finaliseSimulationRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
@@ -56,7 +51,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(getCatchDispositionRequest.SimulationId))
                 return Task.FromResult(new GetCatchDispositionResponse() { SimulationId = getCatchDispositionRequest.SimulationId });
-            LogStep(getCatchDispositionRequest.SimulationId, current, "GetCatchDisposition");
+            LogStep(getCatchDispositionRequest.SimulationId, current);
             return _fisheryClient.GetCatchDispositionAsync(getCatchDispositionRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
@@ -64,7 +59,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(fishingActivityRequest.SimulationId))
                 return Task.FromResult(new GetFishingActivityResponse() { SimulationId = fishingActivityRequest.SimulationId });
-            LogStep(fishingActivityRequest.SimulationId, current, "GetFishingActivity");
+            LogStep(fishingActivityRequest.SimulationId, current);
             return _fisheryClient.GetFishingActivityAsync(fishingActivityRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
@@ -72,7 +67,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(getSalesRequest.SimulationId))
                 return Task.FromResult(new GetSalesResponse() { SimulationId = getSalesRequest.SimulationId });
-            LogStep(getSalesRequest.SimulationId, current, "GetSalesSummary");
+            LogStep(getSalesRequest.SimulationId, current);
             return _fisheryClient.GetSalesAsync(getSalesRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
@@ -80,7 +75,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(simulationStepRequest.SimulationId))
                 return Task.FromResult(new SimulateStepResponse() { SimulationId = simulationStepRequest.SimulationId });
-            LogStep(simulationStepRequest.SimulationId, current, "SimulateStep");
+            LogStep(simulationStepRequest.SimulationId, current);
             return _fisheryClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
@@ -88,7 +83,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(updateBiomassRequest.SimulationId))
                 return Task.FromResult(new UpdateBiomassResponse() { SimulationId = updateBiomassRequest.SimulationId });
-            LogStep(updateBiomassRequest.SimulationId, current, "UpdateBiomass");
+            LogStep(updateBiomassRequest.SimulationId, current);
             return _fisheryClient.UpdateBiomassAsync(updateBiomassRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
@@ -96,7 +91,7 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(updateRegulationsRequest.SimulationId))
                 return Task.FromResult(new UpdateRegulationsResponse() { SimulationId = updateRegulationsRequest.SimulationId });
-            LogStep(updateRegulationsRequest.SimulationId, current, "UpdateRegulations");
+            LogStep(updateRegulationsRequest.SimulationId, current);
             return _fisheryClient.UpdateRegulationsAsync(updateRegulationsRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
@@ -104,16 +99,11 @@ namespace SURIMI_controller.Services
         {
             if (!IsPoseidonEnabled(updateSpeciesPricesRequest.SimulationId))
                 return Task.FromResult(new UpdateSpeciesPricesResponse() { SimulationId = updateSpeciesPricesRequest.SimulationId });
-            LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdatePrices");
+            LogStep(updateSpeciesPricesRequest.SimulationId, current);
             return _fisheryClient.UpdateSpeciesPricesAsync(updateSpeciesPricesRequest, cancellationToken: cancellationToken).ResponseAsync;
         }
 
         private bool IsPoseidonEnabled(string simulationId) =>
             _usePoseidon.TryGetValue(simulationId, out var enabled) && enabled;
-
-        private void LogStep(string simulationId, DateTime current, string step)
-        {
-            _logger.LogInformation("{SimulationId} Processing step Poseidon.{Step}. {DateTime}", simulationId, step, current);
-        }
     }
 }

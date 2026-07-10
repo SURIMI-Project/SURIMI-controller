@@ -1,28 +1,21 @@
-﻿using Grpc.Core;
+using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
 namespace SURIMI_controller.Services
 {
-    public class ValueChainServiceClient : IValueChainServiceClient
+    public class ValueChainServiceClient(GrpcClientFactory clientFactory, ILogger<ValueChainServiceClient> logger)
+        : OptionalGrpcServiceClientBase<ValueChainServiceClient>(logger, "EXCLUDE_VALUECHAIN"), IValueChainServiceClient
     {
-        private readonly ILogger<ValueChainServiceClient> _logger;
-        private readonly ValueChainService.ValueChainServiceClient _valueChainClient;
-        private readonly bool _includeValueChain = Environment.GetEnvironmentVariable("EXCLUDE_VALUECHAIN")?.ToLower() != "true";
+        private readonly ValueChainService.ValueChainServiceClient _valueChainClient =
+            clientFactory.CreateClient<ValueChainService.ValueChainServiceClient>("ValueChain");
 
-        public ValueChainServiceClient(GrpcClientFactory clientFactory, ILogger<ValueChainServiceClient> logger)
+        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initialisationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default(CancellationToken))
         {
-            _valueChainClient = clientFactory.CreateClient<ValueChainService.ValueChainServiceClient>("ValueChain");
-
-            _logger = logger;
-        }
-
-        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            if (_includeValueChain)
+            if (IsEnabled)
             {
                 var InitialiseExperimentResponse = _valueChainClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
-                initializationTasks.Add(InitialiseExperimentResponse.ResponseAsync);
+                initialisationTasks.Add(InitialiseExperimentResponse.ResponseAsync);
                 return InitialiseExperimentResponse;
             }
             return null;
@@ -30,7 +23,7 @@ namespace SURIMI_controller.Services
 
         public async Task<CancelExperimentResponse> CancelExperimentAsync(CancelExperimentRequest cancelRequest, CancellationToken token)
         {
-            if (_includeValueChain)
+            if (IsEnabled)
             {
                 return await _valueChainClient.CancelExperimentAsync(cancelRequest, cancellationToken: token);
             }
@@ -39,9 +32,9 @@ namespace SURIMI_controller.Services
 
         public async Task<ExperimentStepResponse> ExperimentStepAsync(ExperimentStepRequest experimentStepRequest, DateTime current, CancellationToken token)
         {
-            if (_includeValueChain)
+            if (IsEnabled)
             {
-                LogStep(experimentStepRequest.ExperimentId, current, "ExperimentStep");
+                LogStep(experimentStepRequest.ExperimentId, current);
                 return await _valueChainClient.ExperimentStepAsync(experimentStepRequest, cancellationToken: token);
             }
             return new ExperimentStepResponse() { ExperimentId = experimentStepRequest.ExperimentId };
@@ -49,7 +42,7 @@ namespace SURIMI_controller.Services
 
         public async Task<FinaliseExperimentResponse> FinaliseExperimentAsync(FinaliseExperimentRequest finaliseExperimentRequest, CancellationToken cancellationToken = default)
         {
-            if (_includeValueChain)
+            if (IsEnabled)
             {
                 return await _valueChainClient.FinaliseExperimentAsync(finaliseExperimentRequest, cancellationToken: cancellationToken);
             }
@@ -58,17 +51,12 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateSalesStatisticsResponse> UpdateSalesStatisticsAsync(UpdateSalesStatisticsRequest updateSalesStatisticsRequest, DateTime current, CancellationToken cancellationToken)
         {
-            if (_includeValueChain)
+            if (IsEnabled)
             {
-                LogStep(updateSalesStatisticsRequest.ExperimentId, current, "UpdateSalesStatistics");
+                LogStep(updateSalesStatisticsRequest.ExperimentId, current);
                 return await _valueChainClient.UpdateSalesStatisticsAsync(updateSalesStatisticsRequest, cancellationToken: cancellationToken);
             }
             return new UpdateSalesStatisticsResponse() { ExperimentId = updateSalesStatisticsRequest.ExperimentId };
-        }
-
-        private void LogStep(string ExperimentId, DateTime current, string step)
-        {
-            _logger.LogInformation("{ExperimentId} Processing step ValueChain.{Step}. {DateTime}", ExperimentId, step, current);
         }
     }
 }

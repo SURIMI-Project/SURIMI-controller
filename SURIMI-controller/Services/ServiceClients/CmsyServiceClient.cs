@@ -1,33 +1,24 @@
-﻿using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
-using SURIMI_controller.Models;
 
 namespace SURIMI_controller.Services
 {
-    public class CmsyServiceClient : ICmsyServiceClient
+    public class CmsyServiceClient(GrpcClientFactory clientFactory, ILogger<CmsyServiceClient> logger)
+        : OptionalGrpcServiceClientBase<CmsyServiceClient>(logger, "EXCLUDE_CMSY"), ICmsyServiceClient
     {
-        private readonly ILogger<CmsyServiceClient> _logger;
-        private readonly StockAssessmentService.StockAssessmentServiceClient _cmsyClient;
-        private readonly bool _includeCmsy = Environment.GetEnvironmentVariable("EXCLUDE_CMSY")?.ToLower() != "true";
+        private readonly StockAssessmentService.StockAssessmentServiceClient _cmsyClient =
+            clientFactory.CreateClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy");
 
-        public CmsyServiceClient(GrpcClientFactory clientFactory, ILogger<CmsyServiceClient> logger)
+        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initialisationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default)
         {
-            _cmsyClient = clientFactory.CreateClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy");
-
-            _logger = logger;
-        }
-
-        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default)
-        {
-            if (_includeCmsy)
+            if (IsEnabled)
             {
                 var callOptions = new CallOptions(
                     deadline: DateTime.UtcNow.AddMinutes(10),   // adjust to expected CMSY init time
                     cancellationToken: cancellationToken);
                 var response = _cmsyClient.InitialiseExperimentAsync(initialiseExperimentRequest, callOptions);
-                initializationTasks.Add(response.ResponseAsync);
+                initialisationTasks.Add(response.ResponseAsync);
                 return response;
             }
             return null;
@@ -35,7 +26,7 @@ namespace SURIMI_controller.Services
 
         public async Task<CancelExperimentResponse> CancelExperimentAsync(CancelExperimentRequest cancelRequest, CancellationToken token)
         {
-            if (_includeCmsy)
+            if (IsEnabled)
             {
                 return await _cmsyClient.CancelExperimentAsync(cancelRequest, cancellationToken: token);
             }
@@ -44,7 +35,7 @@ namespace SURIMI_controller.Services
 
         public async Task<ExperimentStepResponse> ExperimentStepAsync(ExperimentStepRequest experimentStepRequest, DateTime current, CancellationToken token)
         {
-            if (_includeCmsy)
+            if (IsEnabled)
             {
                 return await _cmsyClient.ExperimentStepAsync(experimentStepRequest, cancellationToken: token);
             }
@@ -53,7 +44,7 @@ namespace SURIMI_controller.Services
 
         public async Task<FinaliseExperimentResponse> FinaliseExperimentAsync(FinaliseExperimentRequest finaliseExperimentRequest, CancellationToken cancellationToken = default)
         {
-            if (_includeCmsy)
+            if (IsEnabled)
             {
                 return await _cmsyClient.FinaliseExperimentAsync(finaliseExperimentRequest, cancellationToken: cancellationToken);
             }
@@ -62,7 +53,7 @@ namespace SURIMI_controller.Services
 
         public async Task<GetStockAssessmentResponse> GetStockAssessmentAsync(GetStockAssessmentRequest getStockAssessmentRequest, CancellationToken cancellationToken = default)
         {
-            if (_includeCmsy)
+            if (IsEnabled)
             {
                 return await _cmsyClient.GetStockAssessmentAsync(getStockAssessmentRequest, cancellationToken: cancellationToken);
             }
@@ -71,9 +62,9 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateBiomassStatisticsResponse> UpdateBiomassStatisticsAsync(UpdateBiomassStatisticsRequest updateBiomassStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if(_includeCmsy)
+            if (IsEnabled)
             {
-                LogStep(experimentId, current, "UpdateBiomassStatistics");
+                LogStep(experimentId, current);
                 return await _cmsyClient.UpdateBiomassStatisticsAsync(updateBiomassStatisticsRequest, cancellationToken: cancellationToken);
             }
             return new UpdateBiomassStatisticsResponse() { ExperimentId = experimentId };
@@ -81,17 +72,13 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateCatchDispositionStatisticsResponse> UpdateCatchDispositionStatisticsAsync(UpdateCatchDispositionStatisticsRequest updateCatchDispositionStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if(_includeCmsy)
+            if (IsEnabled)
             {
-                LogStep(experimentId, current, "UpdateCatchDispositionStatistics");
+                LogStep(experimentId, current);
                 return await _cmsyClient.UpdateCatchDispositionStatisticsAsync(updateCatchDispositionStatisticsRequest, cancellationToken: cancellationToken);
             }
             return new UpdateCatchDispositionStatisticsResponse() { ExperimentId = experimentId };
         }
 
-        private void LogStep(string experimentId, DateTime current, string step)
-        {
-            _logger.LogInformation("{ExperimentId} Processing step CMSY.{Step}. {DateTime}", experimentId, step, current);
-        }
     }
 }

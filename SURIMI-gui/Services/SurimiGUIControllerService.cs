@@ -40,7 +40,7 @@ namespace SURIMI_gui.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error initializing simulation");
+                _logger.LogError(ex, "Error initialising simulation");
                 return ex.Message;
             }
 
