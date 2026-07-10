@@ -1,24 +1,18 @@
-﻿using Grpc.Core;
+using Grpc.Core;
 using Grpc.Surimi;
 
 namespace SURIMI_controller.Services
 {
-    public class EcopathServiceClient : IEcopathServiceClient
+    public class EcopathServiceClient(ILogger<EcopathServiceClient> logger, SimulationDispatcher ecopathSimDispatcher)
+        : GrpcServiceClientBase<EcopathServiceClient>(logger), IEcopathServiceClient
     {
-        private readonly ILogger<MarketServiceClient> _logger;
-        private readonly SimulationDispatcher _ecopathSimDispatcher;
+        private readonly SimulationDispatcher _ecopathSimDispatcher = ecopathSimDispatcher;
 
-        public EcopathServiceClient(ILogger<MarketServiceClient> logger, SimulationDispatcher ecopathSimDispatcher)
-        {
-            _logger = logger;
-            _ecopathSimDispatcher = ecopathSimDispatcher;
-        }
-
-        public AsyncUnaryCall<InitialiseSimulationResponse>? AddInitialise(List<Task<InitialiseSimulationResponse>> initializationTasks, InitialiseSimulationRequest InitialiseSimulationRequest, CancellationToken cancellationToken = default)
+        public AsyncUnaryCall<InitialiseSimulationResponse>? AddInitialise(List<Task<InitialiseSimulationResponse>> initialisationTasks, InitialiseSimulationRequest InitialiseSimulationRequest, CancellationToken cancellationToken = default)
         {
             var InitialiseSimulationResponse = _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, InitialiseSimulationRequest, InitialiseSimulationResponse>(InitialiseSimulationRequest, InitialiseSimulationRequest.SimulationId,
                 (client, req) => client.InitialiseSimulationAsync(req));
-            initializationTasks.Add(InitialiseSimulationResponse.ResponseAsync);
+            initialisationTasks.Add(InitialiseSimulationResponse.ResponseAsync);
             return InitialiseSimulationResponse;
         }
 
@@ -39,68 +33,63 @@ namespace SURIMI_controller.Services
 
         public async Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(getCatchDispositionRequest.SimulationId, current, "GetCatchDisposition");
+            LogStep(getCatchDispositionRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetCatchDispositionRequest, GetCatchDispositionResponse>(getCatchDispositionRequest, getCatchDispositionRequest.SimulationId,
                 (client, req) => client.GetCatchDispositionAsync(req, cancellationToken: cancellationToken));
         }
 
         public async Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(getSalesRequest.SimulationId, current, "GetSales");
+            LogStep(getSalesRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetSalesRequest, GetSalesResponse>(getSalesRequest, getSalesRequest.SimulationId,
                 (client, req) => client.GetSalesAsync(req, cancellationToken: cancellationToken));
         }
 
         public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(simulationStepRequest.SimulationId, current, "Ecopath.SimulateStep");
+            LogStep(simulationStepRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, SimulateStepRequest, SimulateStepResponse>(simulationStepRequest, simulationStepRequest.SimulationId,
                 (client, req) => client.SimulateStepAsync(req, cancellationToken: cancellationToken));
         }
 
         public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(updateCatchDispositionRequest.SimulationId, current, "UpdateCatchDisposition Summary");
+            LogStep(updateCatchDispositionRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, UpdateCatchDispositionRequest, UpdateCatchDispositionResponse>(updateCatchDispositionRequest, updateCatchDispositionRequest.SimulationId,
                 (client, req) => client.UpdateCatchDispositionAsync(req, cancellationToken: cancellationToken));
         }
 
         public async Task<UpdateSpeciesPricesResponse> UpdateSpeciesPricesAsync(UpdateSpeciesPricesRequest updateSpeciesPricesRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(updateSpeciesPricesRequest.SimulationId, current, "UpdateSpeciesPrices");
+            LogStep(updateSpeciesPricesRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, UpdateSpeciesPricesRequest, UpdateSpeciesPricesResponse>(updateSpeciesPricesRequest, updateSpeciesPricesRequest.SimulationId,
                 (client, req) => client.UpdateSpeciesPricesAsync(req, cancellationToken: cancellationToken));
         }
 
         public async Task<GetBiomassResponse> GetBiomassAsync(GetBiomassRequest getBiomassRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(getBiomassRequest.SimulationId, current, "GetBiomass");
+            LogStep(getBiomassRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetBiomassRequest, GetBiomassResponse>(getBiomassRequest, getBiomassRequest.SimulationId,
                 (client, req) => client.GetBiomassAsync(req, cancellationToken: cancellationToken));
         }
 
-        private void LogStep(string simulationId, DateTime current, string step)
-        {
-            _logger.LogInformation("{SimulationId} Processing step Ecopath.{Step}. {DateTime}", simulationId, step, current);
-        }
-
         public async Task<UpdateEnvironmentVariablesResponse> UpdateEnvironmentVariablesAsync(UpdateEnvironmentVariablesRequest updateEnvironmentVariablesRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(updateEnvironmentVariablesRequest.SimulationId, current, "UpdateEnvironmentVariables");
+            LogStep(updateEnvironmentVariablesRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, UpdateEnvironmentVariablesRequest, UpdateEnvironmentVariablesResponse>(updateEnvironmentVariablesRequest, updateEnvironmentVariablesRequest.SimulationId,
                 (client, req) => client.UpdateEnvironmentVariablesAsync(req, cancellationToken: cancellationToken));
         }
 
         public async Task<UpdateRegulationsResponse> UpdateRegulationsAsync(UpdateRegulationsRequest updateRegulationsRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(updateRegulationsRequest.SimulationId, current, "UpdateRegulations");
+            LogStep(updateRegulationsRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, UpdateRegulationsRequest, UpdateRegulationsResponse>(updateRegulationsRequest, updateRegulationsRequest.SimulationId,
                 (client, req) => client.UpdateRegulationsAsync(req, cancellationToken: cancellationToken));
         }
 
         public async Task<GetFishingActivityResponse> GetFishingActivityAsync(GetFishingActivityRequest getFishingActivityRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(getFishingActivityRequest.SimulationId, current, "GetFishingActivity");
+            LogStep(getFishingActivityRequest.SimulationId, current);
             return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetFishingActivityRequest, GetFishingActivityResponse>(getFishingActivityRequest, getFishingActivityRequest.SimulationId,
                 (client, req) => client.GetFishingActivityAsync(req, cancellationToken: cancellationToken));
         }

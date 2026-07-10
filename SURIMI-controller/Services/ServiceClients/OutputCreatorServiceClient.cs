@@ -1,27 +1,22 @@
-﻿using Grpc.Core;
+using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
 namespace SURIMI_controller.Services
 {
-    public class OutputCreatorServiceClient : IOutputCreatorServiceClient
+    public class OutputCreatorServiceClient(GrpcClientFactory clientFactory, ILogger<OutputCreatorServiceClient> logger)
+        : OptionalGrpcServiceClientBase<OutputCreatorServiceClient>(logger, "EXCLUDE_OUTPUTCREATOR"), IOutputCreatorServiceClient
     {
-        private readonly ILogger<OutputCreatorServiceClient> _logger;
-        private readonly OutputCreatorService.OutputCreatorServiceClient _outputCreatorServiceClient;
-        private readonly bool _includeOutputCreator = Environment.GetEnvironmentVariable("EXCLUDE_OUTPUTCREATOR")?.ToLower() != "true";
+        private readonly OutputCreatorService.OutputCreatorServiceClient _outputCreatorServiceClient =
+            clientFactory.CreateClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator");
 
-        public OutputCreatorServiceClient(GrpcClientFactory clientFactory, ILogger<OutputCreatorServiceClient> logger)
+        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initialisationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default(CancellationToken))
         {
-            _outputCreatorServiceClient = clientFactory.CreateClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator");
-            _logger = logger;
-        }
-
-        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
-                var InitialiseExperimentResponse = _outputCreatorServiceClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
-                initializationTasks.Add(InitialiseExperimentResponse.ResponseAsync);
+                LogStep(initialiseExperimentRequest.ExperimentId, initialiseExperimentRequest.Simulation.StartDateTime.ToDateTime());
+               var InitialiseExperimentResponse = _outputCreatorServiceClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
+                initialisationTasks.Add(InitialiseExperimentResponse.ResponseAsync);
                 return InitialiseExperimentResponse;
             }
             return null;
@@ -29,8 +24,9 @@ namespace SURIMI_controller.Services
 
         public async Task<CancelExperimentResponse> CancelExperimentAsync(CancelExperimentRequest cancelRequest, CancellationToken token)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
+                LogStep(cancelRequest.ExperimentId, DateTime.UtcNow);
                 return await _outputCreatorServiceClient.CancelExperimentAsync(cancelRequest, cancellationToken: token);
             }
             return new CancelExperimentResponse() { ExperimentId = cancelRequest.ExperimentId };
@@ -38,8 +34,9 @@ namespace SURIMI_controller.Services
 
         public async Task<ExperimentStepResponse> ExperimentStepAsync(ExperimentStepRequest experimentStepRequest, DateTime current, CancellationToken token)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
+                LogStep(experimentStepRequest.ExperimentId, current);
                 return await _outputCreatorServiceClient.ExperimentStepAsync(experimentStepRequest, cancellationToken: token);
             }
             return new ExperimentStepResponse() { ExperimentId = experimentStepRequest.ExperimentId };
@@ -47,8 +44,9 @@ namespace SURIMI_controller.Services
 
         public async Task<FinaliseExperimentResponse> FinaliseExperimentAsync(FinaliseExperimentRequest finaliseExperimentRequest, CancellationToken cancellationToken = default)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
+                LogStep(finaliseExperimentRequest.ExperimentId, DateTime.UtcNow);
                 return await _outputCreatorServiceClient.FinaliseExperimentAsync(finaliseExperimentRequest, cancellationToken: cancellationToken);
             }
             return new FinaliseExperimentResponse() { ExperimentId = finaliseExperimentRequest.ExperimentId };
@@ -56,9 +54,9 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateBiomassStatisticsResponse> UpdateBiomassStatisticsAsync(UpdateBiomassStatisticsRequest updateBiomassStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
-                LogStep(updateBiomassStatisticsRequest.ExperimentId, current, "UpdateBiomassStatistics");
+                LogStep(updateBiomassStatisticsRequest.ExperimentId, current);
                 return await _outputCreatorServiceClient.UpdateBiomassStatisticsAsync(updateBiomassStatisticsRequest, cancellationToken: cancellationToken);
             }
             return new UpdateBiomassStatisticsResponse() { ExperimentId = updateBiomassStatisticsRequest.ExperimentId };
@@ -66,9 +64,9 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateCatchDispositionStatisticsResponse> UpdateCatchDispositionStatisticsAsync(UpdateCatchDispositionStatisticsRequest updateCatchDispositionStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
-                LogStep(updateCatchDispositionStatisticsRequest.ExperimentId, current, "UpdateCatchDispositionStatistics");
+                LogStep(updateCatchDispositionStatisticsRequest.ExperimentId, current);
                 return await _outputCreatorServiceClient.UpdateCatchDispositionStatisticsAsync(updateCatchDispositionStatisticsRequest, cancellationToken: cancellationToken);
             }
             return new UpdateCatchDispositionStatisticsResponse() { ExperimentId = updateCatchDispositionStatisticsRequest.ExperimentId };
@@ -76,9 +74,9 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateFishingActivityStatisticsResponse> UpdateFishingActivityStatisticsAsync(UpdateFishingActivityStatisticsRequest updateFishingActivityStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
-                LogStep(updateFishingActivityStatisticsRequest.ExperimentId, current, "UpdateFishingActivityStatistics");
+                LogStep(updateFishingActivityStatisticsRequest.ExperimentId, current);
                 return await _outputCreatorServiceClient.UpdateFishingActivityStatisticsAsync(updateFishingActivityStatisticsRequest, cancellationToken: cancellationToken);
             }
             return new UpdateFishingActivityStatisticsResponse() { ExperimentId = updateFishingActivityStatisticsRequest.ExperimentId };
@@ -86,9 +84,9 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateSalesStatisticsResponse> UpdateSalesStatisticsAsync(UpdateSalesStatisticsRequest updateSalesStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
-                LogStep(updateSalesStatisticsRequest.ExperimentId, current, "UpdateSalesStatistics");
+                LogStep(updateSalesStatisticsRequest.ExperimentId, current);
                 return await _outputCreatorServiceClient.UpdateSalesStatisticsAsync(updateSalesStatisticsRequest, cancellationToken: cancellationToken);
             }
             return new UpdateSalesStatisticsResponse() { ExperimentId = updateSalesStatisticsRequest.ExperimentId };
@@ -96,9 +94,9 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateSpeciesPriceStatisticsResponse> UpdateSpeciesPriceStatisticsAsync(UpdateSpeciesPriceStatisticsRequest updateSpeciesPriceStatisticsRequest, string experimentId, DateTime current, CancellationToken cancellationToken)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
-                LogStep(updateSpeciesPriceStatisticsRequest.ExperimentId, current, "UpdateSpeciesPriceStatistics");
+                LogStep(updateSpeciesPriceStatisticsRequest.ExperimentId, current);
                 return await _outputCreatorServiceClient.UpdateSpeciesPriceStatisticsAsync(updateSpeciesPriceStatisticsRequest, cancellationToken: cancellationToken);
             }
             return new UpdateSpeciesPriceStatisticsResponse() { ExperimentId = updateSpeciesPriceStatisticsRequest.ExperimentId };
@@ -106,17 +104,12 @@ namespace SURIMI_controller.Services
 
         public async Task<UpdateStockAssessmentResponse> UpdateStockAssessmentAsync(UpdateStockAssessmentRequest updateStockAssessmentRequest, string experimentId, CancellationToken cancellationToken)
         {
-            if (_includeOutputCreator)
+            if (IsEnabled)
             {
-                LogStep(updateStockAssessmentRequest.ExperimentId, DateTime.UtcNow, "UpdateSpeciesPriceStatistics");
+                LogStep(updateStockAssessmentRequest.ExperimentId, DateTime.UtcNow);
                 return await _outputCreatorServiceClient.UpdateStockAssessmentAsync(updateStockAssessmentRequest, cancellationToken: cancellationToken);
             }
             return new UpdateStockAssessmentResponse() { ExperimentId = updateStockAssessmentRequest.ExperimentId };
-        }
-
-        private void LogStep(string experimentId, DateTime current, string step)
-        {
-            _logger.LogInformation("{ExperimentId} Processing step OutputCreator.{Step}. {DateTime}", experimentId, step, current);
         }
     }
 }

@@ -23,7 +23,7 @@ namespace SURIMI_controller.Services
 
         public override async Task<SubmitExperimentResponse> SubmitExperiment(SubmitExperimentRequest request, ServerCallContext context)
         {
-            _logger.LogInformation("Simulation {ExperimentId} is initializing", request.ExperimentId);
+            _logger.LogInformation("Simulation {ExperimentId} is initialising", request.ExperimentId);
             System.Diagnostics.Activity.Current?.SetTag("experiment_id", request.ExperimentId);
 
             var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(request.ScenarioName);

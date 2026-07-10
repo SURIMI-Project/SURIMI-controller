@@ -1,25 +1,20 @@
-﻿using Grpc.Core;
+using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 
 namespace SURIMI_controller.Services
 {
-    public class EnvironmentServiceClient : IEnvironmentServiceClient
+    public class EnvironmentServiceClient(GrpcClientFactory clientFactory, ILogger<EnvironmentServiceClient> logger)
+        : GrpcServiceClientBase<EnvironmentServiceClient>(logger), IEnvironmentServiceClient
     {
-        private readonly EnvironmentService.EnvironmentServiceClient _environmentClient;
-        private readonly ILogger<EnvironmentServiceClient> _logger;
-        private readonly Dictionary<(string ExperimentId, DateTime Date), GetEnvironmentVariablesResponse> _cache = new();
+        private readonly EnvironmentService.EnvironmentServiceClient _environmentClient =
+            clientFactory.CreateClient<EnvironmentService.EnvironmentServiceClient>("Environment");
+        private readonly Dictionary<(string ExperimentId, DateTime Date), GetEnvironmentVariablesResponse> _cache = [];
 
-        public EnvironmentServiceClient(GrpcClientFactory clientFactory, ILogger<EnvironmentServiceClient> logger)
-        {
-            _environmentClient = clientFactory.CreateClient<EnvironmentService.EnvironmentServiceClient>("Environment");
-            _logger = logger;
-        }
-
-        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initializationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default)
+        public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initialisationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default)
         {
             var initialiseExperimentResponse = _environmentClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
-            initializationTasks.Add(initialiseExperimentResponse.ResponseAsync);
+            initialisationTasks.Add(initialiseExperimentResponse.ResponseAsync);
             return initialiseExperimentResponse;
         }
 
@@ -44,19 +39,15 @@ namespace SURIMI_controller.Services
 
             if (_cache.TryGetValue(cacheKey, out var cached))
             {
-                _logger.LogInformation("{ExperimentId} Cache hit for Environment.GetEnvironmentVariables. {DateTime}", getEnvironmentVariablesRequest.ExperimentId, current);
+                Logger.LogInformation("{ExperimentId} Cache hit for Environment.GetEnvironmentVariables. {DateTime}", getEnvironmentVariablesRequest.ExperimentId, current);
                 return cached;
             }
 
-            LogStep(getEnvironmentVariablesRequest.ExperimentId, current, "GetEnvironmentVariables");
+            LogStep(getEnvironmentVariablesRequest.ExperimentId, current);
             var response = await _environmentClient.GetEnvironmentVariablesAsync(getEnvironmentVariablesRequest, cancellationToken: token);
             _cache[cacheKey] = response;
             return response;
         }
 
-        private void LogStep(string experimentId, DateTime current, string step)
-        {
-            _logger.LogInformation("{ExperimentId} Processing step Environment.{Step}. {DateTime}", experimentId, step, current);
-        }
     }
 }
