@@ -158,6 +158,7 @@ items:
   - species_code: SFS
   - species_code: SHO
   - species_code: SKM
+  - species_code: SLM
   - species_code: SOO
   - species_code: SPC
   - species_code: SPR
@@ -166,12 +167,14 @@ items:
   - species_code: SQM
   - species_code: SRG
   - species_code: SRJ
+  - species_code: SWO
   - species_code: SYC
   - species_code: TSU
   - species_code: TTL
   - species_code: TVA
   - species_code: UIM
   - species_code: UYE
+  - species_code: VMA
   - species_code: WHB
   fleet_segments:
   - gear_code: ART
