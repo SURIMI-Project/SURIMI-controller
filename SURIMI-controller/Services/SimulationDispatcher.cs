@@ -1,4 +1,5 @@
 ﻿using Grpc.Core;
+using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 
 namespace SURIMI_controller.Services
@@ -16,11 +17,13 @@ namespace SURIMI_controller.Services
 
         private readonly ConcurrentDictionary<string, string> simulationToPodMap = new();   // SimulationId is key
         private readonly ConcurrentDictionary<string, bool> podAvailability;    // Pod is key
+        private readonly SimulationDispatcherOptions _options;
         private readonly ILogger<SimulationDispatcher> _logger;
         private readonly ILogger<GrpcErrorDetailLoggingInterceptor> _interceptorLogger;
 
-        public SimulationDispatcher(ILogger<SimulationDispatcher> logger, ILogger<GrpcErrorDetailLoggingInterceptor> interceptorLogger)
+        public SimulationDispatcher(IOptions<SimulationDispatcherOptions> options, ILogger<SimulationDispatcher> logger, ILogger<GrpcErrorDetailLoggingInterceptor> interceptorLogger)
         {
+            _options = options.Value;
             podAvailability = new ConcurrentDictionary<string, bool>(
                 podNames.Select(p => new KeyValuePair<string, bool>(p, true))
             );
@@ -34,8 +37,8 @@ namespace SURIMI_controller.Services
             Func<TClient, TRequest, AsyncUnaryCall<TResponse>> grpcMethod)
             where TClient : ClientBase<TClient>
         {
-            var address = Environment.GetEnvironmentVariable("ECOPATH_URL");    // for example: http://pod.surimi-ecopath.namespace.svc.cluster.local:8080
-            var ns = Environment.GetEnvironmentVariable("POD_NAMESPACE");       // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
+            var address = _options.EcopathUrl;    // for example: http://pod.surimi-ecopath.namespace.svc.cluster.local:8080
+            var ns = _options.PodNamespace;             // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
             string? pod;
 
             if (Guid.TryParse(simulationId, out var guid))

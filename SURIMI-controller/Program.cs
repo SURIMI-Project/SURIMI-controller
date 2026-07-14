@@ -52,6 +52,11 @@ public class Program
         AddConfiguredGrpcClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator", "OUTPUT_CREATOR_URL");
 
         builder.Services.AddSingleton<GrpcErrorDetailLoggingInterceptor>();
+        builder.Services.Configure<SimulationDispatcherOptions>(o =>
+        {
+            o.EcopathUrl = Environment.GetEnvironmentVariable("ECOPATH_URL") ?? string.Empty;
+            o.PodNamespace = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? string.Empty;
+        });
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();
