@@ -56,6 +56,9 @@ public class Program
         {
             o.EcopathUrl = Environment.GetEnvironmentVariable("ECOPATH_URL") ?? string.Empty;
             o.PodNamespace = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? string.Empty;
+            o.PodNames = string.IsNullOrEmpty(o.PodNamespace)
+                ? ["surimi-ecopath-0"]
+                : ["surimi-ecopath-0", "surimi-ecopath-1", "surimi-ecopath-2", "surimi-ecopath-3", "surimi-ecopath-4"];
         });
         builder.Services.AddSingleton<SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();

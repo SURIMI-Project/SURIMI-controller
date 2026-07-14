@@ -6,17 +6,8 @@ namespace SURIMI_controller.Services
 {
     public class SimulationDispatcher
     {
-        private readonly List<string> podNames = new()
-        {
-            "surimi-ecopath-0",
-            "surimi-ecopath-1",
-            "surimi-ecopath-2",
-            "surimi-ecopath-3",
-            "surimi-ecopath-4"
-        };
-
-        private readonly ConcurrentDictionary<string, string> simulationToPodMap = new();   // SimulationId is key
-        private readonly ConcurrentDictionary<string, bool> podAvailability;    // Pod is key
+        // Key = podName, Value = simulationId currently occupying it (null = available)
+        private readonly ConcurrentDictionary<string, string?> podOccupancy;
         private readonly SimulationDispatcherOptions _options;
         private readonly ILogger<SimulationDispatcher> _logger;
         private readonly ILogger<GrpcErrorDetailLoggingInterceptor> _interceptorLogger;
@@ -24,8 +15,8 @@ namespace SURIMI_controller.Services
         public SimulationDispatcher(IOptions<SimulationDispatcherOptions> options, ILogger<SimulationDispatcher> logger, ILogger<GrpcErrorDetailLoggingInterceptor> interceptorLogger)
         {
             _options = options.Value;
-            podAvailability = new ConcurrentDictionary<string, bool>(
-                podNames.Select(p => new KeyValuePair<string, bool>(p, true))
+            podOccupancy = new ConcurrentDictionary<string, string?>(
+                _options.PodNames.Select(p => new KeyValuePair<string, string?>(p, null))
             );
             _logger = logger;
             _interceptorLogger = interceptorLogger;
@@ -43,15 +34,20 @@ namespace SURIMI_controller.Services
 
             if (Guid.TryParse(simulationId, out var guid))
             {
-                if (!simulationToPodMap.TryGetValue(simulationId, out pod))
+                var existingEntry = podOccupancy.FirstOrDefault(kvp => kvp.Value == simulationId);
+                if (existingEntry.Key != null)
+                {
+                    pod = existingEntry.Key;
+                }
+                else
                 {
                     // so this is a new simulation
                     // Atomically claim the first available pod to avoid race conditions when multiple
-                    // simulations start concurrently (TryUpdate only succeeds if value is still true).
+                    // simulations start concurrently (TryUpdate only succeeds if value is still null).
                     pod = null;
-                    foreach (var kvp in podAvailability)
+                    foreach (var kvp in podOccupancy)
                     {
-                        if (kvp.Value && podAvailability.TryUpdate(kvp.Key, false, true))
+                        if (kvp.Value == null && podOccupancy.TryUpdate(kvp.Key, simulationId, null))
                         {
                             pod = kvp.Key;
                             break;
@@ -92,15 +88,13 @@ namespace SURIMI_controller.Services
                         );
                     }
 
-                    _logger.LogInformation("Add Simulation:{SimulationId} with pod:{pod} to simulationToPodMap", simulationId, pod);
-                    simulationToPodMap[simulationId] = pod;
-                    podAvailability[pod] = false;
+                    _logger.LogInformation("Add Simulation:{SimulationId} with pod:{Pod} to podOccupancy", simulationId, pod);
                 }
             }
             else
             {
                 // the simulationId is not a valid Guid, so we don't reserve a pod for it. This allows us to use the dispatcher for non-simulation related calls without consuming pod resources.
-                pod = podNames[0];  // Just take the first pod
+                pod = podOccupancy.Keys.First();  // Just take the first pod
             }
 
             if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
@@ -152,10 +146,11 @@ namespace SURIMI_controller.Services
 
         public void ReleasePodFromSimulation(string simulationId)
         {
-            if (simulationToPodMap.TryRemove(simulationId, out var pod))
+            var entry = podOccupancy.FirstOrDefault(kvp => kvp.Value == simulationId);
+            if (entry.Key != null)
             {
-                podAvailability[pod] = true;
-                _logger.LogInformation("Simulation {SimulationId} Released pod {Pod} from simulationId", simulationId, pod);
+                podOccupancy.TryUpdate(entry.Key, null, simulationId);
+                _logger.LogInformation("Simulation {SimulationId} released pod {Pod}", simulationId, entry.Key);
             }
             else
             {
