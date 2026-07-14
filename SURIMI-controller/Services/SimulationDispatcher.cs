@@ -38,67 +38,66 @@ namespace SURIMI_controller.Services
             var ns = Environment.GetEnvironmentVariable("POD_NAMESPACE");       // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
             string? pod;
 
-            if (!simulationToPodMap.TryGetValue(simulationId, out pod))
+            if (Guid.TryParse(simulationId, out var guid))
             {
-                // so this is a new simulation
-                // Atomically claim the first available pod to avoid race conditions when multiple
-                // simulations start concurrently (TryUpdate only succeeds if value is still true).
-                pod = null;
-                foreach (var kvp in podAvailability)
+                if (!simulationToPodMap.TryGetValue(simulationId, out pod))
                 {
-                    if (kvp.Value && podAvailability.TryUpdate(kvp.Key, false, true))
+                    // so this is a new simulation
+                    // Atomically claim the first available pod to avoid race conditions when multiple
+                    // simulations start concurrently (TryUpdate only succeeds if value is still true).
+                    pod = null;
+                    foreach (var kvp in podAvailability)
                     {
-                        pod = kvp.Key;
-                        break;
+                        if (kvp.Value && podAvailability.TryUpdate(kvp.Key, false, true))
+                        {
+                            pod = kvp.Key;
+                            break;
+                        }
                     }
-                }
-                if (pod == null)
-                    throw new Exception("No available pods");
+                    if (pod == null)
+                        throw new Exception("No available pods");
 
-                if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
-                {
-                    address = address!.Replace("pod", pod);
-                    address = address!.Replace("namespace", ns);
-                }
 
-                // Check if the dns address can be resolved. If not, don't use this pod yet
-                try
-                {
-                    var uri = new Uri(address);
-                    var host = uri.Host;
-                    var addresses = System.Net.Dns.GetHostAddresses(host);
-                }
-                catch (System.Net.Sockets.SocketException)
-                {
-                    throw new RpcException(
-                        new Status(StatusCode.Unavailable, $"Could not resolve DNS for pod {pod} with address {address}"),
-                        new Metadata
-                        {
-                            { "pod", pod },
-                            { "simulationId", simulationId }
-                        }
-                    );
-                }
-                catch (Exception ex)
-                {
-                    throw new RpcException(
-                        new Status(StatusCode.Internal, $"Error resolving DNS for pod {pod}: {ex.Message}"),
-                        new Metadata
-                        {
-                            { "pod", pod },
-                            { "simulationId", simulationId }
-                        }
-                    );
-                }
 
-                // Only reserve the pod if a simulationId is provided and is a valid Guid. This allows us to use the dispatcher for non-simulation related calls without consuming pod resources.
-                // for example the GetProtocolVersion call from the client, doesn't need to be dispatched to a specific pod. The versions are all the same.
-                if (Guid.TryParse(simulationId, out var guid))
-                {
+                    // Check if the dns address can be resolved. If not, don't use this pod yet
+                    try
+                    {
+                        var uri = new Uri(address);
+                        var host = uri.Host;
+                        var addresses = System.Net.Dns.GetHostAddresses(host);
+                    }
+                    catch (System.Net.Sockets.SocketException)
+                    {
+                        throw new RpcException(
+                            new Status(StatusCode.Unavailable, $"Could not resolve DNS for pod {pod} with address {address}"),
+                            new Metadata
+                            {
+                                { "pod", pod },
+                                { "simulationId", simulationId }
+                            }
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new RpcException(
+                            new Status(StatusCode.Internal, $"Error resolving DNS for pod {pod}: {ex.Message}"),
+                            new Metadata
+                            {
+                                { "pod", pod },
+                                { "simulationId", simulationId }
+                            }
+                        );
+                    }
+
                     _logger.LogInformation("Add Simulation:{SimulationId} with pod:{pod} to simulationToPodMap", simulationId, pod);
                     simulationToPodMap[simulationId] = pod;
                     podAvailability[pod] = false;
                 }
+            }
+            else
+            {
+                // the simulationId is not a valid Guid, so we don't reserve a pod for it. This allows us to use the dispatcher for non-simulation related calls without consuming pod resources.
+                pod = podNames[0];  // Just take the first pod
             }
 
             if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
