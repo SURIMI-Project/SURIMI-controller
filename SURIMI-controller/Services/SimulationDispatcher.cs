@@ -28,8 +28,8 @@ namespace SURIMI_controller.Services
             Func<TClient, TRequest, AsyncUnaryCall<TResponse>> grpcMethod)
             where TClient : ClientBase<TClient>
         {
-            var address = _options.EcopathUrl;    // for example: http://pod.surimi-ecopath.namespace.svc.cluster.local:8080
-            var ns = _options.PodNamespace;             // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
+            var address = _options.EcopathUrl;    // for example: http://pod.surimi-ecopath.namespace.svc.cluster.local:8080  Or http://localhost:7890 when running on a dev machine
+            address = address.Replace("namespace", _options.PodNamespace);  // this environment variable is set in the Deployment yaml to "user-rikkert", "project-surimi" etc
             string? pod;
 
             if (Guid.TryParse(simulationId, out var guid))
@@ -56,19 +56,21 @@ namespace SURIMI_controller.Services
                     if (pod == null)
                         throw new Exception("No available pods");
 
-
-
                     // Check if the dns address can be resolved. If not, don't use this pod yet
+                    var resolveAddress = address.Contains("pod")
+                        ? address.Replace("pod", pod)
+                        : address;
                     try
                     {
-                        var uri = new Uri(address);
+                        var uri = new Uri(resolveAddress);
                         var host = uri.Host;
                         var addresses = System.Net.Dns.GetHostAddresses(host);
                     }
                     catch (System.Net.Sockets.SocketException)
                     {
+                        podOccupancy.TryUpdate(pod, null, simulationId);
                         throw new RpcException(
-                            new Status(StatusCode.Unavailable, $"Could not resolve DNS for pod {pod} with address {address}"),
+                            new Status(StatusCode.Unavailable, $"Could not resolve DNS for pod {pod} with address {resolveAddress}"),
                             new Metadata
                             {
                                 { "pod", pod },
@@ -78,6 +80,7 @@ namespace SURIMI_controller.Services
                     }
                     catch (Exception ex)
                     {
+                        podOccupancy.TryUpdate(pod, null, simulationId);
                         throw new RpcException(
                             new Status(StatusCode.Internal, $"Error resolving DNS for pod {pod}: {ex.Message}"),
                             new Metadata
@@ -97,10 +100,9 @@ namespace SURIMI_controller.Services
                 pod = podOccupancy.Keys.First();  // Just take the first pod
             }
 
-            if (address!.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
+            if (address.Contains("pod"))      // so only when not running on a Dev machine. Because then address = http://localhost:7890
             {
-                address = address!.Replace("pod", pod);
-                address = address!.Replace("namespace", ns);
+                address = address.Replace("pod", pod);                
             }
 
             _logger.LogInformation("Using address {Address} for pod {Pod} and simulationId {SimulationId}", address, pod, simulationId);
