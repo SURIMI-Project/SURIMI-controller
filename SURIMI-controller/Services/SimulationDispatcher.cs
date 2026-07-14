@@ -41,7 +41,17 @@ namespace SURIMI_controller.Services
             if (!simulationToPodMap.TryGetValue(simulationId, out pod))
             {
                 // so this is a new simulation
-                pod = podAvailability.FirstOrDefault(p => p.Value).Key; // Find the first available pod
+                // Atomically claim the first available pod to avoid race conditions when multiple
+                // simulations start concurrently (TryUpdate only succeeds if value is still true).
+                pod = null;
+                foreach (var kvp in podAvailability)
+                {
+                    if (kvp.Value && podAvailability.TryUpdate(kvp.Key, false, true))
+                    {
+                        pod = kvp.Key;
+                        break;
+                    }
+                }
                 if (pod == null)
                     throw new Exception("No available pods");
 
