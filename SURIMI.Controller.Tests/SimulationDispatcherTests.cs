@@ -34,21 +34,21 @@ namespace SURIMI.Controller.Tests
         /// </summary>
         /// <param name="ecopathUrl">The URL of the Ecopath service.</param>
         /// <param name="podNamespace">The namespace for the pods.</param>
-        /// <param name="podNames">The names of the pods.</param>
+        /// <param name="nrOfPods">The number of pods.</param>
         /// <returns>A configured SimulationDispatcher instance.</returns>
-        private SimulationDispatcher CreateSut(string ecopathUrl, string podNamespace, params string[] podNames) =>
+        private SimulationDispatcher CreateSut(string ecopathUrl, string podNamespace, int nrOfPods) =>
             new(Options.Create(new SimulationDispatcherOptions
             {
                 EcopathUrl = ecopathUrl,
                 PodNamespace = podNamespace,
-                PodNames = [.. podNames]
+                NrOfPods = nrOfPods
             }),
             _loggerMock.Object,
             _interceptorLoggerMock.Object);
 
-        // Convenience overload for the common localhost/two-pod scenario System Under Test (SUT).
-        private SimulationDispatcher CreateLocalSut(params string[] podNames) =>
-            CreateSut("http://localhost:5000", "test-ns", podNames.Length > 0 ? podNames : ["pod1", "pod2"]);
+        // Convenience overload for the common localhost scenario System Under Test (SUT).
+        private SimulationDispatcher CreateLocalSut(int nrOfPods = 1) =>
+            CreateSut("http://localhost:5000", "test-ns", nrOfPods);
 
         private static Func<EcologyService.EcologyServiceClient, SimulateStepRequest, AsyncUnaryCall<SimulateStepResponse>> SuccessMethod =>
             (_, _) => FakeCall(new SimulateStepResponse());
@@ -59,7 +59,7 @@ namespace SURIMI.Controller.Tests
         public void DispatchAsync_NewGuidSimulation_AssignsPodAndReturnsCall()
         {
             // Arrange
-            var sut = CreateLocalSut("pod1");
+            var sut = CreateLocalSut();
             var simulationId = Guid.NewGuid().ToString();
 
             // Act
@@ -73,7 +73,7 @@ namespace SURIMI.Controller.Tests
         public void DispatchAsync_SameGuidSimulation_DoesNotThrowAndReusesOccupiedPod()
         {
             // Arrange
-            var sut = CreateLocalSut("pod1");   // only one pod available
+            var sut = CreateLocalSut();   // only one pod available
             var simulationId = Guid.NewGuid().ToString();
 
             // Act – first call occupies the single pod
@@ -90,7 +90,7 @@ namespace SURIMI.Controller.Tests
         public void DispatchAsync_NoPodAvailable_ThrowsException()
         {
             // Arrange – only one pod; occupy it with simulationId1 first
-            var sut = CreateLocalSut("pod1");
+            var sut = CreateLocalSut();
             var simulationId1 = Guid.NewGuid().ToString();
             var simulationId2 = Guid.NewGuid().ToString();
             sut.DispatchAsync(new SimulateStepRequest(), simulationId1, SuccessMethod);
@@ -109,7 +109,7 @@ namespace SURIMI.Controller.Tests
             var sut = CreateSut(
                 "http://pod.surimi-ecopath.namespace.svc.cluster.local:8080",
                 "nonexistent-ns-xyz",
-                "pod1");
+                1);
             var simulationId = Guid.NewGuid().ToString();
 
             // Act
@@ -127,7 +127,7 @@ namespace SURIMI.Controller.Tests
             var sut = CreateSut(
                 "http://pod.surimi-ecopath.namespace.svc.cluster.local:8080",
                 "nonexistent-ns-xyz",
-                "pod1");
+                1);
             var simulationId1 = Guid.NewGuid().ToString();
             var simulationId2 = Guid.NewGuid().ToString();
 
@@ -146,7 +146,7 @@ namespace SURIMI.Controller.Tests
         public void DispatchAsync_NonGuidSimulationId_UsesFirstPodWithoutReservingIt()
         {
             // Arrange
-            var sut = CreateLocalSut("pod1");
+            var sut = CreateLocalSut();
             var nonGuidId = "not-a-guid";
             var guidId = Guid.NewGuid().ToString();
 
@@ -166,7 +166,7 @@ namespace SURIMI.Controller.Tests
         public void ReleasePodFromSimulation_KnownSimulation_MakesPodAvailableAgain()
         {
             // Arrange – one pod; occupy it, then release it
-            var sut = CreateLocalSut("pod1");
+            var sut = CreateLocalSut();
             var simulationId1 = Guid.NewGuid().ToString();
             var simulationId2 = Guid.NewGuid().ToString();
             sut.DispatchAsync(new SimulateStepRequest(), simulationId1, SuccessMethod);
@@ -183,7 +183,7 @@ namespace SURIMI.Controller.Tests
         public void ReleasePodFromSimulation_UnknownSimulation_DoesNotThrow()
         {
             // Arrange
-            var sut = CreateLocalSut("pod1");
+            var sut = CreateLocalSut();
 
             // Act & Assert
             var act = () => sut.ReleasePodFromSimulation(Guid.NewGuid().ToString());
@@ -196,7 +196,7 @@ namespace SURIMI.Controller.Tests
         public async Task DispatchWithRetryAsync_UnavailableOnFirstAttempt_RetriesAndSucceeds()
         {
             // Arrange
-            var sut = CreateLocalSut("pod1", "pod2");
+            var sut = CreateLocalSut(2);
             var simulationId = Guid.NewGuid().ToString();
             var attempts = 0;
             Func<EcologyService.EcologyServiceClient, SimulateStepRequest, AsyncUnaryCall<SimulateStepResponse>> grpcMethod =
@@ -219,7 +219,7 @@ namespace SURIMI.Controller.Tests
         public async Task DispatchWithRetryAsync_NonUnavailableException_DoesNotRetryAndThrows()
         {
             // Arrange
-            var sut = CreateLocalSut("pod1", "pod2");
+            var sut = CreateLocalSut(2);
             var simulationId = Guid.NewGuid().ToString();
             var attempts = 0;
             Func<EcologyService.EcologyServiceClient, SimulateStepRequest, AsyncUnaryCall<SimulateStepResponse>> grpcMethod =
@@ -241,7 +241,7 @@ namespace SURIMI.Controller.Tests
         public async Task DispatchWithRetryAsync_ExceedsMaxRetries_PropagatesUnavailableException()
         {
             // Arrange
-            var sut = CreateLocalSut("pod1", "pod2");
+            var sut = CreateLocalSut(2);
             var simulationId = Guid.NewGuid().ToString();
             Func<EcologyService.EcologyServiceClient, SimulateStepRequest, AsyncUnaryCall<SimulateStepResponse>> grpcMethod =
                 (_, _) => FailingCall<SimulateStepResponse>(new RpcException(new Status(StatusCode.Unavailable, "always down")));

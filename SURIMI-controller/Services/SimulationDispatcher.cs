@@ -16,7 +16,7 @@ namespace SURIMI_controller.Services
         {
             _options = options.Value;
             podOccupancy = new ConcurrentDictionary<string, string?>(
-                _options.PodNames.Select(p => new KeyValuePair<string, string?>(p, null))
+                Enumerable.Range(0, _options.NrOfPods).Select(i => new KeyValuePair<string, string?>($"surimi-ecopath-{i}", null))
             );
             _logger = logger;
             _interceptorLogger = interceptorLogger;
