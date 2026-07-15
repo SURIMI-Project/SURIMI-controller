@@ -17,10 +17,10 @@ namespace SURIMI_controller.Services
         private readonly EnvironmentService.EnvironmentServiceClient _environmentServiceClient;
         private readonly OutputCreatorService.OutputCreatorServiceClient _outputCreatorServiceClient;
 
-        private readonly SimulationDispatcher _ecopathSimDispatcher;
+        private readonly ISimulationDispatcher _ecopathSimDispatcher;
         private readonly ProtocolVersionService _protocolVersionService;
 
-        public VersionCheckerService(GrpcClientFactory clientFactory, ILogger<VersionCheckerService> logger, SimulationDispatcher ecopathSimDispatcher, ProtocolVersionService protocolVersionService)
+        public VersionCheckerService(GrpcClientFactory clientFactory, ILogger<VersionCheckerService> logger, ISimulationDispatcher ecopathSimDispatcher, ProtocolVersionService protocolVersionService)
         {
             _fisheryServiceClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("Poseidon");
             _stockAssessmentServiceClient = clientFactory.CreateClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy");
