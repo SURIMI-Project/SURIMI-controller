@@ -60,7 +60,7 @@ public class Program
                 ? ["surimi-ecopath-0"]
                 : ["surimi-ecopath-0", "surimi-ecopath-1", "surimi-ecopath-2", "surimi-ecopath-3", "surimi-ecopath-4"];
         });
-        builder.Services.AddSingleton<SimulationDispatcher>();
+        builder.Services.AddSingleton<ISimulationDispatcher, SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();
         builder.Services.AddSingleton<IAggregatorService, AggregatorService>();
