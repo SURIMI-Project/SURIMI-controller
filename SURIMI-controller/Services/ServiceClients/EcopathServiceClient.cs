@@ -3,10 +3,10 @@ using Grpc.Surimi;
 
 namespace SURIMI_controller.Services
 {
-    public class EcopathServiceClient(ILogger<EcopathServiceClient> logger, SimulationDispatcher ecopathSimDispatcher)
+    public class EcopathServiceClient(ILogger<EcopathServiceClient> logger, ISimulationDispatcher ecopathSimDispatcher)
         : GrpcServiceClientBase<EcopathServiceClient>(logger), IEcopathServiceClient
     {
-        private readonly SimulationDispatcher _ecopathSimDispatcher = ecopathSimDispatcher;
+        private readonly ISimulationDispatcher _ecopathSimDispatcher = ecopathSimDispatcher;
 
         public AsyncUnaryCall<InitialiseSimulationResponse>? AddInitialise(List<Task<InitialiseSimulationResponse>> initialisationTasks, InitialiseSimulationRequest InitialiseSimulationRequest, CancellationToken cancellationToken = default)
         {

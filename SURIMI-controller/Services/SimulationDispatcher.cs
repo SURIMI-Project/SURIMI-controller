@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 
 namespace SURIMI_controller.Services
 {
-    public class SimulationDispatcher
+    public class SimulationDispatcher : ISimulationDispatcher
     {
         // Key = podName, Value = simulationId currently occupying it (null = available)
         private readonly ConcurrentDictionary<string, string?> podOccupancy;
