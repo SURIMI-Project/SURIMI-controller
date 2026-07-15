@@ -28,6 +28,7 @@ namespace SURIMI_controller.Services
         {
             var _finaliseResponse = await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, FinaliseSimulationRequest, FinaliseSimulationResponse>(finaliseSimulationRequest, finaliseSimulationRequest.SimulationId,
                 (client, req) => client.FinaliseSimulationAsync(req));
+            _ecopathSimDispatcher.ReleasePodFromSimulation(finaliseSimulationRequest.SimulationId);
             return _finaliseResponse;
         }
 
