@@ -1,6 +1,7 @@
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
+using System.Collections.Concurrent;
 
 namespace SURIMI_controller.Services
 {
@@ -9,7 +10,7 @@ namespace SURIMI_controller.Services
     {
         private readonly EnvironmentService.EnvironmentServiceClient _environmentClient =
             clientFactory.CreateClient<EnvironmentService.EnvironmentServiceClient>("Environment");
-        private readonly Dictionary<(string ExperimentId, DateTime Date), GetEnvironmentVariablesResponse> _cache = [];
+        private readonly ConcurrentDictionary<(string ExperimentId, DateTime Date), GetEnvironmentVariablesResponse> _cache = [];
 
         public AsyncUnaryCall<InitialiseExperimentResponse>? AddInitialise(List<Task<InitialiseExperimentResponse>> initialisationTasks, InitialiseExperimentRequest initialiseExperimentRequest, CancellationToken cancellationToken = default)
         {
@@ -45,8 +46,8 @@ namespace SURIMI_controller.Services
 
             LogStep(getEnvironmentVariablesRequest.ExperimentId, current);
             var response = await _environmentClient.GetEnvironmentVariablesAsync(getEnvironmentVariablesRequest, cancellationToken: token);
-            _cache[cacheKey] = response;
-            return response;
+            _cache.TryAdd(cacheKey, response);
+            return _cache[cacheKey];
         }
 
     }
