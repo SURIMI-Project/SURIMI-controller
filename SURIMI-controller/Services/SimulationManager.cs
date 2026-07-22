@@ -284,6 +284,9 @@ namespace SURIMI_controller.Services
             var getBiomassResponseTotal = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId, DateTime = current.ToTimestamp() }, current, cancellationToken: token);
             BiomassUpdated?.Invoke(this, new BiomassEventArgs(getBiomassResponseTotal.BiomassSummary, experimentEventArgs));
 
+            var updateBiomassTotalRequest = CreateUpdateBiomassRequest(getBiomassResponseTotal);
+            await _fisheriesAuthorityServiceClient.UpdateBiomassAsync(updateBiomassTotalRequest, current, cancellationToken: token);
+
             var ecopathCatchDispositionSummary = await _ecopathServiceClient.GetCatchDispositionAsync(getCatchDispositionRequest, current, cancellationToken: token);
 
             var updateCatchDispositionTotalRequest = CreateUpdateCatchDispositionRequest(ecopathCatchDispositionSummary);

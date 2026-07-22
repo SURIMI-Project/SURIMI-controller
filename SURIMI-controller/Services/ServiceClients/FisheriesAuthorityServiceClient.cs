@@ -46,6 +46,12 @@ namespace SURIMI_controller.Services
             return await _fisheriesAuthorityServiceClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
         }
 
+        public async Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassTotalRequest, DateTime current, CancellationToken cancellationToken)
+        {
+            LogStep(updateBiomassTotalRequest.SimulationId, current);
+            return await _fisheriesAuthorityServiceClient.UpdateBiomassAsync(updateBiomassTotalRequest, cancellationToken: cancellationToken);
+        }
+
         public async Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateCatchDispositionRequest.SimulationId, current);
@@ -57,6 +63,5 @@ namespace SURIMI_controller.Services
             LogStep(updateFishingActivityRequest.SimulationId, current);
             return await _fisheriesAuthorityServiceClient.UpdateFishingActivityAsync(updateFishingActivityRequest, cancellationToken: cancellationToken);
         }
-
     }
 }
