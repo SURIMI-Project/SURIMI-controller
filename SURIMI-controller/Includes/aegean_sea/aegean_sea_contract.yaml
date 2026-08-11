@@ -1,5 +1,5 @@
 simulation:
-  case_study_name: Agean Sea
+  case_study_name: Aegean Sea
   start_date_time: 2013-01-01T00:00:00
   maximum_end_date_time: 2050-01-01T00:00:00
   time_step: P1M
