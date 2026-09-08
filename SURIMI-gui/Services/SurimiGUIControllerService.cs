@@ -30,7 +30,30 @@ namespace SURIMI_gui.Services
                     ScenarioName = config.ScenarioName ?? "",
                     EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(DateTime.SpecifyKind(config.EndDateTime.Value, DateTimeKind.Utc)) : null,
                     ExperimentId = config.ExperimentId,
-                    NumberOfRuns = config.NumberOfRuns
+                    NumberOfRuns = config.NumberOfRuns,
+                    RegulationsDefinitionsSummary = new RegulationDefinitionsSummary()
+                    {
+                        TargetFishingMortalities = {
+                            new TargetFishingMortality() {
+                                Species = new Species() {
+                                    SpeciesCode = "HKE",
+                                    LifeStage = "juvenile"
+                                },
+                                BiomassLimit = 0.0110,
+                                BiomassBase = 0.0440,
+                                FMax = 1.081
+                            },
+                            new TargetFishingMortality() {
+                                Species = new Species() {
+                                    SpeciesCode = "PIL",
+                                    LifeStage = "adult"
+                                },
+                                BiomassLimit = 1.103,
+                                BiomassBase = 2.207,
+                                FMax = 0.076
+                            }
+                        }
+                    }
                 },
                 cancellationToken: token);
             }
