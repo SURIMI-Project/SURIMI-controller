@@ -25,3 +25,24 @@ To build and push the Surimi-GUI docker image, run the following command in the 
 ```bash
 PS C:\Users\<user>\source\repos\SURIMI-controller\surimi-gui> dotnet build /t:BuildPushDockerImage -v:detailed
 ```
+
+### Secrets
+The GitHubToken and the BsrToken are used by this script as secrets. Add them to your secrets if they aren't already there and you get errors like:
+
+```
+warning : Your request could not be authenticated by the GitHub Packages service. Please ensure your access token is valid and has the appropriate scopes configured
+```
+
+And add the secrets using the following commands:
+```bash
+PS C:\Users\<user>\source\repos\SURIMI-controller\surimi-gui> dotnet user-secrets set "DockerBuild:GitHubToken" "<github token>"
+PS C:\Users\<user>\source\repos\SURIMI-controller\surimi-gui> dotnet user-secrets set "DockerBuild:BsrToken" "<bsr token>"
+```
+
+You can see the secrets by right-clicking on the csproj file and selecting "Manage User Secrets". This will open a secrets.json file where you can view and edit your secrets.
+
+If you still get the authentication error, clear the cache with:
+```bash
+docker builder prune -f
+```
+Then try to build and push the docker image again.
