@@ -40,10 +40,10 @@ namespace SURIMI_controller.Services
             return await _fisheriesAuthorityServiceClient.GetRegulationsAsync(getRegulationsRequest, cancellationToken: cancellationToken);
         }
 
-        public async Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
+        public Task<SimulateStepResponse> SimulateStepAsync(SimulateStepRequest simulationStepRequest, DateTime current, CancellationToken cancellationToken)
         {
-            LogStep(simulationStepRequest.SimulationId, current);
-            return await _fisheriesAuthorityServiceClient.SimulateStepAsync(simulationStepRequest, cancellationToken: cancellationToken);
+            // There is no need to call the FisheriesAuthorityService for this step
+            throw new NotImplementedException("The FisheriesAuthorityService does not support SimulateStepAsync. Calculation is done in GetRegulations.");
         }
 
         public async Task<UpdateBiomassResponse> UpdateBiomassAsync(UpdateBiomassRequest updateBiomassTotalRequest, DateTime current, CancellationToken cancellationToken)
@@ -56,12 +56,6 @@ namespace SURIMI_controller.Services
         {
             LogStep(updateCatchDispositionRequest.SimulationId, current);
             return await _fisheriesAuthorityServiceClient.UpdateCatchDispositionAsync(updateCatchDispositionRequest, cancellationToken: cancellationToken);
-        }
-
-        public async Task<UpdateFishingActivityResponse> UpdateFishingActivityAsync(UpdateFishingActivityRequest updateFishingActivityRequest, DateTime current, CancellationToken cancellationToken)
-        {
-            LogStep(updateFishingActivityRequest.SimulationId, current);
-            return await _fisheriesAuthorityServiceClient.UpdateFishingActivityAsync(updateFishingActivityRequest, cancellationToken: cancellationToken);
         }
     }
 }
