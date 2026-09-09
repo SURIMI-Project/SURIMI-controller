@@ -53,7 +53,9 @@ namespace SURIMI_gui.Services
                                 FMax = 0.076
                             }
                         }
-                    }
+                    },
+                    ClimateScenario = "RCP_4.5"
+
                 },
                 cancellationToken: token);
             }

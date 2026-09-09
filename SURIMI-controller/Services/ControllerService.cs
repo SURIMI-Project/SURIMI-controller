@@ -166,10 +166,18 @@ namespace SURIMI_controller.Services
                     },
                     PriceCategories =
                     {
-                        (surimiContract.Items?.Price_Categories ?? Enumerable.Empty<SURIMI.Datamodel.PriceCategory>())
+                        (surimiContract.Items?.PriceCategories ?? Enumerable.Empty<SURIMI.Datamodel.PriceCategory>())
                             .Select(m => new Grpc.Surimi.PriceCategory()
                             {
                                 CategoryCode = m.CategoryCode ?? string.Empty
+                            })
+                    },
+                    ClimateScenarios =
+                    {
+                        (surimiContract.Items?.ClimateScenarios ?? Enumerable.Empty<SURIMI.Datamodel.ClimateScenario>())
+                            .Select(m => new Grpc.Surimi.ClimateScenario()
+                            {
+                                ClimateScenarioCode = m.ClimateScenarioCode ?? string.Empty
                             })
                     }
                 }

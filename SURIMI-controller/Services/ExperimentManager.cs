@@ -102,6 +102,7 @@ namespace SURIMI_controller.Services
                 EndDateTime = request.EndDateTime,
                 Simulation = simulation,
                 SimulationIds = { experiment.SimulationIds },
+                ClimateScenario = request.ClimateScenario,
             };
 
             // Kick off initialisation on all experiments in parallel
@@ -120,6 +121,7 @@ namespace SURIMI_controller.Services
                     request.ScenarioName,
                     request.EndDateTime?.ToDateTime(),
                     simulation,
+                    request.ClimateScenario,
                     cancellationToken),
                 "Init");
 

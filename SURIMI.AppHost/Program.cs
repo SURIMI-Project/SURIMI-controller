@@ -50,8 +50,6 @@ var ecopath = builder.AddContainer("ecopath", "ghcr.io/official-ewe/surimiecopat
 var environment = builder.AddContainer("environment", "ghcr.io/official-ewe/surimienvironment", "latest")
     .WithHttpEndpoint(port: 5839, targetPort: 5839, name: "environment");
 
-var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "ghcr.io/official-ewe/surimifisheriesauthority", "latest")
-    .WithHttpEndpoint(port: 5493, targetPort: 5493, name: "fisheriesauthority");
 
 var valueChain = builder.AddContainer("valuechain", "ghcr.io/official-ewe/surimivaluechain", "latest")
     .WithHttpEndpoint(port: 7990, targetPort: 7990, name: "valuechain");
