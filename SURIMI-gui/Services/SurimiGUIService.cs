@@ -7,19 +7,19 @@ using System.Text;
 
 namespace SURIMI_gui.Services
 {
-    public class SurimiGUIControllerService
+    public class SurimiGUIService
     {
         private readonly ControllerService.ControllerServiceClient _controllerClient;
-        private readonly ILogger<SurimiGUIControllerService> _logger;
+        private readonly ILogger<SurimiGUIService> _logger;
         private static readonly ActivitySource _activitySource = new("SurimiGUI");
 
-        public SurimiGUIControllerService(ControllerService.ControllerServiceClient controllerClient, ILogger<SurimiGUIControllerService> logger)
+        public SurimiGUIService(ControllerService.ControllerServiceClient controllerClient, ILogger<SurimiGUIService> logger)
         {
             _controllerClient = controllerClient;
             _logger = logger;
         }
 
-        public async Task<string> Init(Models.ExperimentConfig config, CancellationToken token)
+        public async Task<string> Submit(Models.ExperimentConfig config, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set. In a Blazor application, the Activity.Current might be unaltered which causes telemetry to use the same TraceId for all requests, leading to confusion in telemetry data.
             SubmitExperimentResponse reply;
@@ -54,7 +54,7 @@ namespace SURIMI_gui.Services
                             }
                         }
                     },
-                    ClimateScenario = "RCP_4.5"
+                    ClimateScenario = config.ClimateScenario ?? ""
 
                 },
                 cancellationToken: token);
@@ -123,6 +123,46 @@ namespace SURIMI_gui.Services
                 Status = sim.Status,
                 IP = string.IsNullOrEmpty(sim.EcologyHost) ? string.Empty : sim.EcologyHost.Replace("http://", "").Split(':')[3]
             }).ToList();
+        }
+
+        public async Task<List<string>> GetScenarioNamesAsync(CancellationToken token)
+        {
+            Activity.Current = null; // Ensure no previous activity is set
+            GetScenarioNamesResponse reply;
+            try
+            {
+                reply = await _controllerClient.GetScenarioNamesAsync(new GetScenarioNamesRequest(), cancellationToken: token);
+            }
+            catch (RpcException ex)
+            {
+                throw new Exception(CreateErrorStringFromGrpcException(ex));
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+
+            return reply.ScenarioNames.ToList();
+        }
+
+        public async Task<List<string>> GetClimateScenariosAsync(string scenarioName, CancellationToken token)
+        {
+            Activity.Current = null; // Ensure no previous activity is set
+            GetSimulationContractResponse reply;
+            try
+            {
+                reply = await _controllerClient.GetSimulationContractAsync(new GetSimulationContractRequest { ScenarioName = scenarioName ?? "" }, cancellationToken: token);
+            }
+            catch (RpcException ex)
+            {
+                throw new Exception(CreateErrorStringFromGrpcException(ex));
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+
+            return reply.Simulation.Items.ClimateScenarios.Select(c => c.ClimateScenarioCode).ToList();
         }
 
         private string CreateErrorStringFromGrpcException(RpcException ex)

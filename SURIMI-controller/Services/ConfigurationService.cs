@@ -23,15 +23,15 @@ namespace SURIMI_controller.ConfigurationService
         /// This will be the case when running in a Docker container in Kubernetes.
         /// </summary>
         /// <returns>A SurimiContract object representing the configuration.</returns>
-        public async Task<SurimiContract> ReadConfigurationAsync(string scenarioName)
+        public async Task<SurimiContract> ReadConfigurationAsync(string scenarioName, CancellationToken cancellationToken)
         {
             string yaml = "";
-            if (!await _blobStore.ExistsAsync($"{scenarioName}/{scenarioName}_contract.yaml", PathType.Input))
+            if (!await _blobStore.ExistsAsync($"{scenarioName}/{scenarioName}_contract.yaml", PathType.Input, cancellationToken))
             {
                 throw new RpcException(new Status(StatusCode.Internal, $"Couldn't find {scenarioName}/{scenarioName}_contract.yaml"));
             }
 
-            yaml = await _blobStore.ReadAllTextAsync($"{scenarioName}/{scenarioName}_contract.yaml", PathType.Input);
+            yaml = await _blobStore.ReadAllTextAsync($"{scenarioName}/{scenarioName}_contract.yaml", PathType.Input, cancellationToken);
             _logger.LogInformation("Loaded {ScenarioName}/{ScenarioName}_contract.yaml", scenarioName, scenarioName);
             return DeserialiseContract(yaml);
         }
@@ -46,6 +46,11 @@ namespace SURIMI_controller.ConfigurationService
                 .Build();
 
             return deserializer.Deserialize<SurimiContract>(input);
+        }
+
+        public async Task<IEnumerable<string>> GetScenarioNames(CancellationToken cancellationToken)
+        {
+            return await _blobStore.GetSubdirectoryNamesAsync(PathType.Input, cancellationToken);
         }
     }
 }
