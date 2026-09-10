@@ -7,13 +7,13 @@ using System.Text;
 
 namespace SURIMI_gui.Services
 {
-    public class SurimiGUIControllerService
+    public class SurimiGUIService
     {
         private readonly ControllerService.ControllerServiceClient _controllerClient;
-        private readonly ILogger<SurimiGUIControllerService> _logger;
+        private readonly ILogger<SurimiGUIService> _logger;
         private static readonly ActivitySource _activitySource = new("SurimiGUI");
 
-        public SurimiGUIControllerService(ControllerService.ControllerServiceClient controllerClient, ILogger<SurimiGUIControllerService> logger)
+        public SurimiGUIService(ControllerService.ControllerServiceClient controllerClient, ILogger<SurimiGUIService> logger)
         {
             _controllerClient = controllerClient;
             _logger = logger;
@@ -145,13 +145,13 @@ namespace SURIMI_gui.Services
             return reply.ScenarioNames.ToList();
         }
 
-        public async Task<List<string>> GetClimateScenariosAsync(CancellationToken token)
+        public async Task<List<string>> GetClimateScenariosAsync(string scenarioName, CancellationToken token)
         {
             Activity.Current = null; // Ensure no previous activity is set
             GetSimulationContractResponse reply;
             try
             {
-                reply = await _controllerClient.GetSimulationContractAsync(new GetSimulationContractRequest(), cancellationToken: token);
+                reply = await _controllerClient.GetSimulationContractAsync(new GetSimulationContractRequest { ScenarioName = scenarioName ?? "" }, cancellationToken: token);
             }
             catch (RpcException ex)
             {

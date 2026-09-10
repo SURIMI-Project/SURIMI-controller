@@ -29,7 +29,7 @@
             <div class="form-group row">
                 <label class="col-md-2 col-form-label">Scenario Name</label>
                 <div class="col-md-2">
-                    <select class="form-select" @bind="config.ScenarioName">
+                    <select class="form-select" value="@config.ScenarioName" @onchange="OnScenarioNameChanged">
                         @foreach (var name in scenarioNames)
                         {
                             <option value="@name">@name</option>
@@ -171,9 +171,8 @@ else
             try
             {
                 scenarioNames = (await controllerService.GetScenarioNamesAsync(cts.Token)).OrderByDescending(n => n, StringComparer.OrdinalIgnoreCase).ToList();
-                climateScenarios = await controllerService.GetClimateScenariosAsync(cts.Token);
                 config.ScenarioName = scenarioNames.FirstOrDefault() ?? config.ScenarioName;
-                config.ClimateScenario = climateScenarios.FirstOrDefault();
+                await LoadClimateScenariosAsync();
             }
             catch (Exception ex)
             {
@@ -183,6 +182,37 @@ else
             }
         }
         StartRefreshTimer();
+    }
+
+    private async Task LoadClimateScenariosAsync()
+    {
+        if (controllerService == null || config == null)
+        {
+            return;
+        }
+
+        climateScenarios = await controllerService.GetClimateScenariosAsync(config.ScenarioName ?? "", cts.Token);
+        config.ClimateScenario = climateScenarios.FirstOrDefault();
+    }
+
+    private async Task OnScenarioNameChanged(ChangeEventArgs e)
+    {
+        if (config == null)
+        {
+            return;
+        }
+
+        config.ScenarioName = e.Value?.ToString();
+        try
+        {
+            await LoadClimateScenariosAsync();
+        }
+        catch (Exception ex)
+        {
+            result = $"Exception loading climate scenarios: {ex.Message}";
+            climateScenarios = new List<string>();
+        }
+        StateHasChanged();
     }
 
     private async Task HandleSubmit()

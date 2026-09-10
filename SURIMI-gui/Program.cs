@@ -12,7 +12,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
 
-        builder.Services.AddSingleton<SurimiGUIControllerService>();
+        builder.Services.AddSingleton<SurimiGUIService>();
         builder.Services.AddTransient<VaultService>();
 
         // Add services to the container.

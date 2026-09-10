@@ -1,5 +1,6 @@
 ﻿using Grpc.Core;
 using Grpc.Surimi;
+using SURIMI.Common.gRPC;
 using SURIMI.Common.gRPC.Services;
 using SURIMI.Datamodel;
 using SURIMI_controller.ConfigurationService;
@@ -23,6 +24,8 @@ namespace SURIMI_controller.Services
 
         public override async Task<SubmitExperimentResponse> SubmitExperiment(SubmitExperimentRequest request, ServerCallContext context)
         {
+            GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioName);
+
             _logger.LogInformation("Simulation {ExperimentId} is initialising", request.ExperimentId);
             System.Diagnostics.Activity.Current?.SetTag("experiment_id", request.ExperimentId);
 
@@ -51,7 +54,9 @@ namespace SURIMI_controller.Services
 
         public override async Task<GetSimulationContractResponse> GetSimulationContract(GetSimulationContractRequest request, ServerCallContext context)
         {
-            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(@"northwestern_med", context.CancellationToken);
+            GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioName);
+
+            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(request.ScenarioName, context.CancellationToken);
             var simulation = GetSimulation(surimiConfiguration);
             return new GetSimulationContractResponse() { Simulation = simulation };
         }
