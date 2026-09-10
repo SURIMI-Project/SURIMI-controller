@@ -10,10 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.83.10103.87+d688d42c344c" />
+    <PackageReference Include="BSR.Surimi.Surimi-Protocol.Grpc.Csharp" Version="1.83.10103.88+eefcaf3b56da" />
     <PackageReference Include="Eii.BlobStore" Version="2.0.*" />
     <PackageReference Include="Eii.BlobStore.S3" Version="1.0.*" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
+    <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
     <PackageReference Include="Grpc.StatusProto" Version="2.80.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
@@ -23,6 +24,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Includes\aegean_sea\aegean_sea_contract.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Includes\anchovy_bay\anchovy_bay_contract.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Includes\northwestern_med\northwestern_med_contract.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

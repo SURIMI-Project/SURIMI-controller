@@ -19,20 +19,32 @@
 
     <h2>Initialize the simulation</h2>
 
-    @if (config == null)
+    @if (config == null || scenarioNames == null || climateScenarios == null)
     {
         <p><em>Loading...</em></p>
     }
     else
     {
-        <EditForm Model="config" OnSubmit="HandleInit">
+        <EditForm Model="config" OnSubmit="HandleSubmit">
             <div class="form-group row">
                 <label class="col-md-2 col-form-label">Scenario Name</label>
                 <div class="col-md-2">
                     <select class="form-select" @bind="config.ScenarioName">
-                        <option value="northwestern_med">northwestern_med</option>
-                        <option value="aegean_sea">aegean_sea</option>
-                        <option value="anchovy_bay">anchovy_bay</option>
+                        @foreach (var name in scenarioNames)
+                        {
+                            <option value="@name">@name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label class="col-md-2 col-form-label">Climate Scenario</label>
+                <div class="col-md-2">
+                    <select class="form-select" @bind="config.ClimateScenario">
+                        @foreach (var scenario in climateScenarios)
+                        {
+                            <option value="@scenario">@scenario</option>
+                        }
                         <option value=""></option>
                     </select>
                 </div>
@@ -57,10 +69,10 @@
                     <button type="submit"
                             class="btn btn-primary"
                             style="width: 155px"
-                            disabled="@isInitLoading">
+                            disabled="@isSubmitLoading">
                         Submit
                     </button>
-                    @if (isInitLoading)
+                    @if (isSubmitLoading)
                     {
                         <span class="spinner-border spinner-border-sm text-primary ms-2" role="status" aria-hidden="true"></span>
                     }
@@ -139,9 +151,11 @@ else
 
 
 @code {
-    private bool isInitLoading = false;
+    private bool isSubmitLoading = false;
     private SURIMI_gui.Models.ExperimentConfig? config { get; set; }
     private List<SURIMI_gui.Models.SimulationStatus>? simulations { get; set; } = new List<SURIMI_gui.Models.SimulationStatus>();
+    private List<string>? scenarioNames;
+    private List<string>? climateScenarios;
     private string result = "";
     CancellationTokenSource cts = new CancellationTokenSource();
     private System.Threading.Timer? _refreshTimer;
@@ -152,30 +166,46 @@ else
     protected override async Task OnInitializedAsync()
     {
         config = new SURIMI_gui.Models.ExperimentConfig();
+        if (controllerService != null)
+        {
+            try
+            {
+                scenarioNames = (await controllerService.GetScenarioNamesAsync(cts.Token)).OrderByDescending(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+                climateScenarios = await controllerService.GetClimateScenariosAsync(cts.Token);
+                config.ScenarioName = scenarioNames.FirstOrDefault() ?? config.ScenarioName;
+                config.ClimateScenario = climateScenarios.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                result = $"Exception loading scenarios: {ex.Message}";
+                scenarioNames ??= new List<string>();
+                climateScenarios ??= new List<string>();
+            }
+        }
         StartRefreshTimer();
     }
 
-    private async Task HandleInit()
+    private async Task HandleSubmit()
     {
         if (config != null && controllerService != null)
         {
-            isInitLoading = true;
+            isSubmitLoading = true;
             StateHasChanged();
             try
             {
                 result = "";
                 config.ExperimentId = Guid.NewGuid().ToString();
-                var res = await controllerService.Init(config, cts.Token);
+                var res = await controllerService.Submit(config, cts.Token);
                 if (Guid.TryParse(res, out Guid simres))
                 {
                     config = new SURIMI_gui.Models.ExperimentConfig();    // Reset form
-                    // Fetch updated simulations list after successful init
+                    // Fetch updated simulations list after successful submit
                     simulations = await controllerService.GetAllSimulationsAsync(cts.Token);
                     result = $"OK";
                 }
                 else
                 {
-                    result = $"Error initializing simulation: {res}";
+                    result = $"Error submitting simulation: {res}";
                 }
             }
             catch (Exception ex)
@@ -184,7 +214,7 @@ else
             }
             finally
             {
-                isInitLoading = false;
+                isSubmitLoading = false;
                 StateHasChanged();
             }
         }

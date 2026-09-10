@@ -41,6 +41,7 @@ public class Program
             options.Interceptors.Add<ExceptionMetadataInterceptor>();
             options.Interceptors.Add<VersionMetadataInterceptor>();
         });
+        builder.Services.AddGrpcReflection();
 
         // Use the helper for all your gRPC clients
         AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("Poseidon", "POSEIDON_URL");
@@ -91,6 +92,8 @@ public class Program
 
         // Configure the HTTP request pipeline.
         app.MapGrpcService<Services.ControllerService>();
+        app.MapGrpcReflectionService();
+
         app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
         // Retrieve the logger

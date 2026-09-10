@@ -26,7 +26,7 @@ namespace SURIMI_controller.Services
             _logger.LogInformation("Simulation {ExperimentId} is initialising", request.ExperimentId);
             System.Diagnostics.Activity.Current?.SetTag("experiment_id", request.ExperimentId);
 
-            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(request.ScenarioName);
+            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(request.ScenarioName, context.CancellationToken);
 
             var simulation = GetSimulation(surimiConfiguration);
 
@@ -51,13 +51,20 @@ namespace SURIMI_controller.Services
 
         public override async Task<GetSimulationContractResponse> GetSimulationContract(GetSimulationContractRequest request, ServerCallContext context)
         {
-            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(@"northwestern_med");
+            var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(@"northwestern_med", context.CancellationToken);
             var simulation = GetSimulation(surimiConfiguration);
             return new GetSimulationContractResponse() { Simulation = simulation };
         }
+
         public override Task<GetProtocolVersionResponse> GetProtocolVersion(GetProtocolVersionRequest request, ServerCallContext context)
         {
             return Task.FromResult(new GetProtocolVersionResponse() { ProtocolVersion = _version });
+        }
+
+        public override async Task<GetScenarioNamesResponse> GetScenarioNames(GetScenarioNamesRequest request, ServerCallContext context)
+        {
+            var scenarioNames = await _surimiConfigurationService.GetScenarioNames(context.CancellationToken);
+            return new GetScenarioNamesResponse() { ScenarioNames = { scenarioNames } };
         }
 
         /// <summary>
