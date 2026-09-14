@@ -36,21 +36,20 @@ namespace SURIMI_gui.Services
                         TargetFishingMortalities = {
                             new TargetFishingMortality() {
                                 Species = new Species() {
-                                    SpeciesCode = "HKE",
-                                    LifeStage = "juvenile"
+                                    SpeciesCode = "MUT",    // Red mullet
+                                    LifeStage = "adult"
                                 },
-                                BiomassLimit = 0.0110,
-                                BiomassBase = 0.0440,
-                                FMax = 1.081
+                                BiomassLimit = 0.018,
+                                BiomassBase = 0.072,
+                                FMax = 0.317561
                             },
                             new TargetFishingMortality() {
                                 Species = new Species() {
-                                    SpeciesCode = "PIL",
-                                    LifeStage = "adult"
+                                    SpeciesCode = "BFT"    // Blue fin tuna
                                 },
-                                BiomassLimit = 1.103,
-                                BiomassBase = 2.207,
-                                FMax = 0.076
+                                BiomassLimit = 0.008,
+                                BiomassBase = 0.032,
+                                FMax = 0.6216745
                             }
                         }
                     },
