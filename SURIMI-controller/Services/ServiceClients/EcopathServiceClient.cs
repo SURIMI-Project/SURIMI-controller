@@ -74,13 +74,6 @@ namespace SURIMI_controller.Services
                 (client, req) => client.GetBiomassAsync(req, cancellationToken: cancellationToken));
         }
 
-        public async Task<UpdateEnvironmentVariablesResponse> UpdateEnvironmentVariablesAsync(UpdateEnvironmentVariablesRequest updateEnvironmentVariablesRequest, DateTime current, CancellationToken cancellationToken)
-        {
-            LogStep(updateEnvironmentVariablesRequest.SimulationId, current);
-            return await _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, UpdateEnvironmentVariablesRequest, UpdateEnvironmentVariablesResponse>(updateEnvironmentVariablesRequest, updateEnvironmentVariablesRequest.SimulationId,
-                (client, req) => client.UpdateEnvironmentVariablesAsync(req, cancellationToken: cancellationToken));
-        }
-
         public async Task<UpdateRegulationsResponse> UpdateRegulationsAsync(UpdateRegulationsRequest updateRegulationsRequest, DateTime current, CancellationToken cancellationToken)
         {
             LogStep(updateRegulationsRequest.SimulationId, current);

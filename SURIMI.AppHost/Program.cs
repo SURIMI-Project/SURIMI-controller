@@ -47,11 +47,16 @@ var ecopath = builder.AddContainer("ecopath", "ghcr.io/official-ewe/surimiecopat
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
-var environment = builder.AddContainer("environment", "ghcr.io/official-ewe/surimienvironment", "latest")
-    .WithHttpEndpoint(port: 5839, targetPort: 5839, name: "environment");
-
 var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "ghcr.io/official-ewe/surimifisheriesauthority", "latest")
-    .WithHttpEndpoint(port: 5493, targetPort: 5493, name: "fisheriesauthority");
+    .WithHttpEndpoint(port: 5493, targetPort: 5493, name: "fisheriesauthority")
+    .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
+    .WithEnvironment("VAULT_TOKEN", "hvs.CAESILFoH6ZCJ-7yWUqQ31YppDKimnHDYwBzJep-fsNEemYPGh4KHGh2cy54NVdyc1YyVm93RWpJOVR1cGl3SVlyeFc")
+    .WithEnvironment("VAULT_TOP_DIR", "rikkert")
+    .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
+    .WithEnvironment("VAULT_MOUNT", "secret-kv")
+    .WithEnvironment("AWS_S3_ENDPOINT", "minio.dive.edito.eu")
+    .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
+    .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
 var valueChain = builder.AddContainer("valuechain", "ghcr.io/official-ewe/surimivaluechain", "latest")
     .WithHttpEndpoint(port: 7990, targetPort: 7990, name: "valuechain");
@@ -65,7 +70,6 @@ var surimicontroller = builder.AddProject<Projects.SURIMI_controller>("surimicon
     .WithEnvironment("OUTPUT_CREATOR_URL", "http://localhost:5189")
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")
-    .WithEnvironment("ENVIRONMENT_URL", "http://localhost:5839")
     .WithEnvironment("FISHERIES_AUTHORITY_URL", "http://localhost:5493")
 
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")

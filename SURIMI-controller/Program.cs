@@ -48,7 +48,6 @@ public class Program
         AddConfiguredGrpcClient<MarketService.MarketServiceClient>("Market", "MARKET_URL");
         AddConfiguredGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy", "CMSY_URL");
         AddConfiguredGrpcClient<ValueChainService.ValueChainServiceClient>("ValueChain", "VALUECHAIN_URL");
-        AddConfiguredGrpcClient<EnvironmentService.EnvironmentServiceClient>("Environment", "ENVIRONMENT_URL");
         AddConfiguredGrpcClient<FisheriesAuthorityService.FisheriesAuthorityServiceClient>("FisheriesAuthority", "FISHERIES_AUTHORITY_URL");
         AddConfiguredGrpcClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator", "OUTPUT_CREATOR_URL");
 
@@ -70,7 +69,6 @@ public class Program
         builder.Services.AddSingleton<IPoseidonServiceClient, PoseidonServiceClient>(); // singleton because it holds state about the current experiment (e.g. which fishery models are currently loaded)
         builder.Services.AddTransient<IMarketServiceClient, MarketServiceClient>();
         builder.Services.AddTransient<IEcopathServiceClient, EcopathServiceClient>();
-        builder.Services.AddTransient<IEnvironmentServiceClient, EnvironmentServiceClient>();
         builder.Services.AddTransient<IOutputCreatorServiceClient, OutputCreatorServiceClient>();
         builder.Services.AddTransient<IFisheriesAuthorityServiceClient, FisheriesAuthorityServiceClient>();
         builder.Services.AddSingleton<VersionCheckerService>();
