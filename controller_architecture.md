@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **SURIMI Controller** is the central orchestrator of the SURIMI system — a Management Strategy Evaluation (MSE) platform for fisheries science. It coordinates multi-simulation experiments across a suite of downstream scientific models (Ecopath, Poseidon, Market, CMSY, Environment, FisheriesAuthority, OutputCreator, ValueChain), all of which communicate exclusively with the controller over **gRPC**.
+The **SURIMI Controller** is the central orchestrator of the SURIMI system — a Management Strategy Evaluation (MSE) platform for fisheries science. It coordinates multi-simulation experiments across a suite of downstream scientific models (Ecopath, Poseidon, Market, CMSY, FisheriesAuthority, OutputCreator, ValueChain), all of which communicate exclusively with the controller over **gRPC**.
 
 The controller is written in **C# 14 / .NET 10** using ASP.NET Core and is developed in **Microsoft Visual Studio**. Locally it runs inside a **.NET Aspire** application host that simulates the Kubernetes cluster environment.
 
@@ -16,7 +16,7 @@ No licence file is present in the repository. The code is proprietary to the Off
 
 - Expose a gRPC server endpoint to the GUI, accepting experiment submission and cancellation requests.
 - Load the **scenario contract** (YAML) from the local filesystem or from an S3-compatible object store and translate it into the shared gRPC `Simulation` message.
-- Fan out **experiment initialisation** calls concurrently to all downstream experiment-layer services (CMSY, OutputCreator, Environment, ValueChain).
+  - Fan out **experiment initialisation** calls concurrently to all downstream experiment-layer services (CMSY, OutputCreator, ValueChain).
 - Manage N parallel **simulation runs** per experiment; each run is driven through a full time-step loop by `SimulationManager`, which calls simulation-layer services (Ecopath, Poseidon, Market, FisheriesAuthority).
 - **Aggregate** per-simulation summaries (biomass, catch disposition, fishing activity, sales, species prices) across all N runs using mean / P05 / P95 statistics, then forward the aggregated result to the appropriate downstream clients.
 - Route each simulation run to a dedicated **Ecopath pod** via `SimulationDispatcher`.
@@ -54,9 +54,8 @@ No licence file is present in the repository. The code is proprietary to the Off
 |---|---|
 | **CMSY** | `InitialiseExperiment`, `UpdateBiomassStatistics`, `UpdateCatchDispositionStatistics`, `ExperimentStep`, `FinaliseExperiment`, `CancelExperiment` |
 | **OutputCreator** | `InitialiseExperiment`, all `UpdateStatistics` messages, `ExperimentStep`, `FinaliseExperiment`, `CancelExperiment` |
-| **Environment** | `InitialiseExperiment`, `GetEnvironmentVariables`, `ExperimentStep`, `FinaliseExperiment`, `CancelExperiment` |
 | **ValueChain** | `InitialiseExperiment`, `UpdateSalesStatistics`, `FinaliseExperiment`, `CancelExperiment` |
-| **Ecopath** | `InitialiseSimulation`, `UpdateEnvironmentVariables`, `UpdateRegulations`, `UpdateBiomass`, `UpdateCatchDisposition`, `UpdateSpeciesPrices`, `SimulateStep`, `GetBiomass`, `GetCatchDisposition`, `GetSales`, `GetFishingActivity`, `FinaliseSimulation` |
+| **Ecopath** | `InitialiseSimulation`, `UpdateRegulations`, `UpdateBiomass`, `UpdateCatchDisposition`, `UpdateSpeciesPrices`, `SimulateStep`, `GetBiomass`, `GetCatchDisposition`, `GetSales`, `GetFishingActivity`, `FinaliseSimulation` |
 | **Poseidon** | `InitialiseSimulation`, `UpdateBiomass`, `UpdateCatchDisposition`, `UpdateSpeciesPrices`, `UpdateRegulations`, `SimulateStep`, `GetCatchDisposition`, `GetSales`, `FinaliseSimulation` |
 | **Market** | `InitialiseSimulation`, `GetSpeciesPrices`, `UpdateSales`, `FinaliseSimulation` |
 | **FisheriesAuthority** | `InitialiseSimulation`, `CreateRegulations`, `GetRegulations`, `UpdateCatchDisposition`, `UpdateFishingActivity`, `FinaliseSimulation` |
@@ -95,11 +94,9 @@ flowchart TD
     SM --> Poseidon
     SM --> Market
     SM --> FisheriesAuthority
-    SM --> Environment
 
     EM --> CMSY
     EM --> OutputCreator
-    EM --> Environment
     EM --> ValueChain
 
     CTRL --> S3
@@ -175,17 +172,16 @@ flowchart TD
     B --> C{"current ≤ end?"}
     C -- Yes --> D["New year?\nGetRegulations → UpdateRegulations\n(Ecopath, Poseidon)"]
     D --> E["GetSpeciesPrices (Market)\n→ fire SpeciesPriceUpdated event\n→ UpdateSpeciesPrices (Poseidon, Ecopath)"]
-    E --> F["GetEnvironmentVariables (Environment)\n→ UpdateEnvironmentVariables (Ecopath)"]
-    F --> G["SimulateStep (Ecopath) 🐟"]
-    G --> H["GetBiomass (Ecopath)\n→ UpdateBiomass (Poseidon)"]
-    H --> I["SimulateStep (Poseidon) 🚢"]
-    I --> J["GetCatchDisposition (Poseidon)\n→ UpdateCatchDisposition (Ecopath, FishAuth)\n→ fire CatchDispositionUpdated event"]
-    J --> K["GetBiomass (Ecopath)\n→ fire BiomassUpdated event"]
-    K --> L["GetSales (Ecopath + Poseidon)\n→ fire SalesUpdated event\n→ UpdateSales (Market)"]
-    L --> M["GetFishingActivity (Ecopath)\n→ fire FishingActivityUpdated event\n→ UpdateFishingActivity (FishAuth)"]
-    M --> N["fire SimulateStep event"]
-    N --> O["advance current date"]
-    O --> C
+    E --> F["SimulateStep (Ecopath) 🐟"]
+    F --> G["GetBiomass (Ecopath)\n→ UpdateBiomass (Poseidon)"]
+    G --> H["SimulateStep (Poseidon) 🚢"]
+    H --> I["GetCatchDisposition (Poseidon)\n→ UpdateCatchDisposition (Ecopath, FishAuth)\n→ fire CatchDispositionUpdated event"]
+    I --> J["GetBiomass (Ecopath)\n→ fire BiomassUpdated event"]
+    J --> K["GetSales (Ecopath + Poseidon)\n→ fire SalesUpdated event\n→ UpdateSales (Market)"]
+    K --> L["GetFishingActivity (Ecopath)\n→ fire FishingActivityUpdated event\n→ UpdateFishingActivity (FishAuth)"]
+    L --> M["fire SimulateStep event"]
+    M --> N["advance current date"]
+    N --> C
     C -- No --> P["FinaliseSimulation\n(Ecopath, Poseidon, Market, FishAuth)"]
     P --> Q["fire SimulationFinalised event"]
 ```
@@ -337,7 +333,6 @@ flowchart TB
     subgraph "Experiment-layer Services"
         CMSY["CMSY\n(Stock assessment)"]
         OC["OutputCreator\n(Statistics storage)"]
-        ENV["Environment\n(Env variables)"]
         VC["ValueChain"]
     end
 
@@ -432,7 +427,6 @@ flowchart TB
 
     EM -- "InitialiseExperimentRequest\n(contains Simulation)" --> CMSY["CMSY"]
     EM -- "InitialiseExperimentRequest\n(contains Simulation)" --> OC["OutputCreator"]
-    EM -- "InitialiseExperimentRequest\n(contains Simulation)" --> ENV["Environment"]
     EM -- "InitialiseExperimentRequest\n(contains Simulation)" --> VC["ValueChain"]
 
     EM --> SM
@@ -487,7 +481,6 @@ The controller is deployed as a pod in the **EDITO Datalab Kubernetes cluster**.
 | `MARKET_URL` | Base address of the Market gRPC service |
 | `CMSY_URL` | Base address of the CMSY stock-assessment gRPC service |
 | `VALUECHAIN_URL` | Base address of the ValueChain gRPC service |
-| `ENVIRONMENT_URL` | Base address of the Environment gRPC service |
 | `FISHERIES_AUTHORITY_URL` | Base address of the FisheriesAuthority gRPC service |
 | `OUTPUT_CREATOR_URL` | Base address of the OutputCreator gRPC service |
 | `ECOPATH_URL` | URL template for Ecopath pods (contains `namespace` placeholder) |

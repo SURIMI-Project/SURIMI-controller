@@ -14,7 +14,6 @@ namespace SURIMI_controller.Services
         private readonly ValueChainService.ValueChainServiceClient _valueChainServiceClient;
         private readonly MarketService.MarketServiceClient _marketServiceClient;
         private readonly FisheriesAuthorityService.FisheriesAuthorityServiceClient _fisheriesAuthorityServiceClient;
-        private readonly EnvironmentService.EnvironmentServiceClient _environmentServiceClient;
         private readonly OutputCreatorService.OutputCreatorServiceClient _outputCreatorServiceClient;
 
         private readonly ISimulationDispatcher _ecopathSimDispatcher;
@@ -27,7 +26,6 @@ namespace SURIMI_controller.Services
             _valueChainServiceClient = clientFactory.CreateClient<ValueChainService.ValueChainServiceClient>("ValueChain");
             _marketServiceClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("Market");
             _fisheriesAuthorityServiceClient = clientFactory.CreateClient<FisheriesAuthorityService.FisheriesAuthorityServiceClient>("FisheriesAuthority");
-            _environmentServiceClient = clientFactory.CreateClient<EnvironmentService.EnvironmentServiceClient>("Environment");
             _outputCreatorServiceClient = clientFactory.CreateClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator");
 
             _ecopathSimDispatcher = ecopathSimDispatcher;
@@ -45,7 +43,6 @@ namespace SURIMI_controller.Services
                 GetVersionWithRetryAsync("ValueChain",        async () => (await _valueChainServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
                 GetVersionWithRetryAsync("Market",            async () => (await _marketServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
                 GetVersionWithRetryAsync("FisheriesAuthority",async () => (await _fisheriesAuthorityServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
-                GetVersionWithRetryAsync("Environment",       async () => (await _environmentServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
                 GetVersionWithRetryAsync("Ecopath",   async () =>
                 {
                     var response = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetProtocolVersionRequest, GetProtocolVersionResponse>(

@@ -21,7 +21,6 @@ namespace SURIMI_controller.Services
         private readonly IAggregatorService _aggregatorService;
         private readonly ICmsyServiceClient _cmsyServiceClient;
         private readonly IOutputCreatorServiceClient _outputCreatorClient;
-        private readonly IEnvironmentServiceClient _environmentServiceClient;
         private readonly IValueChainServiceClient _valueChainServiceClient;
         private readonly VersionCheckerService _versionCheckerService;
 
@@ -29,14 +28,13 @@ namespace SURIMI_controller.Services
         /// Initialises a new <see cref="ExperimentManager"/> and subscribes to all
         /// <see cref="ISimulationManager"/> events.
         /// </summary>
-        public ExperimentManager(ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IEnvironmentServiceClient environmentServiceClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService)
+        public ExperimentManager(ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService)
         {
             _simulationManager = simulationManager;
             _cmsyServiceClient = cmsyServiceClient;
             _aggregatorService = aggregatorService;
             _logger = logger;
             _outputCreatorClient = outputCreatorClient;
-            _environmentServiceClient = environmentServiceClient;
             _valueChainServiceClient = valueChainServiceClient;
             _versionCheckerService = versionCheckerService;
 
@@ -109,7 +107,6 @@ namespace SURIMI_controller.Services
             var experimentInitTasks = new List<Task<InitialiseExperimentResponse>>();
             _ = _cmsyServiceClient.AddInitialise(experimentInitTasks, initRequest, cancellationToken);
             _ = _outputCreatorClient.AddInitialise(experimentInitTasks, initRequest, cancellationToken);
-            _ = _environmentServiceClient.AddInitialise(experimentInitTasks, initRequest, cancellationToken);
             _ = _valueChainServiceClient.AddInitialise(experimentInitTasks, initRequest, cancellationToken);
 
             // Initialise the simulations in parallel, each wrapped in a try/catch that logs and rethrows on failure
@@ -221,7 +218,7 @@ namespace SURIMI_controller.Services
 
         /// <summary>
         /// Raised when a simulation reports that the current time step is ready to advance.
-        /// Fans out <see cref="IExperimentStepRequest"/> to CMSY, Environment, and OutputCreator
+        /// Fans out <see cref="IExperimentStepRequest"/> to CMSY and OutputCreator
         /// once all runs have checked in for the date.
         /// </summary>
         private void OnSimulateStep(object? sender, ExperimentEventArgs e) =>
@@ -235,13 +232,12 @@ namespace SURIMI_controller.Services
 
                     await Task.WhenAll(
                         _cmsyServiceClient.ExperimentStepAsync(request, current: current, token: token),
-                        _environmentServiceClient.ExperimentStepAsync(request, current: current, token: token),
                         _outputCreatorClient.ExperimentStepAsync(request, current: current, token: token));
                 });
 
         /// <summary>
         /// Raised when all simulations have completed successfully.
-        /// Fans out <see cref="FinaliseExperimentRequest"/> to CMSY, Environment, and OutputCreator.
+        /// Fans out <see cref="FinaliseExperimentRequest"/> to CMSY and OutputCreator.
         /// </summary>
         private void OnSimulationFinalised(object? sender, ExperimentEventArgs e) =>
             OnFlagUpdated(
@@ -260,14 +256,13 @@ namespace SURIMI_controller.Services
                     var request = new FinaliseExperimentRequest() { ExperimentId = experimentId };
                     await Task.WhenAll(
                         _cmsyServiceClient.FinaliseExperimentAsync(request, token),
-                        _environmentServiceClient.FinaliseExperimentAsync(request, token),
                         _outputCreatorClient.FinaliseExperimentAsync(request, token),
                         _valueChainServiceClient.FinaliseExperimentAsync(request, token));
                 });
 
         /// <summary>
         /// Raised when all simulations have been cancelled.
-        /// Fans out <see cref="CancelExperimentRequest"/> to CMSY, Environment, and OutputCreator.
+        /// Fans out <see cref="CancelExperimentRequest"/> to CMSY and OutputCreator.
         /// </summary>
         private void OnSimulationCancelled(object? sender, ExperimentEventArgs e) =>
             OnFlagUpdated(
@@ -279,7 +274,6 @@ namespace SURIMI_controller.Services
                     var request = new CancelExperimentRequest() { ExperimentId = experimentId };
                     await Task.WhenAll(
                         _cmsyServiceClient.CancelExperimentAsync(request, token),
-                        _environmentServiceClient.CancelExperimentAsync(request, token),
                         _outputCreatorClient.CancelExperimentAsync(request, token),
                         _valueChainServiceClient.CancelExperimentAsync(request, token));
                 });

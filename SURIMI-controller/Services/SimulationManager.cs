@@ -18,7 +18,6 @@ namespace SURIMI_controller.Services
         private readonly IPoseidonServiceClient _poseidonServiceClient;
         private readonly IMarketServiceClient _marketServiceClient;
         private readonly IFisheriesAuthorityServiceClient _fisheriesAuthorityServiceClient;
-        private readonly IEnvironmentServiceClient _environmentServiceClient;
 
         // Event declaration
         public event EventHandler<BiomassEventArgs>? BiomassUpdated;
@@ -30,14 +29,13 @@ namespace SURIMI_controller.Services
         public event EventHandler<ExperimentEventArgs>? SimulationFinalised;
         public event EventHandler<ExperimentEventArgs>? SimulationCancelled;
 
-        public SimulationManager(ILogger<SimulationManager> logger, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient, IFisheriesAuthorityServiceClient fisheriesAuthorityServiceClient, IEnvironmentServiceClient environmentServiceClient)
+        public SimulationManager(ILogger<SimulationManager> logger, IMarketServiceClient marketServiceClient, IPoseidonServiceClient poseidonServiceClient, IEcopathServiceClient ecopathServiceClient, IFisheriesAuthorityServiceClient fisheriesAuthorityServiceClient)
         {
             _logger = logger;
             _marketServiceClient = marketServiceClient;
             _poseidonServiceClient = poseidonServiceClient;
             _ecopathServiceClient = ecopathServiceClient;
             _fisheriesAuthorityServiceClient = fisheriesAuthorityServiceClient;
-            _environmentServiceClient = environmentServiceClient;
         }
 
         /// <summary>
@@ -253,11 +251,6 @@ namespace SURIMI_controller.Services
             await _poseidonServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
             await _ecopathServiceClient.UpdateSpeciesPricesAsync(updatePriceRequest, current, cancellationToken: token);
 
-            var getEnvironmentVariablesResponse = await _environmentServiceClient.GetEnvironmentVariables(new GetEnvironmentVariablesRequest() { ExperimentId = _simulations[simulationId].ExperimentId, DateTime = current.ToTimestamp() }, current, cancellationToken: token);
-            var updateEnvironmentVariablesRequest = CreateUpdateEnvironmentVariablesRequest(getEnvironmentVariablesResponse, simulationId);
-
-            await _ecopathServiceClient.UpdateEnvironmentVariablesAsync(updateEnvironmentVariablesRequest, current, cancellationToken: token);
-
             var simulationStepRequest = CreateSimulateStepRequest(simulationId, current);
 
             await _ecopathServiceClient.SimulateStepAsync(simulationStepRequest, current, token);
@@ -345,16 +338,6 @@ namespace SURIMI_controller.Services
                 StartDateTime = regulationsResponse.StartDateTime,
                 EndDateTime = regulationsResponse.EndDateTime,
                 RegulationsSummary = regulationsResponse.RegulationsSummary
-            };
-        }
-
-        private UpdateEnvironmentVariablesRequest CreateUpdateEnvironmentVariablesRequest(GetEnvironmentVariablesResponse getEnvironmentVariablesResponse, string simulationId)
-        {
-            return new UpdateEnvironmentVariablesRequest()
-            {
-                SimulationId = simulationId,
-                EnvironmentVariablesSummary = getEnvironmentVariablesResponse.EnvironmentVariablesSummary,
-                DateTime = getEnvironmentVariablesResponse.DateTime
             };
         }
 
