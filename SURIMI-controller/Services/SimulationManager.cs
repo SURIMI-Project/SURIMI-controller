@@ -5,6 +5,7 @@ using SURIMI_controller.Models;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Xml;
+using YamlDotNet.Core.Tokens;
 
 namespace SURIMI_controller.Services
 {
@@ -137,6 +138,11 @@ namespace SURIMI_controller.Services
 
             var current = simulation.StartDateTime;
             var end = simulation.EndDateTime;
+
+            // retrieve initial biomass from Ecopath and update FisheriesAuthority with it, so that the initial biomass is available for the first step of the simulation
+            var getBiomassResponseInitial = await _ecopathServiceClient.GetBiomassAsync(new GetBiomassRequest() { SimulationId = simulationId, DateTime = current.ToTimestamp() }, current, cancellationToken);
+            var updateBiomassTotalRequest = CreateUpdateBiomassRequest(getBiomassResponseInitial);
+            await _fisheriesAuthorityServiceClient.UpdateBiomassAsync(updateBiomassTotalRequest, current, cancellationToken);
 
             simulation.Status = "Running";
             simulation.SimulationDuration = TimeSpan.FromMilliseconds(10);    // so you immediately see a duration, instead of nothing
