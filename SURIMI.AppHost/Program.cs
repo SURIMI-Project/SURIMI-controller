@@ -1,6 +1,6 @@
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
-var poseidon = builder.AddContainer("poseidon", "ghcr.io/official-ewe/surimiposeidon", "latest")
+var poseidon = builder.AddContainer("poseidon", "ghcr.io/surimi-project/surimiposeidon", "latest")
     .WithHttpEndpoint( port: 50051, targetPort: 50051, name: "poseidon");
 
 var market = builder.AddContainer("market", "ghcr.io/official-ewe/surimimarket", "latest")
@@ -25,7 +25,7 @@ var cmsy = builder.AddContainer("cmsy", "ghcr.io/official-ewe/surimicmsy", "late
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
-var outputCreator = builder.AddContainer("outputcreator", "ghcr.io/official-ewe/surimioutputcreator", "latest")
+var outputCreator = builder.AddContainer("outputcreator", "ghcr.io/surimi-project/surimioutputcreator", "latest")
     .WithHttpEndpoint(port: 5189, targetPort: 5189, name: "outputcreator")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESILFoH6ZCJ-7yWUqQ31YppDKimnHDYwBzJep-fsNEemYPGh4KHGh2cy54NVdyc1YyVm93RWpJOVR1cGl3SVlyeFc")
@@ -36,7 +36,7 @@ var outputCreator = builder.AddContainer("outputcreator", "ghcr.io/official-ewe/
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
-var ecopath = builder.AddContainer("ecopath", "ghcr.io/official-ewe/surimiecopath", "latest")
+var ecopath = builder.AddContainer("ecopath", "ghcr.io/surimi-project/surimiecopath", "latest")
     .WithHttpEndpoint(port: 7890, targetPort: 7890, name: "ecopath")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESILFoH6ZCJ-7yWUqQ31YppDKimnHDYwBzJep-fsNEemYPGh4KHGh2cy54NVdyc1YyVm93RWpJOVR1cGl3SVlyeFc")
@@ -47,7 +47,7 @@ var ecopath = builder.AddContainer("ecopath", "ghcr.io/official-ewe/surimiecopat
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
-var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "ghcr.io/official-ewe/surimifisheriesauthority", "latest")
+var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "ghcr.io/surimi-project/surimifisheriesauthority", "latest")
     .WithHttpEndpoint(port: 5493, targetPort: 5493, name: "fisheriesauthority")
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", "hvs.CAESILFoH6ZCJ-7yWUqQ31YppDKimnHDYwBzJep-fsNEemYPGh4KHGh2cy54NVdyc1YyVm93RWpJOVR1cGl3SVlyeFc")
@@ -58,7 +58,7 @@ var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "ghcr.io/off
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
-var valueChain = builder.AddContainer("valuechain", "ghcr.io/official-ewe/surimivaluechain", "latest")
+var valueChain = builder.AddContainer("valuechain", "ghcr.io/surimi-project/surimivaluechain", "latest")
     .WithHttpEndpoint(port: 7990, targetPort: 7990, name: "valuechain");
 
 var surimicontroller = builder.AddProject<Projects.SURIMI_controller>("surimicontroller")

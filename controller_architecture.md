@@ -8,7 +8,7 @@ The controller is written in **C# 14 / .NET 10** using ASP.NET Core and is devel
 
 ### Licence
 
-No licence file is present in the repository. The code is proprietary to the Official-EwE organisation.
+No licence file is present in the repository. The code is proprietary to the SURIMI-project organisation.
 
 ---
 
@@ -511,7 +511,7 @@ The controller is deployed as a pod in the **EDITO Datalab Kubernetes cluster**.
 
 | Image | Registry | Tag |
 |---|---|---|
-| `surimicontroller` | `ghcr.io/official-ewe/surimicontroller` | `latest` |
+| `surimicontroller` | `ghcr.io/surimi-project/surimicontroller` | `latest` |
 
 The GUI image is **not** built by CI. It must be built and pushed manually:
 
@@ -580,9 +580,9 @@ SURIMI-controller.sln
 
 ## Source control
 
-Git is used for source control, hosted on **GitHub** at `github.com/Official-EwE/SURIMI-controller`.
+Git is used for source control, hosted on **GitHub** at `github.com/surimi-project/SURIMI-controller`.
 
-The gRPC **protocol definitions** (`.proto` files) live in the separate [`SURIMI-protocol`](https://github.com/Official-EwE/SURIMI-protocol) repository and are consumed as a NuGet package from the Buf Schema Registry (BSR) and GitHub Packages — not as a submodule. The remote alias `surimi-protocol` in the controller repo is used to track upstream protocol changes.
+The gRPC **protocol definitions** (`.proto` files) live in the separate [`SURIMI-protocol`](https://github.com/surimi-project/SURIMI-protocol) repository and are consumed as a NuGet package from the Buf Schema Registry (BSR) and GitHub Packages — not as a submodule. The remote alias `surimi-protocol` in the controller repo is used to track upstream protocol changes.
 
 Branch protection is enforced on `master`; all changes must go through a pull request that passes the **Build Check** workflow.
 
