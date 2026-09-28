@@ -27,11 +27,11 @@ jobs:
         run: |
           docker build \
             -f ./SURIMI-controller/Dockerfile \
-            -t ghcr.io/official-ewe/surimicontroller:latest \
+            -t ghcr.io/surimi-project/surimicontroller:latest \
             --secret id=GITHUB_TOKEN,env=GITHUB_TOKEN \
             --secret id=BSR_TOKEN,env=BSR_TOKEN \
             .
 
       - name: Push Controller Docker image
         run: |
-          docker push ghcr.io/official-ewe/surimicontroller:latest
+          docker push ghcr.io/surimi-project/surimicontroller:latest
