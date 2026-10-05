@@ -46,3 +46,21 @@ If you still get the authentication error, clear the cache with:
 docker builder prune -f
 ```
 Then try to build and push the docker image again.
+
+
+# Copy the configuration files from local to the S3 bucket
+
+* go to the Developer Powershell
+* Check if an alias is present:
+`& "C:\Program Files\MinioClient\mc.exe" alias list`
+* Add the alias with the following command:
+`& "C:\Program Files\MinioClient\mc.exe" alias set surimi https://s3.waw3-1.cloudferro.com 78540c1dda814532a000c8430c9f2558 "YOUR_SECRET_ACCESS_KEY"`
+
+* run the following command to copy the configuration files from your local machine to the S3 bucket:
+
+```powershell
+PS C:\Users\<user>\source\repos\SURIMI-controller> .\Sync_S3_Bucket.ps1
+```
+
+* The script will prompt you for the bucketname
+

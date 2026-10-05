@@ -50,10 +50,12 @@
                 </div>
             </div>
             <div class="form-group row">
-                <label class="col-md-2 col-form-label">Number of runs</label>
+                <label class="col-md-2 col-form-label">MSE Run</label>
                 <div class="col-md-2">
-                    <input type="number" class="form-control" @bind="config.NumberOfRuns"
-                           title="Select the number of runs for the simulation">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" @bind="config.IsMseRun"
+                               title="Select whether this is an MSE run">
+                    </div>
                 </div>
             </div>
             <div class="form-group row">

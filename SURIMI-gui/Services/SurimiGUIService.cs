@@ -30,7 +30,7 @@ namespace SURIMI_gui.Services
                     ScenarioName = config.ScenarioName ?? "",
                     EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(DateTime.SpecifyKind(config.EndDateTime.Value, DateTimeKind.Utc)) : null,
                     ExperimentId = config.ExperimentId,
-                    NumberOfRuns = config.NumberOfRuns,
+                    IsMseRun = config.IsMseRun,
                     RegulationsDefinitionsSummary = new RegulationDefinitionsSummary()
                     {
                         TargetFishingMortalities = {

@@ -1,6 +1,7 @@
 ﻿using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Surimi;
+using Microsoft.Extensions.Options;
 using SURIMI_controller.Models;
 using System.Collections.Concurrent;
 
@@ -23,12 +24,13 @@ namespace SURIMI_controller.Services
         private readonly IOutputCreatorServiceClient _outputCreatorClient;
         private readonly IValueChainServiceClient _valueChainServiceClient;
         private readonly VersionCheckerService _versionCheckerService;
+        private readonly SimulationDispatcherOptions _simulationDispatcherOptions;
 
         /// <summary>
         /// Initialises a new <see cref="ExperimentManager"/> and subscribes to all
         /// <see cref="ISimulationManager"/> events.
         /// </summary>
-        public ExperimentManager(ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService)
+        public ExperimentManager(ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService, IOptions<SimulationDispatcherOptions> simulationDispatcherOptions)
         {
             _simulationManager = simulationManager;
             _cmsyServiceClient = cmsyServiceClient;
@@ -37,6 +39,7 @@ namespace SURIMI_controller.Services
             _outputCreatorClient = outputCreatorClient;
             _valueChainServiceClient = valueChainServiceClient;
             _versionCheckerService = versionCheckerService;
+            _simulationDispatcherOptions = simulationDispatcherOptions.Value;
 
             // Subscribe to all simulation lifecycle and data events
             _simulationManager.SimulateStep += OnSimulateStep;
@@ -64,8 +67,11 @@ namespace SURIMI_controller.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {request.ExperimentId} is already submitteded"));
             }
 
+            // Number of runs is derived from ECOPATH_NR_OF_PODS when this is an MSE run, otherwise a single run
+            var numberOfRuns = request.IsMseRun ? _simulationDispatcherOptions.NrOfPods : 1;
+
             // Generate a unique simulation ID for each requested run
-            var simulationIds = Enumerable.Range(0, request.NumberOfRuns)
+            var simulationIds = Enumerable.Range(0, numberOfRuns)
                 .Select(_ => Guid.NewGuid().ToString())
                 .ToList();
 
