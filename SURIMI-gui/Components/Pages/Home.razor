@@ -231,6 +231,8 @@ else
                 if (Guid.TryParse(res, out Guid simres))
                 {
                     config = new SURIMI_gui.Models.ExperimentConfig();    // Reset form
+                    config.ScenarioName = scenarioNames?.FirstOrDefault() ?? config.ScenarioName;
+                    await LoadClimateScenariosAsync();
                     // Fetch updated simulations list after successful submit
                     simulations = await controllerService.GetAllSimulationsAsync(cts.Token);
                     result = $"OK";
