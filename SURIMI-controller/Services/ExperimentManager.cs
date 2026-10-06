@@ -24,13 +24,13 @@ namespace SURIMI_controller.Services
         private readonly IOutputCreatorServiceClient _outputCreatorClient;
         private readonly IValueChainServiceClient _valueChainServiceClient;
         private readonly VersionCheckerService _versionCheckerService;
-        private readonly SimulationDispatcherOptions _simulationDispatcherOptions;
+        private readonly ExperimentManagerOptions _options;
 
         /// <summary>
         /// Initialises a new <see cref="ExperimentManager"/> and subscribes to all
         /// <see cref="ISimulationManager"/> events.
         /// </summary>
-        public ExperimentManager(ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService, IOptions<SimulationDispatcherOptions> simulationDispatcherOptions)
+        public ExperimentManager(ISimulationManager simulationManager, ICmsyServiceClient cmsyServiceClient, ILogger<ExperimentManager> logger, IAggregatorService aggregatorService, IOutputCreatorServiceClient outputCreatorClient, IValueChainServiceClient valueChainServiceClient, VersionCheckerService versionCheckerService, IOptions<ExperimentManagerOptions> options)
         {
             _simulationManager = simulationManager;
             _cmsyServiceClient = cmsyServiceClient;
@@ -39,7 +39,7 @@ namespace SURIMI_controller.Services
             _outputCreatorClient = outputCreatorClient;
             _valueChainServiceClient = valueChainServiceClient;
             _versionCheckerService = versionCheckerService;
-            _simulationDispatcherOptions = simulationDispatcherOptions.Value;
+            _options = options.Value;
 
             // Subscribe to all simulation lifecycle and data events
             _simulationManager.SimulateStep += OnSimulateStep;
@@ -67,8 +67,8 @@ namespace SURIMI_controller.Services
                 throw new RpcException(new Status(StatusCode.Internal, $"Experiment with Id {request.ExperimentId} is already submitteded"));
             }
 
-            // Number of runs is derived from ECOPATH_NR_OF_PODS when this is an MSE run, otherwise a single run
-            var numberOfRuns = request.IsMseRun ? _simulationDispatcherOptions.NrOfPods : 1;
+            // Number of runs is derived from NR_OF_MSE_RUNS when this is an MSE run, otherwise a single run
+            var numberOfRuns = request.IsMseRun ? _options.NrOfMseRuns : 1;
 
             // Generate a unique simulation ID for each requested run
             var simulationIds = Enumerable.Range(0, numberOfRuns)
