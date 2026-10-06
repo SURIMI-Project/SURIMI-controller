@@ -58,6 +58,10 @@ public class Program
             o.PodNamespace = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? string.Empty;
             o.NrOfPods = int.TryParse(Environment.GetEnvironmentVariable("ECOPATH_NR_OF_PODS"), out var n) ? n : 1;
         });
+        builder.Services.Configure<ExperimentManagerOptions>(o =>
+        {
+            o.NrOfMseRuns = int.TryParse(Environment.GetEnvironmentVariable("NR_OF_MSE_RUNS"), out var n) ? n : 1;
+        });
         builder.Services.AddSingleton<ISimulationDispatcher, SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();

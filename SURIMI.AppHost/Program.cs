@@ -74,6 +74,7 @@ var surimicontroller = builder.AddProject<Projects.SURIMI_controller>("surimicon
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")
     .WithEnvironment("FISHERIES_AUTHORITY_URL", "http://localhost:5493")
+    .WithEnvironment("NR_OF_MSE_RUNS", "1")
 
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", vaultToken)

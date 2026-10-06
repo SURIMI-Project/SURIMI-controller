@@ -485,6 +485,7 @@ The controller is deployed as a pod in the **EDITO Datalab Kubernetes cluster**.
 | `OUTPUT_CREATOR_URL` | Base address of the OutputCreator gRPC service |
 | `ECOPATH_URL` | URL template for Ecopath pods (contains `namespace` placeholder) |
 | `ECOPATH_NR_OF_PODS` | Number of Ecopath pods available for dispatch |
+| `NR_OF_MSE_RUNS` | Number of parallel simulation runs launched for an MSE experiment (default 1) |
 | `POD_NAMESPACE` | Kubernetes namespace; substituted into the Ecopath URL template |
 | `AWS_ACCESS_KEY_ID` | S3-compatible storage access key (triggers S3 mode when set) |
 | `AWS_SECRET_ACCESS_KEY` | S3-compatible storage secret key |
