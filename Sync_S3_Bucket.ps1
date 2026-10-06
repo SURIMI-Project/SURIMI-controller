@@ -37,6 +37,10 @@ $Mappings = @(
         SourceRoot  = "C:\Users\Rik\source\repos\SURIMI-fisheries-authority\SURIMI-fisheries-authority\Includes"
     },
     @{
+        Application = "ecopath"
+        SourceRoot  = "C:\Users\Rik\source\repos\Eii\Eii.Ecopath.Models\SURIMI"
+    },
+    @{
         Application = "market"
         SourceRoot  = "C:\Users\Rik\source\repos\SURIMI-market\config"
     }
