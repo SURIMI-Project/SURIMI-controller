@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $McExe  = "C:\Program Files\MinioClient\mc.exe"
-$Alias  = "surimi"  #"myminio"
+$Alias  = "myminio" #"surimi"
 
 # ============================================================
 # Configuration
@@ -41,6 +41,10 @@ $Mappings = @(
         SourceRoot  = "C:\Users\Rik\source\repos\Eii\Eii.Ecopath.Models\SURIMI"
     },
     @{
+        Application = "surimi-poseidon"
+        SourceRoot  = "C:\Users\Rik\source\repos\SURIMI-POSEIDON_inputs"
+    },
+    @{
         Application = "market"
         SourceRoot  = "C:\Users\Rik\source\repos\SURIMI-market\config"
     }
@@ -69,10 +73,32 @@ catch {
 }
 
 # ============================================================
+# Show alias and endpoint
+# ============================================================
+
+$Endpoint = "unknown"
+
+try {
+    $aliasJson = & $McExe alias list $Alias --json | Out-String
+    $aliasInfo = $aliasJson | ConvertFrom-Json
+    if ($aliasInfo.URL) {
+        $Endpoint = $aliasInfo.URL
+    }
+}
+catch {
+    Write-Host "Could not determine endpoint for alias '$Alias'." -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "Alias    : $Alias" -ForegroundColor Cyan
+Write-Host "Endpoint : $Endpoint" -ForegroundColor Cyan
+Write-Host ""
+
+# ============================================================
 # Bucket
 # ============================================================
 
-$DefaultBucket = "surimi-bucket" #"oidc-rikkert"
+$DefaultBucket = "oidc-rikkert" #"surimi-bucket"
 
 $Bucket = Read-Host "Bucket name [$DefaultBucket]"
 
