@@ -48,7 +48,7 @@ namespace SURIMI_controller.Services
         /// <param name="simulation">The simulation details</param>
         /// <returns></returns>
         /// <exception cref="RpcException"></exception>
-        public async Task InitSimulationAsync(string simulationId, string experimentId, string scenarioName, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, string climateScenario, CancellationToken cancellationToken)
+        public async Task InitSimulationAsync(string simulationId, string experimentId, string scenarioName, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, string climateScenario, bool isMseRun, CancellationToken cancellationToken)
         {
             if (_simulations.ContainsKey(simulationId))
             {
@@ -61,7 +61,8 @@ namespace SURIMI_controller.Services
                 ScenarioName = scenarioName,
                 EndDateTime = endDateTime.HasValue ? Timestamp.FromDateTime(endDateTime.Value) : null,
                 Simulation = simulation,
-                ClimateScenario = climateScenario
+                ClimateScenario = climateScenario,
+                IsMseRun = isMseRun,
             };
 
             var xx = GetProtoString<InitialiseSimulationRequest>(initRequest);
