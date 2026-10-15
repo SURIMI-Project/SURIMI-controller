@@ -19,3 +19,4 @@ jobs:
         with:
           image-name: ghcr.io/surimi-project/surimicontroller
           bsr-token: ${{ secrets.BSR_TOKEN }}
+          dockerfile: ./SURIMI-controller/Dockerfile
