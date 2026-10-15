@@ -9,10 +9,10 @@ simulation:
       name: WGS 84
       authority: EPSG
       code: '4326'
-    xres: 0.0041667
-    yres: 0.0041667
-    ncol: 480
-    nrow: 480
+    xres: 0.1799646
+    yres: 0.1799646
+    ncol: 20
+    nrow: 20
     xmin: -1.0
     xmax: 1.0
     ymin: -1.0
@@ -31,25 +31,26 @@ standards:
     - quantity: mass
       unit: kg
 items:
-  markets:
-  - market_code: GR
-  price_categories:
-  - category_code: Fresh - Whole
   currencies:
   - currency_code: EUR
   species:
+  - species_code: HUW
+  - species_code: GRW
+  - species_code: SEG
+  - species_code: SEC
+  - species_code: COD
+  - species_code: WHG
+  - species_code: MAC
   - species_code: ANE
-    life_stage: juvenile
-  - species_code: ANE
-    life_stage: adult
+  - species_code: ARA
   fleet_segments:
+  - gear_code: MHI
   - gear_code: OTB
-    country_code: GRC
-    model: EwE
   - gear_code: PS
-    country_code: GRC
-    model: EwE
+  - gear_code: LLNB
+  - gear_code: TBS
   climate_scenarios:
   - climate_scenario_code: RCP_2.6
   - climate_scenario_code: RCP_4.5
+  - climate_scenario_code: RCP_8.5
   - climate_scenario_code: RCP_8.5
