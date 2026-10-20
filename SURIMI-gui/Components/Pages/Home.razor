@@ -1,6 +1,5 @@
 ﻿@page "/"
 @using SURIMI_gui.Services
-@using System.Diagnostics
 @implements IDisposable
 
 <PageTitle>Home</PageTitle>
@@ -158,7 +157,7 @@ else
     private List<SURIMI_gui.Models.SimulationStatus>? simulations { get; set; } = new List<SURIMI_gui.Models.SimulationStatus>();
     private List<string>? scenarioNames;
     private List<string>? climateScenarios;
-    private List<string>? experimentIds = new List<string>();
+    private List<string> experimentIds = new List<string>();
     private string result = "";
     CancellationTokenSource cts = new CancellationTokenSource();
     private System.Threading.Timer? _refreshTimer;
@@ -231,7 +230,7 @@ else
                 var res = await controllerService.Submit(config, cts.Token);
                 if (Guid.TryParse(res, out Guid simres))
                 {
-                    experimentIds?.Add(config.ExperimentId);
+                    experimentIds.Add(config.ExperimentId);
                     config = new SURIMI_gui.Models.ExperimentConfig();    // Reset form
                     config.ScenarioName = scenarioNames?.FirstOrDefault() ?? config.ScenarioName;
                     await LoadClimateScenariosAsync();
