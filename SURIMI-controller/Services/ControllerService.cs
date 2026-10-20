@@ -47,6 +47,11 @@ namespace SURIMI_controller.Services
             return new RemoveExperimentResponse() { ExperimentId = request.ExperimentId };
         }
 
+        public override async Task<GetSimulationStatusesResponse> GetSimulationStatuses(GetSimulationStatusesRequest get, ServerCallContext context)
+        {
+            return await _experimentManager.GetSimulationStatussesAsync(get.ExperimentIds, context.CancellationToken);
+        }
+
         public override async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatuses(GetAllSimulationStatusesRequest get, ServerCallContext context)
         {
             return await _experimentManager.GetAllSimulationStatussesAsync(context.CancellationToken);
