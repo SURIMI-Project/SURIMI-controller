@@ -522,7 +522,7 @@ namespace SURIMI_controller.Services
             };
         }
 
-        public Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken)
+        public Task<GetAllSimulationStatusesResponse> GetAllSimulationStatusesAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -532,7 +532,7 @@ namespace SURIMI_controller.Services
             return Task.FromResult(response);
         }
 
-        public Task<GetSimulationStatusesResponse> GetSimulationStatussesAsync(IEnumerable<string> experimentIds, CancellationToken cancellationToken)
+        public Task<GetSimulationStatusesResponse> GetSimulationStatusesAsync(IEnumerable<string> experimentIds, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 

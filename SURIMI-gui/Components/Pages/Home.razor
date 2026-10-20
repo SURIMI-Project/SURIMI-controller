@@ -158,6 +158,7 @@ else
     private List<SURIMI_gui.Models.SimulationStatus>? simulations { get; set; } = new List<SURIMI_gui.Models.SimulationStatus>();
     private List<string>? scenarioNames;
     private List<string>? climateScenarios;
+    private List<string>? experimentIds = new List<string>();
     private string result = "";
     CancellationTokenSource cts = new CancellationTokenSource();
     private System.Threading.Timer? _refreshTimer;
@@ -230,11 +231,12 @@ else
                 var res = await controllerService.Submit(config, cts.Token);
                 if (Guid.TryParse(res, out Guid simres))
                 {
+                    experimentIds?.Add(config.ExperimentId);
                     config = new SURIMI_gui.Models.ExperimentConfig();    // Reset form
                     config.ScenarioName = scenarioNames?.FirstOrDefault() ?? config.ScenarioName;
                     await LoadClimateScenariosAsync();
                     // Fetch updated simulations list after successful submit
-                    simulations = await controllerService.GetAllSimulationsAsync(cts.Token);
+                    simulations = await controllerService.GetSimulationsAsync(experimentIds, cts.Token);
                     result = $"OK";
                 }
                 else
@@ -261,7 +263,7 @@ else
             result = "";
             result = await controllerService.RemoveExperimentAsync(sim.ExperimentId, CancellationToken.None);
             // Optionally refresh simulations list
-            simulations = await controllerService.GetAllSimulationsAsync(CancellationToken.None);
+            simulations = await controllerService.GetSimulationsAsync(experimentIds, CancellationToken.None);
 
             StateHasChanged();
         }
@@ -281,7 +283,7 @@ else
         {
             try
             {
-                var sims = await controllerService.GetAllSimulationsAsync(CancellationToken.None);
+                var sims = await controllerService.GetSimulationsAsync(experimentIds, CancellationToken.None);
                 await InvokeAsync(() =>
                 {
                     simulations = sims;
