@@ -18,6 +18,8 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
 
+        var useOtlpExporter = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(serviceName: "SURIMI-controller"))
             .WithTracing(tracing =>
@@ -31,8 +33,15 @@ public class Program
                     {
                         options.RecordException = true;
                     })
-                    .AddGrpcClientInstrumentation()
-                    .AddOtlpExporter();
+                    .AddGrpcClientInstrumentation();
+
+                if (!string.IsNullOrEmpty(useOtlpExporter))
+                {
+                    tracing.AddOtlpExporter(otlpOptions =>
+                    {
+                        otlpOptions.Endpoint = new Uri(useOtlpExporter);
+                    });
+                }
             });
 
         builder.Services.AddSingleton<IBlobStore>(sp =>
