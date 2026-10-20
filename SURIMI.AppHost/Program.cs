@@ -4,7 +4,15 @@ var vaultToken = builder.Configuration["VaultToken"]
     ?? throw new InvalidOperationException("Missing configuration value 'VaultToken'. Set it via 'dotnet user-secrets set \"VaultToken\" \"<token>\"' in SURIMI.AppHost.");
 
 var poseidon = builder.AddContainer("poseidon", "ghcr.io/surimi-project/surimiposeidon", "latest")
-    .WithHttpEndpoint( port: 50051, targetPort: 50051, name: "poseidon");
+    .WithHttpEndpoint( port: 50051, targetPort: 50051, name: "poseidon")
+    .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
+    .WithEnvironment("VAULT_TOKEN", vaultToken)
+    .WithEnvironment("VAULT_TOP_DIR", "rikkert")
+    .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
+    .WithEnvironment("VAULT_MOUNT", "secret-kv")
+    .WithEnvironment("AWS_S3_ENDPOINT", "minio.dive.edito.eu")
+    .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
+    .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
 var market = builder.AddContainer("market", "ghcr.io/official-ewe/surimimarket", "latest")
     .WithHttpEndpoint(port: 5001, targetPort: 5001, name: "market")
@@ -64,9 +72,9 @@ var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "ghcr.io/sur
 var valueChain = builder.AddContainer("valuechain", "ghcr.io/surimi-project/surimivaluechain", "latest")
     .WithHttpEndpoint(port: 7990, targetPort: 7990, name: "valuechain");
 
-var surimicontroller = builder.AddProject<Projects.SURIMI_controller>("surimicontroller")
-//    .WithReference(poseidon)                                      // Strange that you can't use this reference here...
-//    .WithReference(ecopath)
+      var surimicontroller = builder.AddProject<Projects.SURIMI_controller>("surimicontroller")
+   //    .WithReference(poseidon)                                      // Strange that you can't use this reference here...
+   //    .WithReference(ecopath)
     .WithEnvironment("POSEIDON_URL", "http://localhost:50051")      // I don't know why you can't use http://poseidon:50051 in this place... but this also works
     .WithEnvironment("MARKET_URL", "http://localhost:5001")         // idem. Didn't test
     .WithEnvironment("CMSY_URL", "http://localhost:5021")
