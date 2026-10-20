@@ -90,15 +90,15 @@ namespace SURIMI_gui.Services
             return "OK";
         }
 
-        public async Task<List<Models.SimulationStatus>> GetAllSimulationsAsync(CancellationToken token)
+        public async Task<List<Models.SimulationStatus>> GetSimulationsAsync(IEnumerable<string> experimentIds, CancellationToken token)
         {
             // for this method we do not set the Activity.Current to null because we want to group all calls to this method under the same Activity in telemetry. So it shows as one line in the Aspire Dashboard
-            using var activity = _activitySource.StartActivity("GetAllSimulations", ActivityKind.Server, parentContext: default);
+            using var activity = _activitySource.StartActivity("GetSimulations", ActivityKind.Server, parentContext: default);
 
-            GetAllSimulationStatusesResponse reply;
+            GetSimulationStatusesResponse reply;
             try
             {
-                reply = await _controllerClient.GetAllSimulationStatusesAsync(new GetAllSimulationStatusesRequest(), cancellationToken: token);
+                reply = await _controllerClient.GetSimulationStatusesAsync(new GetSimulationStatusesRequest() { ExperimentIds = { experimentIds } }, cancellationToken: token);
             }
             catch (RpcException ex)
             {

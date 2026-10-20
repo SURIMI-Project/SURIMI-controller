@@ -214,15 +214,15 @@ namespace SURIMI_controller.Services
         }
 
         /// <inheritdoc/>
-        public async Task<GetSimulationStatusesResponse> GetSimulationStatussesAsync(IEnumerable<string> experimentIds, CancellationToken cancellationToken)
+        public async Task<GetSimulationStatusesResponse> GetSimulationStatusesAsync(IEnumerable<string> experimentIds, CancellationToken cancellationToken)
         {
-            return await _simulationManager.GetSimulationStatussesAsync(experimentIds, cancellationToken);
+            return await _simulationManager.GetSimulationStatusesAsync(experimentIds, cancellationToken);
         }
 
         /// <inheritdoc/>
-        public async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync( CancellationToken cancellationToken)
+        public async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatusesAsync( CancellationToken cancellationToken)
         {
-            return await _simulationManager.GetAllSimulationStatussesAsync(cancellationToken);
+            return await _simulationManager.GetAllSimulationStatusesAsync(cancellationToken);
         }
 
         // -------------------------------------------------------------------------

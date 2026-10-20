@@ -49,12 +49,12 @@ namespace SURIMI_controller.Services
 
         public override async Task<GetSimulationStatusesResponse> GetSimulationStatuses(GetSimulationStatusesRequest get, ServerCallContext context)
         {
-            return await _experimentManager.GetSimulationStatussesAsync(get.ExperimentIds, context.CancellationToken);
+            return await _experimentManager.GetSimulationStatusesAsync(get.ExperimentIds, context.CancellationToken);
         }
 
         public override async Task<GetAllSimulationStatusesResponse> GetAllSimulationStatuses(GetAllSimulationStatusesRequest get, ServerCallContext context)
         {
-            return await _experimentManager.GetAllSimulationStatussesAsync(context.CancellationToken);
+            return await _experimentManager.GetAllSimulationStatusesAsync(context.CancellationToken);
         }
 
         public override async Task<GetSimulationContractResponse> GetSimulationContract(GetSimulationContractRequest request, ServerCallContext context)
