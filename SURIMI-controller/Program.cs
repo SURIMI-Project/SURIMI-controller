@@ -1,7 +1,8 @@
 using Eii.BlobStore;
 using Eii.BlobStore.S3;
-using Grpc.Net.Client.Configuration;
 using Grpc.Surimi;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using SURIMI.Common.gRPC;
 using SURIMI.Common.gRPC.Services;
 using SURIMI.Common.Services;
@@ -16,6 +17,23 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
+
+        builder.Services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(serviceName: "SURIMI-controller"))
+            .WithTracing(tracing =>
+            {
+                tracing
+                    .AddAspNetCoreInstrumentation(options =>
+                    {
+                        options.RecordException = true;
+                    })
+                    .AddHttpClientInstrumentation(options =>
+                    {
+                        options.RecordException = true;
+                    })
+                    .AddGrpcClientInstrumentation()
+                    .AddOtlpExporter();
+            });
 
         builder.Services.AddSingleton<IBlobStore>(sp =>
         {
