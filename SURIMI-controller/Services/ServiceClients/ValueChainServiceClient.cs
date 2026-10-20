@@ -32,12 +32,7 @@ namespace SURIMI_controller.Services
 
         public async Task<ExperimentStepResponse> ExperimentStepAsync(ExperimentStepRequest experimentStepRequest, DateTime current, CancellationToken token)
         {
-            if (IsEnabled)
-            {
-                LogStep(experimentStepRequest.ExperimentId, current);
-                return await _valueChainClient.ExperimentStepAsync(experimentStepRequest, cancellationToken: token);
-            }
-            return new ExperimentStepResponse() { ExperimentId = experimentStepRequest.ExperimentId };
+            throw new NotImplementedException("ExperimentStepAsync is not implemented in ValueChainServiceClient.");
         }
 
         public async Task<FinaliseExperimentResponse> FinaliseExperimentAsync(FinaliseExperimentRequest finaliseExperimentRequest, CancellationToken cancellationToken = default)

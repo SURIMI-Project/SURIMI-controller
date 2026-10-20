@@ -18,5 +18,6 @@ namespace SURIMI_controller.Services
         Task InitSimulationAsync(string simulationId, string experimentId, string scenarioName, DateTime? endDateTime, Grpc.Surimi.Simulation simulation, string climateScenario, bool isMseRun, CancellationToken cancellationToken);
         Task RunSimulationAsync(string simulationId, string scenarioName, RegulationDefinitionsSummary regulationsSummary, CancellationToken cancellationToken);
         Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken);
+        Task<GetSimulationStatusesResponse> GetSimulationStatussesAsync(IEnumerable<string> experimentIds, CancellationToken cancellationToken);
     }
 }

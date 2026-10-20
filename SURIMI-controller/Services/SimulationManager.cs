@@ -524,27 +524,50 @@ namespace SURIMI_controller.Services
 
         public Task<GetAllSimulationStatusesResponse> GetAllSimulationStatussesAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new GetAllSimulationStatusesResponse
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var response = new GetAllSimulationStatusesResponse();
+            response.SimulationStatuses.AddRange(GetSimulationStatusesCore());
+
+            return Task.FromResult(response);
+        }
+
+        public Task<GetSimulationStatusesResponse> GetSimulationStatussesAsync(IEnumerable<string> experimentIds, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var response = new GetSimulationStatusesResponse();
+            response.SimulationStatuses.AddRange(GetSimulationStatusesCore(experimentIds));
+
+            return Task.FromResult(response);
+        }
+
+        private IEnumerable<Grpc.Surimi.SimulationStatus> GetSimulationStatusesCore(IEnumerable<string>? experimentIds = null)
+        {
+            var requestedExperimentIds = experimentIds?.ToList();
+
+            return _simulations
+                .Select(pair => ToSimulationStatus(pair.Key, pair.Value))
+                .Where(status => requestedExperimentIds is null || requestedExperimentIds.Contains(status.ExperimentId))
+                .OrderByDescending(status => status.Order);
+        }
+
+        private static Grpc.Surimi.SimulationStatus ToSimulationStatus(string simulationId, Models.Simulation simulation)
+        {
+            return new Grpc.Surimi.SimulationStatus
             {
-                SimulationStatuses =
-                {
-                    _simulations.Select(sim => new Grpc.Surimi.SimulationStatus
-                    {
-                        SimulationId = sim.Key,
-                        ExperimentId = sim.Value.ExperimentId,
-                        ScenarioName = sim.Value.ScenarioName,
-                        StartDateTime = Timestamp.FromDateTime(sim.Value.StartDateTime),
-                        //StepSize = sim.Value.StepSize,
-                        EndDateTime = Timestamp.FromDateTime(sim.Value.EndDateTime),
-                        Status = sim.Value.Status,
-                        SimulationCurrent = sim.Value.SimulationCurrent == default ? null : Timestamp.FromDateTime(sim.Value.SimulationCurrent),
-                        SimulationStarted = sim.Value.SimulationStarted == default ? null : Timestamp.FromDateTime(sim.Value.SimulationStarted),
-                        SimulationDuration = sim.Value.SimulationDuration == default ? null : Duration.FromTimeSpan(sim.Value.SimulationDuration),
-                        EcologyHost = sim.Value.EcologyHost,
-                        Order = sim.Value.Order
-                    }).OrderByDescending(sim => sim.Order).ToList()
-                }
-            });
+                SimulationId = simulationId,
+                ExperimentId = simulation.ExperimentId,
+                ScenarioName = simulation.ScenarioName,
+                StartDateTime = Timestamp.FromDateTime(simulation.StartDateTime),
+                EndDateTime = Timestamp.FromDateTime(simulation.EndDateTime),
+                Status = simulation.Status,
+                SimulationCurrent = simulation.SimulationCurrent == default ? null : Timestamp.FromDateTime(simulation.SimulationCurrent),
+                SimulationStarted = simulation.SimulationStarted == default ? null : Timestamp.FromDateTime(simulation.SimulationStarted),
+                SimulationDuration = simulation.SimulationDuration == default ? null : Duration.FromTimeSpan(simulation.SimulationDuration),
+                EcologyHost = simulation.EcologyHost,
+                Order = simulation.Order
+            };
         }
     }
 }
