@@ -1,0 +1,49 @@
+{
+	"title": "SURIMI controller",
+	"description": "The SURIMI controller is the main component of the SURIMI system, responsible for managing and orchestrating the various services and components within the system.",
+	"upload_type": "software",
+	"access_right": "open",
+	"license": "EUPL-1.2",
+	"language": "eng",
+
+	"creators": [
+		{
+			"name": "Kreeftenberg, Rik",
+			"affiliation": "Ecopath International Initiative",
+			"type": "Producer"
+		},
+		{
+			"name": "Payette, Nicolas",
+			"affiliation": "University of Oxford",
+			"orcid": "0000-0002-6628-4953",
+			"type": "Producer"
+		},
+		{
+			"name": "Steenbeek, Jeroen",
+			"affiliation": "Ecopath International Initiative",
+			"orcid": "0000-0002-7878-8075",
+			"type": "Producer"
+		}
+	],
+
+	"keywords": [
+		"SURIMI project"
+	],
+
+	"communities": [
+		{ "identifier": "surimi-project" }
+	],
+
+	"grants": [
+		{ "id": "10.13039/501100000780::101157456" },
+		{ "id": "10.13039/501100000780::10132993" }
+	],
+
+	"related_identifiers": [
+		{
+			"identifier": "https://github.com/SURIMI-Project/SURIMI-controller.git",
+			"relation": "isSupplementTo",
+			"resource_type": "software"
+		}
+	]
+}
