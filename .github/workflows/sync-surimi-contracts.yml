@@ -28,7 +28,7 @@ jobs:
       - name: Checkout source repo (SURIMI-data_preprocessing) with LFS (sparse)
         uses: actions/checkout@v4.2.2
         with:
-          repository: Official-EwE/SURIMI-data_preprocessing
+          repository: SURIMI-Project/SURIMI-data_preprocessing
           token: ${{ secrets.SURIMI_SYNC_CSVS_TOKEN }}
           path: source
           sparse-checkout: |
@@ -92,7 +92,7 @@ jobs:
           branch: chore/sync-surimi-inputs
           title: "chore: sync SURIMI contracts from SURIMI-data_preprocessing"
           body: |
-            Automated sync from **Official-EwE/SURIMI-data_preprocessing** → **SURIMI-controller**.
+            Automated sync from **SURIMI-Project/SURIMI-data_preprocessing** → **SURIMI-controller**.
 
             **Files updated from** `SURIMI-data_preprocessing/SURIMI-contracts`
 
