@@ -51,5 +51,49 @@ namespace SURIMI.Controller.Tests
             // Assert
             _dispatcherMock.Verify(d => d.ReleasePodFromSimulation(_simulationId), Times.Once);
         }
+
+        [Fact]
+        public async Task GetInitialBiomassesAsync_DispatchesRequestByScenarioName()
+        {
+            // Arrange
+            var request = new GetInitialBiomassesRequest { ScenarioName = "scenario" };
+            _dispatcherMock
+                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, GetInitialBiomassesResponse>(
+                    request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, AsyncUnaryCall<GetInitialBiomassesResponse>>>(),
+                    It.IsAny<int>(), It.IsAny<int>()))
+                .ReturnsAsync(new GetInitialBiomassesResponse());
+
+            var sut = new EcopathServiceClient(_loggerMock.Object, _dispatcherMock.Object);
+
+            // Act
+            await sut.GetInitialBiomassesAsync(request, CancellationToken.None);
+
+            // Assert
+            _dispatcherMock.Verify(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, GetInitialBiomassesResponse>(
+                request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, AsyncUnaryCall<GetInitialBiomassesResponse>>>(),
+                It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetInitialFishingMortalitiesAsync_DispatchesRequestByScenarioName()
+        {
+            // Arrange
+            var request = new GetInitialFishingMortalitiesRequest { ScenarioName = "scenario" };
+            _dispatcherMock
+                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, GetInitialFishingMortalitiesResponse>(
+                    request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, AsyncUnaryCall<GetInitialFishingMortalitiesResponse>>>(),
+                    It.IsAny<int>(), It.IsAny<int>()))
+                .ReturnsAsync(new GetInitialFishingMortalitiesResponse());
+
+            var sut = new EcopathServiceClient(_loggerMock.Object, _dispatcherMock.Object);
+
+            // Act
+            await sut.GetInitialFishingMortalitiesAsync(request, CancellationToken.None);
+
+            // Assert
+            _dispatcherMock.Verify(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, GetInitialFishingMortalitiesResponse>(
+                request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, AsyncUnaryCall<GetInitialFishingMortalitiesResponse>>>(),
+                It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+        }
     }
 }
