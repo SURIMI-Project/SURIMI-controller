@@ -12,13 +12,15 @@ namespace SURIMI_controller.Services
         private readonly ILogger<ControllerService> _logger;
         private readonly IExperimentManager _experimentManager;
         private readonly IConfigurationService _surimiConfigurationService;
+        private readonly IEcopathServiceClient _ecopathServiceClient;
         private readonly string _version;
 
-        public ControllerService(IExperimentManager experimentManager, ILogger<ControllerService> logger, IConfigurationService surimiConfigurationService, ProtocolVersionService protocolVersionService)
+        public ControllerService(IExperimentManager experimentManager, ILogger<ControllerService> logger, IConfigurationService surimiConfigurationService, IEcopathServiceClient ecopathServiceClient, ProtocolVersionService protocolVersionService)
         {
             _logger = logger;
             _experimentManager = experimentManager;
             _surimiConfigurationService = surimiConfigurationService;
+            _ecopathServiceClient = ecopathServiceClient;
             _version = protocolVersionService.LoadVersion();
         }
 
@@ -75,6 +77,18 @@ namespace SURIMI_controller.Services
         {
             var scenarioNames = await _surimiConfigurationService.GetScenarioNames(context.CancellationToken);
             return new GetScenarioNamesResponse() { ScenarioNames = { scenarioNames } };
+        }
+
+        public override async Task<GetInitialBiomassesResponse> GetInitialBiomasses(GetInitialBiomassesRequest request, ServerCallContext context)
+        {
+            GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioName);
+            return await _ecopathServiceClient.GetInitialBiomassesAsync(request, context.CancellationToken);
+        }
+
+        public override async Task<GetInitialFishingMortalitiesResponse> GetInitialFishingMortalities(GetInitialFishingMortalitiesRequest request, ServerCallContext context)
+        {
+            GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioName);
+            return await _ecopathServiceClient.GetInitialFishingMortalitiesAsync(request, context.CancellationToken);
         }
 
         /// <summary>

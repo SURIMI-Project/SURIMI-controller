@@ -4,6 +4,8 @@ namespace SURIMI_controller.Services
 {
     public interface IEcopathServiceClient : ISimulationService
     {
+        Task<GetInitialBiomassesResponse> GetInitialBiomassesAsync(GetInitialBiomassesRequest request, CancellationToken cancellationToken);
+        Task<GetInitialFishingMortalitiesResponse> GetInitialFishingMortalitiesAsync(GetInitialFishingMortalitiesRequest request, CancellationToken cancellationToken);
         Task<GetCatchDispositionResponse> GetCatchDispositionAsync(GetCatchDispositionRequest getCatchDispositionRequest, DateTime current, CancellationToken cancellationToken);
         Task<GetSalesResponse> GetSalesAsync(GetSalesRequest getSalesRequest, DateTime current, CancellationToken cancellationToken);
         Task<UpdateCatchDispositionResponse> UpdateCatchDispositionAsync(UpdateCatchDispositionRequest updateCatchDispositionRequest, DateTime current, CancellationToken cancellationToken);
