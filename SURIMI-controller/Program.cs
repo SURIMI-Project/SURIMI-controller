@@ -125,17 +125,7 @@ public class Program
 
         app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
-        // Retrieve the logger
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-
         app.Services.GetRequiredService<VaultService>().LoadVaultSecretsInEnvironmentVariables();
-
-        logger.LogInformation("============================= Logging All Environment Variables =============================");
-        foreach (System.Collections.DictionaryEntry envVar in Environment.GetEnvironmentVariables())
-        {
-            logger.LogInformation("{Key}: {Value}", envVar.Key, envVar.Value);
-        }
-        logger.LogInformation("============================= End of Environment Variables =============================");
 
         app.Run();
 
