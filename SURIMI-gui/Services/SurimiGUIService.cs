@@ -119,8 +119,7 @@ namespace SURIMI_gui.Services
                 SimulationStarted = sim.SimulationStarted?.ToDateTime(),
                 SimulationDuration = sim.SimulationDuration?.ToTimeSpan(),
                 SimulationCurrent = sim.SimulationCurrent?.ToDateTime(),
-                Status = sim.Status,
-                IP = string.IsNullOrEmpty(sim.EcologyHost) ? string.Empty : sim.EcologyHost.Replace("http://", "").Split(':')[3]
+                Status = sim.Status
             }).ToList();
         }
 

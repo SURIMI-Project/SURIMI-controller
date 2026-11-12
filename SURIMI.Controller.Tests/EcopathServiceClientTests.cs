@@ -1,4 +1,6 @@
+using FluentAssertions;
 using Grpc.Core;
+using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -8,92 +10,38 @@ namespace SURIMI.Controller.Tests
 {
     public class EcopathServiceClientTests
     {
-        private readonly Mock<ILogger<EcopathServiceClient>> _loggerMock = new();
-        private readonly Mock<ISimulationDispatcher> _dispatcherMock = new();
-        private readonly string _simulationId = Guid.NewGuid().ToString();
-
         [Fact]
-        public async Task CancelSimulationAsync_ReleasesPod_AfterGrpcCall()
+        public void AddInitialise_UsesNamedEcopathClientAndTracksResponseTask()
         {
             // Arrange
-            var cancelRequest = new CancelSimulationRequest { SimulationId = _simulationId };
-            _dispatcherMock
-                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, CancelSimulationRequest, CancelSimulationResponse>(
-                    cancelRequest, _simulationId, It.IsAny<Func<EcologyService.EcologyServiceClient, CancelSimulationRequest, AsyncUnaryCall<CancelSimulationResponse>>>(),
-                    It.IsAny<int>(), It.IsAny<int>()))
-                .ReturnsAsync(new CancelSimulationResponse());
-
-            var sut = new EcopathServiceClient(_loggerMock.Object, _dispatcherMock.Object);
-
-            // Act
-            await sut.CancelSimulationAsync(cancelRequest, CancellationToken.None);
-
-            // Assert
-            _dispatcherMock.Verify(d => d.ReleasePodFromSimulation(_simulationId), Times.Once);
-        }
-
-        [Fact]
-        public async Task FinaliseSimulationAsync_ReleasesPod_AfterGrpcCall()
-        {
-            // Arrange
-            var finaliseRequest = new FinaliseSimulationRequest { SimulationId = _simulationId };
-            _dispatcherMock
-                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, FinaliseSimulationRequest, FinaliseSimulationResponse>(
-                    finaliseRequest, _simulationId, It.IsAny<Func<EcologyService.EcologyServiceClient, FinaliseSimulationRequest, AsyncUnaryCall<FinaliseSimulationResponse>>>(),
-                    It.IsAny<int>(), It.IsAny<int>()))
-                .ReturnsAsync(new FinaliseSimulationResponse());
-
-            var sut = new EcopathServiceClient(_loggerMock.Object, _dispatcherMock.Object);
+            var response = new InitialiseSimulationResponse();
+            var call = new AsyncUnaryCall<InitialiseSimulationResponse>(
+                Task.FromResult(response),
+                Task.FromResult(new Metadata()),
+                () => Status.DefaultSuccess,
+                () => new Metadata(),
+                () => { });
+            var callInvokerMock = new Mock<CallInvoker>();
+            var ecologyClientMock = new Mock<EcologyService.EcologyServiceClient>(callInvokerMock.Object);
+            var clientFactoryMock = new Mock<GrpcClientFactory>();
+            clientFactoryMock
+                .Setup(factory => factory.CreateClient<EcologyService.EcologyServiceClient>("Ecopath"))
+                .Returns(ecologyClientMock.Object);
+            var request = new InitialiseSimulationRequest { SimulationId = Guid.NewGuid().ToString() };
+            ecologyClientMock
+                .Setup(client => client.InitialiseSimulationAsync(request, null, null, It.IsAny<CancellationToken>()))
+                .Returns(call);
+            var initialisationTasks = new List<Task<InitialiseSimulationResponse>>();
+            var sut = new EcopathServiceClient(clientFactoryMock.Object, Mock.Of<ILogger<EcopathServiceClient>>());
 
             // Act
-            await sut.FinaliseSimulationAsync(finaliseRequest, CancellationToken.None);
+            var result = sut.AddInitialise(initialisationTasks, request);
 
             // Assert
-            _dispatcherMock.Verify(d => d.ReleasePodFromSimulation(_simulationId), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetInitialBiomassesAsync_DispatchesRequestByScenarioName()
-        {
-            // Arrange
-            var request = new GetInitialBiomassesRequest { ScenarioName = "scenario" };
-            _dispatcherMock
-                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, GetInitialBiomassesResponse>(
-                    request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, AsyncUnaryCall<GetInitialBiomassesResponse>>>(),
-                    It.IsAny<int>(), It.IsAny<int>()))
-                .ReturnsAsync(new GetInitialBiomassesResponse());
-
-            var sut = new EcopathServiceClient(_loggerMock.Object, _dispatcherMock.Object);
-
-            // Act
-            await sut.GetInitialBiomassesAsync(request, CancellationToken.None);
-
-            // Assert
-            _dispatcherMock.Verify(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, GetInitialBiomassesResponse>(
-                request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, AsyncUnaryCall<GetInitialBiomassesResponse>>>(),
-                It.IsAny<int>(), It.IsAny<int>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetInitialFishingMortalitiesAsync_DispatchesRequestByScenarioName()
-        {
-            // Arrange
-            var request = new GetInitialFishingMortalitiesRequest { ScenarioName = "scenario" };
-            _dispatcherMock
-                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, GetInitialFishingMortalitiesResponse>(
-                    request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, AsyncUnaryCall<GetInitialFishingMortalitiesResponse>>>(),
-                    It.IsAny<int>(), It.IsAny<int>()))
-                .ReturnsAsync(new GetInitialFishingMortalitiesResponse());
-
-            var sut = new EcopathServiceClient(_loggerMock.Object, _dispatcherMock.Object);
-
-            // Act
-            await sut.GetInitialFishingMortalitiesAsync(request, CancellationToken.None);
-
-            // Assert
-            _dispatcherMock.Verify(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, GetInitialFishingMortalitiesResponse>(
-                request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, AsyncUnaryCall<GetInitialFishingMortalitiesResponse>>>(),
-                It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+            result.Should().BeSameAs(call);
+            initialisationTasks.Should().ContainSingle().Which.Should().BeSameAs(call.ResponseAsync);
+            clientFactoryMock.Verify(factory => factory.CreateClient<EcologyService.EcologyServiceClient>("Ecopath"), Times.Once);
+            ecologyClientMock.Verify(client => client.InitialiseSimulationAsync(request, null, null, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

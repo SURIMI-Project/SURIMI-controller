@@ -109,7 +109,6 @@ else
                 <th>Sim Started</th>
                 <th>Sim Duration</th>
                 <th>Sim Current</th>
-                <th>EwE IP</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -134,7 +133,6 @@ else
                                         : "")
                     </td>
                     <td>@sim.SimulationCurrent?.ToLocalTime().ToString("dd-MM-yyyy")</td>
-                    <td>@sim.IP</td>
                     <td>
                         <a href="#"
                            class="btn btn-link btn-sm text-danger @(sim.Status != "Running" ? "disabled" : "")"

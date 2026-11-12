@@ -15,11 +15,10 @@ namespace SURIMI_controller.Services
         private readonly MarketService.MarketServiceClient _marketServiceClient;
         private readonly FisheriesAuthorityService.FisheriesAuthorityServiceClient _fisheriesAuthorityServiceClient;
         private readonly OutputCreatorService.OutputCreatorServiceClient _outputCreatorServiceClient;
-
-        private readonly ISimulationDispatcher _ecopathSimDispatcher;
+        private readonly EcologyService.EcologyServiceClient _ecologyServiceClient;
         private readonly ProtocolVersionService _protocolVersionService;
 
-        public VersionCheckerService(GrpcClientFactory clientFactory, ILogger<VersionCheckerService> logger, ISimulationDispatcher ecopathSimDispatcher, ProtocolVersionService protocolVersionService)
+        public VersionCheckerService(GrpcClientFactory clientFactory, ILogger<VersionCheckerService> logger, ProtocolVersionService protocolVersionService)
         {
             _fisheryServiceClient = clientFactory.CreateClient<FisheryService.FisheryServiceClient>("Poseidon");
             _stockAssessmentServiceClient = clientFactory.CreateClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy");
@@ -27,8 +26,8 @@ namespace SURIMI_controller.Services
             _marketServiceClient = clientFactory.CreateClient<MarketService.MarketServiceClient>("Market");
             _fisheriesAuthorityServiceClient = clientFactory.CreateClient<FisheriesAuthorityService.FisheriesAuthorityServiceClient>("FisheriesAuthority");
             _outputCreatorServiceClient = clientFactory.CreateClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator");
+            _ecologyServiceClient = clientFactory.CreateClient<EcologyService.EcologyServiceClient>("Ecopath");
 
-            _ecopathSimDispatcher = ecopathSimDispatcher;
             _protocolVersionService = protocolVersionService;
             _logger = logger;
         }
@@ -43,14 +42,7 @@ namespace SURIMI_controller.Services
                 GetVersionWithRetryAsync("ValueChain",        async () => (await _valueChainServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
                 GetVersionWithRetryAsync("Market",            async () => (await _marketServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
                 GetVersionWithRetryAsync("FisheriesAuthority",async () => (await _fisheriesAuthorityServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
-                GetVersionWithRetryAsync("Ecopath",   async () =>
-                {
-                    var response = await _ecopathSimDispatcher.DispatchAsync<EcologyService.EcologyServiceClient, GetProtocolVersionRequest, GetProtocolVersionResponse>(
-                        new GetProtocolVersionRequest(),
-                        "dummy",
-                        (client, req) => client.GetProtocolVersionAsync(req, cancellationToken: cancellationToken));
-                    return response.ProtocolVersion;
-                }, cancellationToken),
+                GetVersionWithRetryAsync("Ecopath",         async () => (await _ecologyServiceClient.GetProtocolVersionAsync(new GetProtocolVersionRequest(), cancellationToken: cancellationToken)).ProtocolVersion, cancellationToken),
             };
 
             var results = await Task.WhenAll(tasks);
