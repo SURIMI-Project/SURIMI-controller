@@ -82,7 +82,7 @@ var valueChain = builder.AddContainer("valuechain", "ghcr.io/surimi-project/suri
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")
     .WithEnvironment("FISHERIES_AUTHORITY_URL", "http://localhost:5493")
-    .WithEnvironment("NR_OF_MSE_RUNS", "2")
+    .WithEnvironment("NR_OF_MSE_RUNS", "10")
 
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", vaultToken)

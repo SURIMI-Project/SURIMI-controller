@@ -14,6 +14,8 @@ The solution contains the following projects:
 ## Simulation Architecture
 [See detailed documentation](docs/simulation-architecture.md)
 
+CMSY experiment initialization has no fixed controller-side deadline because it can take more than 10 minutes when all services run together. The call retains the experiment cancellation token, and simulations wait for initialization to complete before running.
+
 ## Build Docker image
 
 The Surimi-controller docker image will be built and pushed to the GitHub Container Registry (ghcr.io) as part of the CI/CD build process. 
