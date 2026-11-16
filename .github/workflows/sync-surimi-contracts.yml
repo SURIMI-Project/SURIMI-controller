@@ -78,7 +78,7 @@ jobs:
         if: steps.sync.outputs.changed == '1'
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.SURIMI_SYNC_CSVS_TOKEN }}
+          token: ${{ github.token }}
           add-paths: SURIMI-controller/Includes
           commit-message: "chore: sync SURIMI contracts"
           branch: chore/sync-surimi-inputs
