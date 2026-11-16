@@ -14,6 +14,16 @@ The solution contains the following projects:
 ## Simulation Architecture
 [See detailed documentation](docs/simulation-architecture.md)
 
+## Contract sync
+
+The scheduled and manually dispatched contract sync uses the repository secret
+`SURIMI_SYNC_CSVS_TOKEN` to read `SURIMI-data_preprocessing` and create or update
+pull requests in this repository. Configure it as a PAT with Contents read access
+to `SURIMI-data_preprocessing` and Contents and Pull requests write access to
+`SURIMI-controller` (or a classic PAT with `repo` scope). The token owner must
+have the corresponding repository access, and any required organization SSO
+authorization must be granted.
+
 ## Build Docker image
 
 The Surimi-controller docker image will be built and pushed to the GitHub Container Registry (ghcr.io) as part of the CI/CD build process. 
@@ -63,4 +73,3 @@ PS C:\Users\<user>\source\repos\SURIMI-controller> .\Sync_S3_Bucket.ps1
 ```
 
 * The script will prompt you for the bucketname
-
