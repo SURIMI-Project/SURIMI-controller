@@ -79,16 +79,10 @@ namespace SURIMI_controller.Services
             return new GetScenarioNamesResponse() { ScenarioNames = { scenarioNames } };
         }
 
-        public override async Task<GetInitialBiomassesResponse> GetInitialBiomasses(GetInitialBiomassesRequest request, ServerCallContext context)
+        public override async Task<GetInitialHCRDataResponse> GetInitialHCRData(GetInitialHCRDataRequest request, ServerCallContext context)
         {
             GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioName);
-            return await _ecopathServiceClient.GetInitialBiomassesAsync(request, context.CancellationToken);
-        }
-
-        public override async Task<GetInitialFishingMortalitiesResponse> GetInitialFishingMortalities(GetInitialFishingMortalitiesRequest request, ServerCallContext context)
-        {
-            GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioName);
-            return await _ecopathServiceClient.GetInitialFishingMortalitiesAsync(request, context.CancellationToken);
+            return await _ecopathServiceClient.GetInitialHCRDataAsync(request, context.CancellationToken);
         }
 
         /// <summary>

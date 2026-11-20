@@ -16,16 +16,10 @@ namespace SURIMI_controller.Services
             return InitialiseSimulationResponse;
         }
 
-        public Task<GetInitialBiomassesResponse> GetInitialBiomassesAsync(GetInitialBiomassesRequest request, CancellationToken cancellationToken)
+        public Task<GetInitialHCRDataResponse> GetInitialHCRDataAsync(GetInitialHCRDataRequest request, CancellationToken cancellationToken)
         {
-            return _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, GetInitialBiomassesResponse>(request, request.ScenarioName,
-                (client, req) => client.GetInitialBiomassesAsync(req, cancellationToken: cancellationToken));
-        }
-
-        public Task<GetInitialFishingMortalitiesResponse> GetInitialFishingMortalitiesAsync(GetInitialFishingMortalitiesRequest request, CancellationToken cancellationToken)
-        {
-            return _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, GetInitialFishingMortalitiesResponse>(request, request.ScenarioName,
-                (client, req) => client.GetInitialFishingMortalitiesAsync(req, cancellationToken: cancellationToken));
+            return _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialHCRDataRequest, GetInitialHCRDataResponse>(request, request.ScenarioName,
+                (client, req) => client.GetInitialHCRDataAsync(req, cancellationToken: cancellationToken));
         }
 
         public async Task<CancelSimulationResponse> CancelSimulationAsync(CancelSimulationRequest cancelRequest, CancellationToken token)
