@@ -494,7 +494,13 @@ The controller is deployed as a pod in the **EDITO Datalab Kubernetes cluster**.
 | `VAULT_*` | Vault address / token (consumed by `VaultService` to retrieve AWS credentials) |
 | `ASPNETCORE_HTTP_PORTS` | Kestrel listen port (default `5092`) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry collector endpoint |
-| `OTEL_SERVICE_NAME` | Service name reported to OTLP (`surimi-controller`) |
+| `OTEL_SERVICE_NAME` | OpenTelemetry service-name setting; the controller explicitly registers `SURIMI-controller` |
+
+### Diagnosing missing submission traces
+
+The Blazor GUI (`surimi-gui`) registers OpenTelemetry gRPC client tracing when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Its default sampler samples new root calls, including `SubmitExperiment`, and honors the sampling decision on calls with a parent. The controller applies the same parent-based policy to incoming RPCs. The GUI spans use `OTEL_SERVICE_NAME` (default `surimi-gui`), distinct from the `SURIMI-controller` server spans.
+
+The `Simulation … is initialising` log for `SubmitExperiment` includes the request's `TraceId` and `Sampled` flag. If `Sampled` is `True`, look up that trace ID in Jaeger after the RPC returns and the export batch has had time to flush. A sampled flag is not proof of export. If it is `False`, check the caller's propagated trace context and the controller's sampling configuration. Empty fields mean there was no current activity at the log point.
 
 ---
 

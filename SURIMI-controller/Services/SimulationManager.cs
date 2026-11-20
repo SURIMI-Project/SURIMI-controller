@@ -282,6 +282,7 @@ namespace SURIMI_controller.Services
             var getSalesRequest = CreateGetSalesRequest(simulationId, current, endStepDateTime);
 
             var ecopathGetSalesResponse = await _ecopathServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
+            SalesUpdated?.Invoke(this, new SalesEventArgs(ecopathGetSalesResponse.SalesSummary, experimentEventArgs));
 
             // TODO: check start_date_time and end_date_time in the response, to make sure they are correct and consistent with the request and the current simulation step
 
@@ -291,10 +292,7 @@ namespace SURIMI_controller.Services
             var marketUpdateSalesResponse = await _marketServiceClient.UpdateSalesAsync(ecopathUpdateSalesRequest, current, token);
 
             var poseidonGetSalesResponse = await _poseidonServiceClient.GetSalesAsync(getSalesRequest, current, cancellationToken: token);
-            var combinedSalesSummary = new SalesSummary();
-            combinedSalesSummary.MarketSales.Add(ecopathGetSalesResponse.SalesSummary.MarketSales);
-            combinedSalesSummary.MarketSales.Add(poseidonGetSalesResponse.SalesSummary.MarketSales);
-            SalesUpdated?.Invoke(this, new SalesEventArgs(combinedSalesSummary, experimentEventArgs));
+            SalesUpdated?.Invoke(this, new SalesEventArgs(poseidonGetSalesResponse.SalesSummary, experimentEventArgs));
 
             var poseidonUpdateSalesRequest = CreateUpdateSalesRequest(poseidonGetSalesResponse, current, endStepDateTime);
  //           xx = GetProtoString<UpdateSalesRequest>(poseidonUpdateSalesRequest);
@@ -303,11 +301,10 @@ namespace SURIMI_controller.Services
 
             var fishingActivityRequest = CreateGetFishingActivityRequest(simulationId, current, endStepDateTime);
             var fishingActivityEcopathResponse = await _ecopathServiceClient.GetFishingActivityAsync(fishingActivityRequest, current, cancellationToken: token);
+            FishingActivityUpdated?.Invoke(this, new FishingActivityEventArgs(fishingActivityEcopathResponse.FishingActivitySummary, experimentEventArgs));
+
             var fishingActivityPoseidonResponse = await _poseidonServiceClient.GetFishingActivityAsync(fishingActivityRequest, current, cancellationToken: token);
-            var combinedFishingActivitySummary = new FishingActivitySummary();
-            combinedFishingActivitySummary.FishingActivities.Add(fishingActivityEcopathResponse.FishingActivitySummary.FishingActivities);
-            combinedFishingActivitySummary.FishingActivities.Add(fishingActivityPoseidonResponse.FishingActivitySummary.FishingActivities);
-            FishingActivityUpdated?.Invoke(this, new FishingActivityEventArgs(combinedFishingActivitySummary, experimentEventArgs));
+            FishingActivityUpdated?.Invoke(this, new FishingActivityEventArgs(fishingActivityPoseidonResponse.FishingActivitySummary, experimentEventArgs));
 
             await _marketServiceClient.SimulateStepAsync(simulationStepRequest, current, token);
             SimulateStep?.Invoke(this, experimentEventArgs);

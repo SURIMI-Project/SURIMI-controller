@@ -16,6 +16,26 @@ The solution contains the following projects:
 
 CMSY experiment initialization has no fixed controller-side deadline because it can take more than 10 minutes when all services run together. The call retains the experiment cancellation token, and simulations wait for initialization to complete before running.
 
+## SURIMI-only monitoring on Onyxia
+
+The manifests in [`deploy/surimi-monitoring`](deploy/surimi-monitoring) install Grafana OSS, Prometheus and a Kubernetes Metrics API exporter, and Loki with Alloy for container logs. They create only namespaced resources. Both collectors select `app.kubernetes.io/instance=surimi-372040` in `user-rikkert`; neither Jupyter nor Jaeger matches. If Onyxia relaunches SURIMI with a new instance label, update the selector in `kustomization.yaml` and reapply. Historical data from the old SURIMI release remains until retention expires.
+
+Copy the `deploy/surimi-monitoring` directory into your Onyxia workspace or use a checkout containing it. From that checkout, run in Bash:
+
+```bash
+NS=user-rikkert
+kubectl -n "$NS" top pods -l 'app.kubernetes.io/instance=surimi-372040' --containers
+openssl rand -hex 24 | tr -d '\n' | kubectl -n "$NS" create secret generic surimi-monitoring-grafana --from-file=admin-password=/dev/stdin
+kubectl apply -k deploy/surimi-monitoring
+kubectl -n "$NS" rollout status deployment/surimi-monitoring --timeout=5m
+```
+
+Create the Secret only on first install. On subsequent updates, reapply the manifests without replacing it. The 5 GiB volume uses the default StorageClass and preserves data across monitoring pod restarts. If the PVC stays `Pending` or the deployment is rejected, check `kubectl -n "$NS" describe pvc surimi-monitoring` and `kubectl -n "$NS" get events --sort-by=.lastTimestamp`. Kubernetes can reject a Role grant even when `auth can-i create roles` says `yes` if the installer does not already hold the requested permissions.
+
+Get the password in a private terminal with `kubectl -n "$NS" get secret surimi-monitoring-grafana -o jsonpath='{.data.admin-password}' | base64 -d; echo`. From a machine with authorized Kubernetes access and your browser, run `kubectl -n user-rikkert port-forward deployment/surimi-monitoring 3000:3000`. Open <http://localhost:3000/d/surimi-workloads> and sign in as `admin`. A port-forward started **inside** a remote notebook listens there, not on your workstation; if your only access is through Jupyter, use an Onyxia-approved private proxy or authenticated ingress rather than exposing the dashboard publicly. Prometheus, Loki and Alloy listen only on loopback inside the monitoring pod.
+
+After a minute, check that **SURIMI workloads** shows CPU and memory only for the selected pods. In Grafana Explore, `up{job="surimi-pod-metrics"}` should be `1`; in Loki, use `{pod=~"surimi-controller-.+"}` to check for controller logs during a run. If data is missing, inspect the `metrics-exporter` and `alloy` container logs in `deployment/surimi-monitoring`. The Metrics API provides recent samples, not precise accounting; Prometheus keeps up to seven days or its configured size limit, and Loki targets three days of logs. Monitor volume usage if the simulation emits a high volume of logs. Jaeger is unchanged.
+
 ## Build Docker image
 
 The Surimi-controller docker image will be built and pushed to the GitHub Container Registry (ghcr.io) as part of the CI/CD build process. 

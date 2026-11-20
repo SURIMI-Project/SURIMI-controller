@@ -1,4 +1,6 @@
 using Grpc.Surimi;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using SURIMI.Common.Services;
 using SURIMI_gui.Components;
 using SURIMI_gui.Services;
@@ -11,6 +13,13 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
+
+        if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+        {
+            builder.Services.AddOpenTelemetry()
+                .ConfigureResource(resource => resource.AddService(builder.Configuration["OTEL_SERVICE_NAME"] ?? "surimi-gui"))
+                .WithTracing(tracing => tracing.AddGrpcClientInstrumentation().AddOtlpExporter());
+        }
 
         builder.Services.AddSingleton<SurimiGUIService>();
         builder.Services.AddTransient<VaultService>();

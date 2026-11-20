@@ -28,8 +28,10 @@ namespace SURIMI_controller.Services
         {
             GrpcValidation.ArgumentNotNullOrEmpty(request.ScenarioName);
 
-            _logger.LogInformation("Simulation {ExperimentId} is initialising", request.ExperimentId);
-            System.Diagnostics.Activity.Current?.SetTag("experiment_id", request.ExperimentId);
+            var activity = System.Diagnostics.Activity.Current;
+            activity?.SetTag("experiment_id", request.ExperimentId);
+            _logger.LogInformation("Simulation {ExperimentId} is initialising (TraceId: {TraceId}, Sampled: {Sampled})",
+                request.ExperimentId, activity?.TraceId.ToHexString(), activity?.Recorded);
 
             var surimiConfiguration = await _surimiConfigurationService.ReadConfigurationAsync(request.ScenarioName, context.CancellationToken);
 
