@@ -53,46 +53,41 @@ namespace SURIMI.Controller.Tests
         }
 
         [Fact]
-        public async Task GetInitialBiomassesAsync_DispatchesRequestByScenarioName()
+        public async Task GetInitialHCRDataAsync_DispatchesRequestByScenarioName()
         {
             // Arrange
-            var request = new GetInitialBiomassesRequest { ScenarioName = "scenario" };
+            var request = new GetInitialHCRDataRequest { ScenarioName = "scenario" };
+            var response = new GetInitialHCRDataResponse
+            {
+                InitialHcrDataSummary = new InitialHCRDataSummary
+                {
+                    InitialHcrData = { new InitialHCRData { InitialBiomass = 42, InitialFishingMortality = 0.3 } }
+                }
+            };
+            using var cancellation = new CancellationTokenSource();
+            var ecologyClient = new Mock<EcologyService.EcologyServiceClient>();
+            var call = new AsyncUnaryCall<GetInitialHCRDataResponse>(Task.FromResult(response), Task.FromResult(new Metadata()),
+                () => Status.DefaultSuccess, () => new Metadata(), () => { });
+            ecologyClient
+                .Setup(c => c.GetInitialHCRDataAsync(request, null, null, cancellation.Token))
+                .Returns(call);
             _dispatcherMock
-                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, GetInitialBiomassesResponse>(
-                    request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, AsyncUnaryCall<GetInitialBiomassesResponse>>>(),
+                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialHCRDataRequest, GetInitialHCRDataResponse>(
+                    request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialHCRDataRequest, AsyncUnaryCall<GetInitialHCRDataResponse>>>(),
                     It.IsAny<int>(), It.IsAny<int>()))
-                .ReturnsAsync(new GetInitialBiomassesResponse());
+                .Returns((GetInitialHCRDataRequest req, string _, Func<EcologyService.EcologyServiceClient, GetInitialHCRDataRequest, AsyncUnaryCall<GetInitialHCRDataResponse>> method, int _, int _) =>
+                    method(ecologyClient.Object, req).ResponseAsync);
 
             var sut = new EcopathServiceClient(_loggerMock.Object, _dispatcherMock.Object);
 
             // Act
-            await sut.GetInitialBiomassesAsync(request, CancellationToken.None);
+            var actual = await sut.GetInitialHCRDataAsync(request, cancellation.Token);
 
             // Assert
-            _dispatcherMock.Verify(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, GetInitialBiomassesResponse>(
-                request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialBiomassesRequest, AsyncUnaryCall<GetInitialBiomassesResponse>>>(),
-                It.IsAny<int>(), It.IsAny<int>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetInitialFishingMortalitiesAsync_DispatchesRequestByScenarioName()
-        {
-            // Arrange
-            var request = new GetInitialFishingMortalitiesRequest { ScenarioName = "scenario" };
-            _dispatcherMock
-                .Setup(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, GetInitialFishingMortalitiesResponse>(
-                    request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, AsyncUnaryCall<GetInitialFishingMortalitiesResponse>>>(),
-                    It.IsAny<int>(), It.IsAny<int>()))
-                .ReturnsAsync(new GetInitialFishingMortalitiesResponse());
-
-            var sut = new EcopathServiceClient(_loggerMock.Object, _dispatcherMock.Object);
-
-            // Act
-            await sut.GetInitialFishingMortalitiesAsync(request, CancellationToken.None);
-
-            // Assert
-            _dispatcherMock.Verify(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, GetInitialFishingMortalitiesResponse>(
-                request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialFishingMortalitiesRequest, AsyncUnaryCall<GetInitialFishingMortalitiesResponse>>>(),
+            Assert.Same(response, actual);
+            ecologyClient.Verify(c => c.GetInitialHCRDataAsync(request, null, null, cancellation.Token), Times.Once);
+            _dispatcherMock.Verify(d => d.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialHCRDataRequest, GetInitialHCRDataResponse>(
+                request, request.ScenarioName, It.IsAny<Func<EcologyService.EcologyServiceClient, GetInitialHCRDataRequest, AsyncUnaryCall<GetInitialHCRDataResponse>>>(),
                 It.IsAny<int>(), It.IsAny<int>()), Times.Once);
         }
     }
