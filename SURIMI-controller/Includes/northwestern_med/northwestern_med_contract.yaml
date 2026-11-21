@@ -14,9 +14,9 @@ simulation:
     ncol: 109
     nrow: 82
     xmin: -1.0185
-    xmax: 8.0612002
-    ymin: 37.0139008
-    ymax: 43.8445009
+    xmax: 8.0612001
+    ymin: 37.0139
+    ymax: 43.8445
 standards:
   date_and_time: ISO 8601
   species_code: FAO 3-alpha
