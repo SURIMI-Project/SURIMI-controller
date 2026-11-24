@@ -1,0 +1,50 @@
+@using SURIMI_gui.Models
+
+@if (Rules.Count == 0)
+{
+    <p><em>No harvest control rules available for this scenario.</em></p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">Select</th>
+                    <th scope="col">Species</th>
+                    <th scope="col">Length class</th>
+                    <th scope="col">Age</th>
+                    <th scope="col">Life stage</th>
+                    <th scope="col">Biomass Limit</th>
+                    <th scope="col">Biomass Base</th>
+                    <th scope="col">FMax</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var rule in Rules)
+                {
+                    <tr @key="rule">
+                        <td><input type="checkbox" class="form-check-input" @bind="rule.Selected" @bind:after="NotifySelectionChanged" aria-label="Select @rule.Species.SpeciesCode @rule.Species.LengthClass @rule.Species.Age @rule.Species.LifeStage" /></td>
+                        <td>@rule.Species.SpeciesCode</td>
+                        <td>@rule.Species.LengthClass</td>
+                        <td>@rule.Species.Age</td>
+                        <td>@rule.Species.LifeStage</td>
+                        <td><InputNumber class="form-control" step="any" @bind-Value="rule.BiomassLimit" aria-label="@($"Biomass limit for {rule.Species.SpeciesCode} {rule.Species.LengthClass} {rule.Species.Age} {rule.Species.LifeStage}")" /></td>
+                        <td><InputNumber class="form-control" step="any" @bind-Value="rule.BiomassBase" aria-label="@($"Biomass base for {rule.Species.SpeciesCode} {rule.Species.LengthClass} {rule.Species.Age} {rule.Species.LifeStage}")" /></td>
+                        <td><InputNumber class="form-control" step="any" @bind-Value="rule.FMax" aria-label="@($"FMax for {rule.Species.SpeciesCode} {rule.Species.LengthClass} {rule.Species.Age} {rule.Species.LifeStage}")" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<HarvestControlRule> Rules { get; set; } = [];
+
+    [Parameter]
+    public EventCallback SelectionChanged { get; set; }
+
+    private System.Threading.Tasks.Task NotifySelectionChanged() => SelectionChanged.InvokeAsync();
+}

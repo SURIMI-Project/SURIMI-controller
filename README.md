@@ -14,6 +14,10 @@ The solution contains the following projects:
 ## Simulation Architecture
 [See detailed documentation](docs/simulation-architecture.md)
 
+## Harvest control rules
+
+The GUI loads the default harvest control rules for the selected scenario from the controller. Select **Add HCR** to open the rules dialog, select the species rows to include in an experiment and, if needed, edit their biomass limit, biomass base, and maximum fishing mortality. Close the dialog to return to the form; the count shows the selected rows. Unselected rows are not sent. Changing the scenario or submitting an experiment reloads the defaults and clears the selections.
+
 ## Contract sync
 
 The scheduled and manually dispatched contract sync uses the repository secret
