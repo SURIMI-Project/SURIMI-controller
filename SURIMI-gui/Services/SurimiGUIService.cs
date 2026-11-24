@@ -95,10 +95,20 @@ namespace SURIMI_gui.Services
             // for this method we do not set the Activity.Current to null because we want to group all calls to this method under the same Activity in telemetry. So it shows as one line in the Aspire Dashboard
             using var activity = _activitySource.StartActivity("GetSimulations", ActivityKind.Server, parentContext: default);
 
-            GetSimulationStatusesResponse reply;
+            IEnumerable<Grpc.Surimi.SimulationStatus> simulationStatuses;
             try
             {
-                reply = await _controllerClient.GetSimulationStatusesAsync(new GetSimulationStatusesRequest() { ExperimentIds = { experimentIds } }, cancellationToken: token);
+                var ids = experimentIds.ToList();
+                if (ids.Count == 0)
+                {
+                    var reply = await _controllerClient.GetAllSimulationStatusesAsync(new GetAllSimulationStatusesRequest(), cancellationToken: token);
+                    simulationStatuses = reply.SimulationStatuses;
+                }
+                else
+                {
+                    var reply = await _controllerClient.GetSimulationStatusesAsync(new GetSimulationStatusesRequest() { ExperimentIds = { ids } }, cancellationToken: token);
+                    simulationStatuses = reply.SimulationStatuses;
+                }
             }
             catch (RpcException ex)
             {
@@ -109,7 +119,7 @@ namespace SURIMI_gui.Services
                 throw new Exception(ex.Message);
             }
 
-            return reply.SimulationStatuses.Select(sim => new Models.SimulationStatus
+            return simulationStatuses.Select(sim => new Models.SimulationStatus
             {
                 SimulationId = sim.SimulationId,
                 ExperimentId = sim.ExperimentId,
