@@ -31,27 +31,9 @@ namespace SURIMI_gui.Services
                     EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(DateTime.SpecifyKind(config.EndDateTime.Value, DateTimeKind.Utc)) : null,
                     ExperimentId = config.ExperimentId,
                     IsMseRun = config.IsMseRun,
-                    RegulationsDefinitionsSummary = new RegulationDefinitionsSummary()
+                    RegulationsDefinitionsSummary = new RegulationDefinitionsSummary
                     {
-                        TargetFishingMortalities = {
-                            new TargetFishingMortality() {
-                                Species = new Species() {
-                                    SpeciesCode = "MUT",    // Red mullet
-                                    LifeStage = "adult"
-                                },
-                                BiomassLimit = 0.018,
-                                BiomassBase = 0.072,
-                                FMax = 0.317561
-                            },
-                            new TargetFishingMortality() {
-                                Species = new Species() {
-                                    SpeciesCode = "BFT"    // Blue fin tuna
-                                },
-                                BiomassLimit = 0.008,
-                                BiomassBase = 0.032,
-                                FMax = 0.6216745
-                            }
-                        }
+                        TargetFishingMortalities = { config.HarvestControlRules.Where(rule => rule.Selected).Select(rule => rule.ToTargetFishingMortality()) }
                     },
                     ClimateScenario = config.ClimateScenario ?? ""
 
@@ -152,6 +134,21 @@ namespace SURIMI_gui.Services
             }
 
             return reply.ScenarioNames.ToList();
+        }
+
+        public async Task<List<Models.HarvestControlRule>> GetInitialHCRDataAsync(string scenarioName, CancellationToken token)
+        {
+            Activity.Current = null;
+            try
+            {
+                var reply = await _controllerClient.GetInitialHCRDataAsync(new GetInitialHCRDataRequest { ScenarioName = scenarioName }, cancellationToken: token);
+                var summary = reply.InitialHcrDataSummary ?? throw new InvalidDataException("The initial HCR data summary is missing.");
+                return summary.InitialHcrData.Select(Models.HarvestControlRule.FromInitialData).ToList();
+            }
+            catch (RpcException ex)
+            {
+                throw new InvalidOperationException(CreateErrorStringFromGrpcException(ex), ex);
+            }
         }
 
         public async Task<List<string>> GetClimateScenariosAsync(string scenarioName, CancellationToken token)
