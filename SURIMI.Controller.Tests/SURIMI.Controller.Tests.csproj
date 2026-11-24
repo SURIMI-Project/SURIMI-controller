@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SURIMI-controller\SURIMI-controller.csproj" />
+    <ProjectReference Include="..\SURIMI-gui\SURIMI-gui.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -68,26 +68,18 @@ jobs:
 
             echo "Updating $filename -> $dest"
             install -m 0644 "$src" "$dest"
-            git add "$dest"
             changed=1
           done
 
+          rm -rf source
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
-
-      - name: Commit changes (only if changed)
-        if: steps.sync.outputs.changed == '1'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: sync contracts from SURIMI-data_preprocessing"
 
       - name: Create or update pull request
         if: steps.sync.outputs.changed == '1'
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
+          add-paths: SURIMI-controller/Includes
           commit-message: "chore: sync SURIMI contracts"
           branch: chore/sync-surimi-inputs
           title: "chore: sync SURIMI contracts from SURIMI-data_preprocessing"

@@ -17,14 +17,10 @@ namespace SURIMI_controller.Services
             return initialiseSimulationResponse;
         }
 
-        public Task<GetInitialBiomassesResponse> GetInitialBiomassesAsync(GetInitialBiomassesRequest request, CancellationToken cancellationToken)
+        public Task<GetInitialHCRDataResponse> GetInitialHCRDataAsync(GetInitialHCRDataRequest request, CancellationToken cancellationToken)
         {
-            return _ecologyClient.GetInitialBiomassesAsync(request, cancellationToken: cancellationToken).ResponseAsync;
-        }
-
-        public Task<GetInitialFishingMortalitiesResponse> GetInitialFishingMortalitiesAsync(GetInitialFishingMortalitiesRequest request, CancellationToken cancellationToken)
-        {
-            return _ecologyClient.GetInitialFishingMortalitiesAsync(request, cancellationToken: cancellationToken).ResponseAsync;
+            return _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialHCRDataRequest, GetInitialHCRDataResponse>(request, request.ScenarioName,
+                (client, req) => client.GetInitialHCRDataAsync(req, cancellationToken: cancellationToken));
         }
 
         public Task<CancelSimulationResponse> CancelSimulationAsync(CancelSimulationRequest cancelRequest, CancellationToken token)

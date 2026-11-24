@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using SURIMI_gui.Services
+@using SURIMI_gui.Components.Shared
 @implements IDisposable
 
 <PageTitle>Home</PageTitle>
@@ -25,10 +26,11 @@
     else
     {
         <EditForm Model="config" OnSubmit="HandleSubmit">
+            <ValidationSummary />
             <div class="form-group row">
                 <label class="col-md-2 col-form-label">Scenario Name</label>
                 <div class="col-md-2">
-                    <select class="form-select" value="@config.ScenarioName" @onchange="OnScenarioNameChanged">
+                    <select class="form-select" value="@config.ScenarioName" @onchange="OnScenarioNameChanged" disabled="@isSubmitLoading">
                         @foreach (var name in scenarioNames)
                         {
                             <option value="@name">@name</option>
@@ -65,12 +67,27 @@
                 </div>
             </div>
 
+            <div class="d-flex align-items-center gap-2 my-3">
+                <button type="button" class="btn btn-outline-primary" style="width: 155px"
+                        disabled="@(isSubmitLoading || isScenarioDataLoading || !scenarioDataLoaded)"
+                        @onclick="OpenHcrDialogAsync">Add HCR</button>
+                <span aria-live="polite">@config.HarvestControlRules.Count(rule => rule.Selected) hcr's added</span>
+            </div>
+            @if (isScenarioDataLoading)
+            {
+                <p><em>Loading harvest control rules...</em></p>
+            }
+            else if (!scenarioDataLoaded && !string.IsNullOrWhiteSpace(config.ScenarioName))
+            {
+                <button type="button" class="btn btn-outline-secondary mb-3" @onclick="LoadScenarioDataAsync" disabled="@isSubmitLoading">Retry loading scenario data</button>
+            }
+
             <div class="d-grid gap-2 mb-3">
                 <div class="d-flex align-items-center">
                     <button type="submit"
                             class="btn btn-primary"
                             style="width: 155px"
-                            disabled="@isSubmitLoading">
+                            disabled="@(isSubmitLoading || isScenarioDataLoading || !scenarioDataLoaded)">
                         Submit
                     </button>
                     @if (isSubmitLoading)
@@ -79,9 +96,22 @@
                     }
                 </div>
             </div>
-            <div class="col-7">
+            <div>
                 Response: @result
             </div>
+            @if (scenarioDataLoaded)
+            {
+                <dialog @ref="hcrDialog" class="hcr-dialog" aria-labelledby="hcr-dialog-title">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 id="hcr-dialog-title" class="mb-0">Default Harvest Control Rules</h3>
+                        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseHcrDialogAsync"></button>
+                    </div>
+                    <HarvestControlRuleGrid Rules="config.HarvestControlRules" SelectionChanged="StateHasChanged" />
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="button" class="btn btn-primary" @onclick="CloseHcrDialogAsync">Done</button>
+                    </div>
+                </dialog>
+            }
         </EditForm>
     }
 </div>
@@ -151,6 +181,10 @@ else
 
 @code {
     private bool isSubmitLoading = false;
+    private bool isScenarioDataLoading;
+    private bool scenarioDataLoaded;
+    private int scenarioLoadVersion;
+    private ElementReference hcrDialog;
     private SURIMI_gui.Models.ExperimentConfig? config { get; set; }
     private List<SURIMI_gui.Models.SimulationStatus>? simulations { get; set; } = new List<SURIMI_gui.Models.SimulationStatus>();
     private List<string>? scenarioNames;
@@ -163,6 +197,12 @@ else
     [Inject]
     private SurimiGUIService? controllerService { get; set; }
 
+    [Inject]
+    private IJSRuntime JS { get; set; } = default!;
+
+    private async Task OpenHcrDialogAsync() => await JS.InvokeVoidAsync("surimiHcrDialog.show", hcrDialog);
+    private async Task CloseHcrDialogAsync() => await JS.InvokeVoidAsync("surimiHcrDialog.close", hcrDialog);
+
     protected override async Task OnInitializedAsync()
     {
         config = new SURIMI_gui.Models.ExperimentConfig();
@@ -171,8 +211,8 @@ else
             try
             {
                 scenarioNames = (await controllerService.GetScenarioNamesAsync(cts.Token)).OrderByDescending(n => n, StringComparer.OrdinalIgnoreCase).ToList();
-                config.ScenarioName = scenarioNames.FirstOrDefault() ?? config.ScenarioName;
-                await LoadClimateScenariosAsync();
+                config.ScenarioName = scenarioNames.FirstOrDefault();
+                await LoadScenarioDataAsync();
             }
             catch (Exception ex)
             {
@@ -184,40 +224,62 @@ else
         StartRefreshTimer();
     }
 
-    private async Task LoadClimateScenariosAsync()
+    private async Task LoadScenarioDataAsync()
     {
         if (controllerService == null || config == null)
         {
             return;
         }
 
-        climateScenarios = await controllerService.GetClimateScenariosAsync(config.ScenarioName ?? "", cts.Token);
-        config.ClimateScenario = climateScenarios.FirstOrDefault();
+        var version = ++scenarioLoadVersion;
+        var scenarioName = config.ScenarioName;
+        isScenarioDataLoading = true;
+        scenarioDataLoaded = false;
+        climateScenarios = [];
+        config.ClimateScenario = null;
+        config.HarvestControlRules = [];
+        result = "";
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(scenarioName))
+            {
+                throw new InvalidOperationException("No scenario is available.");
+            }
+
+            var climateTask = controllerService.GetClimateScenariosAsync(scenarioName, cts.Token);
+            var hcrTask = controllerService.GetInitialHCRDataAsync(scenarioName, cts.Token);
+            await Task.WhenAll(climateTask, hcrTask);
+            if (version != scenarioLoadVersion) return;
+
+            climateScenarios = await climateTask;
+            config.ClimateScenario = climateScenarios.FirstOrDefault();
+            config.HarvestControlRules = await hcrTask;
+            scenarioDataLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            if (version == scenarioLoadVersion)
+            {
+                result = $"Exception loading scenario data: {ex.Message}";
+            }
+        }
+        finally
+        {
+            if (version == scenarioLoadVersion) isScenarioDataLoading = false;
+        }
     }
 
     private async Task OnScenarioNameChanged(ChangeEventArgs e)
     {
-        if (config == null)
-        {
-            return;
-        }
-
+        if (config == null) return;
         config.ScenarioName = e.Value?.ToString();
-        try
-        {
-            await LoadClimateScenariosAsync();
-        }
-        catch (Exception ex)
-        {
-            result = $"Exception loading climate scenarios: {ex.Message}";
-            climateScenarios = new List<string>();
-        }
-        StateHasChanged();
+        await LoadScenarioDataAsync();
     }
 
-    private async Task HandleSubmit()
+    private async Task HandleSubmit(EditContext editContext)
     {
-        if (config != null && controllerService != null)
+        if (config != null && controllerService != null && scenarioDataLoaded && !isScenarioDataLoading && !isSubmitLoading && editContext.Validate())
         {
             isSubmitLoading = true;
             StateHasChanged();
@@ -230,11 +292,11 @@ else
                 {
                     experimentIds.Add(config.ExperimentId);
                     config = new SURIMI_gui.Models.ExperimentConfig();    // Reset form
-                    config.ScenarioName = scenarioNames?.FirstOrDefault() ?? config.ScenarioName;
-                    await LoadClimateScenariosAsync();
+                    config.ScenarioName = scenarioNames?.FirstOrDefault();
+                    await LoadScenarioDataAsync();
                     // Fetch updated simulations list after successful submit
                     simulations = await controllerService.GetSimulationsAsync(experimentIds, cts.Token);
-                    result = $"OK";
+                    if (scenarioDataLoaded) result = "OK";
                 }
                 else
                 {

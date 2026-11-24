@@ -31,27 +31,9 @@ namespace SURIMI_gui.Services
                     EndDateTime = config.EndDateTime.HasValue ? Timestamp.FromDateTime(DateTime.SpecifyKind(config.EndDateTime.Value, DateTimeKind.Utc)) : null,
                     ExperimentId = config.ExperimentId,
                     IsMseRun = config.IsMseRun,
-                    RegulationsDefinitionsSummary = new RegulationDefinitionsSummary()
+                    RegulationsDefinitionsSummary = new RegulationDefinitionsSummary
                     {
-                        TargetFishingMortalities = {
-                            new TargetFishingMortality() {
-                                Species = new Species() {
-                                    SpeciesCode = "MUT",    // Red mullet
-                                    LifeStage = "adult"
-                                },
-                                BiomassLimit = 0.018,
-                                BiomassBase = 0.072,
-                                FMax = 0.317561
-                            },
-                            new TargetFishingMortality() {
-                                Species = new Species() {
-                                    SpeciesCode = "BFT"    // Blue fin tuna
-                                },
-                                BiomassLimit = 0.008,
-                                BiomassBase = 0.032,
-                                FMax = 0.6216745
-                            }
-                        }
+                        TargetFishingMortalities = { config.HarvestControlRules.Where(rule => rule.Selected).Select(rule => rule.ToTargetFishingMortality()) }
                     },
                     ClimateScenario = config.ClimateScenario ?? ""
 
@@ -95,10 +77,20 @@ namespace SURIMI_gui.Services
             // for this method we do not set the Activity.Current to null because we want to group all calls to this method under the same Activity in telemetry. So it shows as one line in the Aspire Dashboard
             using var activity = _activitySource.StartActivity("GetSimulations", ActivityKind.Server, parentContext: default);
 
-            GetSimulationStatusesResponse reply;
+            IEnumerable<Grpc.Surimi.SimulationStatus> simulationStatuses;
             try
             {
-                reply = await _controllerClient.GetSimulationStatusesAsync(new GetSimulationStatusesRequest() { ExperimentIds = { experimentIds } }, cancellationToken: token);
+                var ids = experimentIds.ToList();
+                if (ids.Count == 0)
+                {
+                    var reply = await _controllerClient.GetAllSimulationStatusesAsync(new GetAllSimulationStatusesRequest(), cancellationToken: token);
+                    simulationStatuses = reply.SimulationStatuses;
+                }
+                else
+                {
+                    var reply = await _controllerClient.GetSimulationStatusesAsync(new GetSimulationStatusesRequest() { ExperimentIds = { ids } }, cancellationToken: token);
+                    simulationStatuses = reply.SimulationStatuses;
+                }
             }
             catch (RpcException ex)
             {
@@ -109,7 +101,7 @@ namespace SURIMI_gui.Services
                 throw new Exception(ex.Message);
             }
 
-            return reply.SimulationStatuses.Select(sim => new Models.SimulationStatus
+            return simulationStatuses.Select(sim => new Models.SimulationStatus
             {
                 SimulationId = sim.SimulationId,
                 ExperimentId = sim.ExperimentId,
@@ -141,6 +133,21 @@ namespace SURIMI_gui.Services
             }
 
             return reply.ScenarioNames.ToList();
+        }
+
+        public async Task<List<Models.HarvestControlRule>> GetInitialHCRDataAsync(string scenarioName, CancellationToken token)
+        {
+            Activity.Current = null;
+            try
+            {
+                var reply = await _controllerClient.GetInitialHCRDataAsync(new GetInitialHCRDataRequest { ScenarioName = scenarioName }, cancellationToken: token);
+                var summary = reply.InitialHcrDataSummary ?? throw new InvalidDataException("The initial HCR data summary is missing.");
+                return summary.InitialHcrData.Select(Models.HarvestControlRule.FromInitialData).ToList();
+            }
+            catch (RpcException ex)
+            {
+                throw new InvalidOperationException(CreateErrorStringFromGrpcException(ex), ex);
+            }
         }
 
         public async Task<List<string>> GetClimateScenariosAsync(string scenarioName, CancellationToken token)
