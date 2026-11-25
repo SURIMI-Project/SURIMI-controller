@@ -1,6 +1,7 @@
 using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Grpc.Surimi;
+using SURIMI.Datamodel;
 
 namespace SURIMI_controller.Services
 {
@@ -19,8 +20,7 @@ namespace SURIMI_controller.Services
 
         public Task<GetInitialHCRDataResponse> GetInitialHCRDataAsync(GetInitialHCRDataRequest request, CancellationToken cancellationToken)
         {
-            return _ecopathSimDispatcher.DispatchWithRetryAsync<EcologyService.EcologyServiceClient, GetInitialHCRDataRequest, GetInitialHCRDataResponse>(request, request.ScenarioName,
-                (client, req) => client.GetInitialHCRDataAsync(req, cancellationToken: cancellationToken));
+            return _ecologyClient.GetInitialHCRDataAsync(request, cancellationToken: cancellationToken).ResponseAsync;
         }
 
         public Task<CancelSimulationResponse> CancelSimulationAsync(CancelSimulationRequest cancelRequest, CancellationToken token)
