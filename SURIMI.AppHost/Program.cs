@@ -47,16 +47,16 @@ var outputCreator = builder.AddContainer("outputcreator", "ghcr.io/surimi-projec
     .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
     .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
-var ecopath = builder.AddContainer("ecopath", "ghcr.io/surimi-project/surimiecopath", "latest")
-    .WithHttpEndpoint(port: 7890, targetPort: 7890, name: "ecopath")
-    .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
-    .WithEnvironment("VAULT_TOKEN", vaultToken)
-    .WithEnvironment("VAULT_TOP_DIR", "rikkert")
-    .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
-    .WithEnvironment("VAULT_MOUNT", "secret-kv")
-    .WithEnvironment("AWS_S3_ENDPOINT", "minio.dive.edito.eu")
-    .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
-    .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
+//var ecopath = builder.AddContainer("ecopath", "ghcr.io/surimi-project/surimiecopath", "latest")
+//    .WithHttpEndpoint(port: 7890, targetPort: 7890, name: "ecopath")
+//    .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
+//    .WithEnvironment("VAULT_TOKEN", vaultToken)
+//    .WithEnvironment("VAULT_TOP_DIR", "rikkert")
+//    .WithEnvironment("VAULT_RELATIVE_PATH", "s3-credentials")
+//    .WithEnvironment("VAULT_MOUNT", "secret-kv")
+//    .WithEnvironment("AWS_S3_ENDPOINT", "minio.dive.edito.eu")
+//    .WithEnvironment("AWS_DEFAULT_REGION", "waw3-1")
+//    .WithEnvironment("AWS_BUCKET_NAME", "oidc-rikkert");
 
 var fisheriesAuthority = builder.AddContainer("fisheriesauthority", "ghcr.io/surimi-project/surimifisheriesauthority", "latest")
     .WithHttpEndpoint(port: 5493, targetPort: 5493, name: "fisheriesauthority")
@@ -82,7 +82,7 @@ var valueChain = builder.AddContainer("valuechain", "ghcr.io/surimi-project/suri
     .WithEnvironment("ECOPATH_URL", "http://localhost:7890")
     .WithEnvironment("VALUECHAIN_URL", "http://localhost:7990")
     .WithEnvironment("FISHERIES_AUTHORITY_URL", "http://localhost:5493")
-    .WithEnvironment("NR_OF_MSE_RUNS", "1")
+    .WithEnvironment("NR_OF_MSE_RUNS", "10")
 
     .WithEnvironment("VAULT_ADDR", "https://vault.dive.edito.eu")
     .WithEnvironment("VAULT_TOKEN", vaultToken)

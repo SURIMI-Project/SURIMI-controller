@@ -69,7 +69,7 @@ namespace SURIMI_controller.Services
 
             var simulationInitialisationTasks = new List<Task<InitialiseSimulationResponse>>();
 
-            var ecopathInitialiseSimulationResponse = _ecopathServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
+            _ = _ecopathServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
             _ = _poseidonServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
             _ = _marketServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
             _ = _fisheriesAuthorityServiceClient.AddInitialise(simulationInitialisationTasks, initRequest, cancellationToken);
@@ -86,27 +86,15 @@ namespace SURIMI_controller.Services
                 Status = "Initialising",    
                 SimulationStarted = DateTime.UtcNow,
                 SimulationDuration = TimeSpan.FromMilliseconds(10),    // so you immediately see a duration, instead of nothing
-                EcologyHost = string.Empty,
                 Order = _simulations.Count + 1
             };
 
             await Task.WhenAll(simulationInitialisationTasks);
             _logger.LogInformation("{NrOfTasks} initialisation calls completed for simulation {SimulationId}", simulationInitialisationTasks.Count, simulationId);
 
-            string hostValue = string.Empty;
-            if (ecopathInitialiseSimulationResponse != null)
-            {
-                // Await the response headers
-                var headers = await ecopathInitialiseSimulationResponse.ResponseHeadersAsync;
-
-                // Find the header by key (case-insensitive)
-                hostValue = headers.GetValue("host") ?? string.Empty; // returns string.Empty if not found
-            }
-
-            _simulations[simulationId].EcologyHost = hostValue ?? string.Empty;
             _simulations[simulationId].Status = "Initialised";
 
-            _logger.LogInformation("Simulation {SimulationId} is created and initialised on {EcologyHost}", simulationId, hostValue);
+            _logger.LogInformation("Simulation {SimulationId} is created and initialised", simulationId);
 
             // Return promptly, do not await the task to prevent the gRPC call from timing out. The simulation will continue to run in the background, and its progress can be tracked through the SimulationManager's state.
         }
@@ -565,7 +553,6 @@ namespace SURIMI_controller.Services
                 SimulationCurrent = simulation.SimulationCurrent == default ? null : Timestamp.FromDateTime(simulation.SimulationCurrent),
                 SimulationStarted = simulation.SimulationStarted == default ? null : Timestamp.FromDateTime(simulation.SimulationStarted),
                 SimulationDuration = simulation.SimulationDuration == default ? null : Duration.FromTimeSpan(simulation.SimulationDuration),
-                EcologyHost = simulation.EcologyHost,
                 Order = simulation.Order
             };
         }

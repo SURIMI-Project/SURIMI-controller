@@ -14,10 +14,7 @@ namespace SURIMI_controller.Services
         {
             if (IsEnabled)
             {
-                var callOptions = new CallOptions(
-                    deadline: DateTime.UtcNow.AddMinutes(10),   // adjust to expected CMSY init time
-                    cancellationToken: cancellationToken);
-                var response = _cmsyClient.InitialiseExperimentAsync(initialiseExperimentRequest, callOptions);
+                var response = _cmsyClient.InitialiseExperimentAsync(initialiseExperimentRequest, cancellationToken: cancellationToken);
                 initialisationTasks.Add(response.ResponseAsync);
                 return response;
             }

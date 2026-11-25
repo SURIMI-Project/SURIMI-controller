@@ -71,6 +71,7 @@ public class Program
         builder.Services.AddGrpcReflection();
 
         // Use the helper for all your gRPC clients
+        AddConfiguredGrpcClient<EcologyService.EcologyServiceClient>("Ecopath", "ECOPATH_URL");
         AddConfiguredGrpcClient<FisheryService.FisheryServiceClient>("Poseidon", "POSEIDON_URL");
         AddConfiguredGrpcClient<MarketService.MarketServiceClient>("Market", "MARKET_URL");
         AddConfiguredGrpcClient<StockAssessmentService.StockAssessmentServiceClient>("Cmsy", "CMSY_URL");
@@ -79,17 +80,10 @@ public class Program
         AddConfiguredGrpcClient<OutputCreatorService.OutputCreatorServiceClient>("OutputCreator", "OUTPUT_CREATOR_URL");
 
         builder.Services.AddSingleton<GrpcErrorDetailLoggingInterceptor>();
-        builder.Services.Configure<SimulationDispatcherOptions>(o =>
-        {
-            o.EcopathUrl = Environment.GetEnvironmentVariable("ECOPATH_URL") ?? string.Empty;
-            o.PodNamespace = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? string.Empty;
-            o.NrOfPods = int.TryParse(Environment.GetEnvironmentVariable("ECOPATH_NR_OF_PODS"), out var n) ? n : 1;
-        });
         builder.Services.Configure<ExperimentManagerOptions>(o =>
         {
             o.NrOfMseRuns = int.TryParse(Environment.GetEnvironmentVariable("NR_OF_MSE_RUNS"), out var n) ? n : 1;
         });
-        builder.Services.AddSingleton<ISimulationDispatcher, SimulationDispatcher>();
         builder.Services.AddSingleton<ISimulationManager, SimulationManager>();
         builder.Services.AddSingleton<IExperimentManager, ExperimentManager>();
         builder.Services.AddSingleton<IAggregatorService, AggregatorService>();

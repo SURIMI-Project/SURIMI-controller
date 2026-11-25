@@ -11,6 +11,5 @@
         public required DateTime EndDateTime { get; set; }
         public required string Status { get; set; }
         public DateTime? SimulationCurrent { get; set; }
-        public string IP { get; set; } = string.Empty;
     }
 }
