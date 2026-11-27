@@ -1,6 +1,6 @@
 simulation:
   case_study_name: Anchovy Bay
-  start_date_time: 2013-01-01T00:00:00
+  start_date_time: 2000-01-01T00:00:00
   maximum_end_date_time: 2050-01-01T00:00:00
   time_step: P1M
   geography:
@@ -13,10 +13,10 @@ simulation:
     yres: 0.1799646
     ncol: 20
     nrow: 20
-    xmin: -1.0
-    xmax: 1.0
-    ymin: -1.0
-    ymax: 1.0
+    xmin: 0.0
+    xmax: 3.5992925
+    ymin: -3.5992925
+    ymax: 0.0
 standards:
   date_and_time: ISO 8601
   species_code: FAO 3-alpha
@@ -31,26 +31,41 @@ standards:
     - quantity: mass
       unit: kg
 items:
+  markets:
+  - market_code: XAB01
+  - market_code: XAB02
+  - market_code: XAB03
+  price_categories:
+  - category_code: Fresh - Whole
+  - category_code: Live - Bait
+  - category_code: Pelts and oil
   currencies:
   - currency_code: EUR
   species:
-  - species_code: HUW
-  - species_code: GRW
-  - species_code: SEG
-  - species_code: SEC
-  - species_code: COD
-  - species_code: WHG
-  - species_code: MAC
   - species_code: ANE
   - species_code: ARA
+  - species_code: COD
+  - species_code: MAC
+  - species_code: WCA
+  - species_code: WHG
+  - species_code: ZPX
   fleet_segments:
+  - gear_code: LNB
+    country_code: XAB
+    model: POSEIDON
   - gear_code: MHI
+    country_code: XAB
+    model: POSEIDON
   - gear_code: OTB
+    country_code: XAB
+    model: POSEIDON
   - gear_code: PS
-  - gear_code: LLNB
+    country_code: XAB
+    model: POSEIDON
   - gear_code: TBS
+    country_code: XAB
+    model: POSEIDON
   climate_scenarios:
   - climate_scenario_code: RCP_2.6
   - climate_scenario_code: RCP_4.5
-  - climate_scenario_code: RCP_8.5
   - climate_scenario_code: RCP_8.5
